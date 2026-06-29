@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Inter', sans-serif;
+    background-color: #F5F1E8;
+    color: #3A2E26;
+  }
+  
+  h1, h2, h3, h4, h5, h6, .font-serif-brand {
+    font-family: 'Fraunces', serif;
+  }
+}
+
+.bg-oat { background-color: #F5F1E8; }
+.bg-sage { background-color: #7A8B6F; }
+.bg-clay { background-color: #C97C5D; }
+.text-brown { color: #3A2E26; }
+.text-sage { color: #7A8B6F; }
+.text-clay { color: #C97C5D; }
+.border-sage { border-color: #7A8B6F; }
+.border-clay { border-color: #C97C5D; }

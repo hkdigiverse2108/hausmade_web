@@ -1,0 +1,183 @@
+import React, { useState, useEffect } from 'react';
+import { Star, ChevronLeft, ChevronRight, ShieldCheck } from 'lucide-react';
+
+export default function Reviews() {
+  const reviewsList = [
+    {
+      id: 1,
+      name: 'Solanki Arjunsinh',
+      initial: 'S',
+      rating: 5,
+      verified: 'Google Verified',
+      comment: '"Nice design in whole nadiad. Must visit here. Very nice staff"'
+    },
+    {
+      id: 2,
+      name: 'Kalpna Patel',
+      initial: 'K',
+      rating: 5,
+      verified: 'Google Verified',
+      comment: '"Real diamond ring designs 0% making changes sahajanand jewellers best showroom and. Nice staff "'
+    },
+    {
+      id: 3,
+      name: 'Roselin Mogaria',
+      initial: 'R',
+      rating: 5,
+      verified: 'Google Verified',
+      comment: '"Nice design. Must visit here . Good staff service"'
+    },
+    {
+      id: 4,
+      name: 'Sarah M.',
+      initial: 'S',
+      rating: 5,
+      verified: 'Verified Bather',
+      comment: '"Saved my sensitive winter skin! Switching to the 3-pack of lavender oat soap transformed my shower routine. Creamy lather!"'
+    },
+    {
+      id: 5,
+      name: 'David K.',
+      initial: 'D',
+      rating: 5,
+      verified: 'Verified Bather',
+      comment: '"Lasts twice as long as store soap. One bar lasted me nearly 4 weeks in the shower. The Subscribe & Save option is great."'
+    },
+    {
+      id: 6,
+      name: 'Emily R.',
+      initial: 'E',
+      rating: 5,
+      verified: 'Verified Bather',
+      comment: '"Zero plastic waste and divine smell. Arrived in paper packaging! The scent isn’t artificial — just natural calming herbs."'
+    }
+  ];
+
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  // Auto-slide every 4.5 seconds
+  useEffect(() => {
+    const timer = setInterval(() => {
+      handleNext();
+    }, 4500);
+    return () => clearInterval(timer);
+  }, [currentIndex]);
+
+  const handleNext = () => {
+    setCurrentIndex((prev) => (prev + 1) % reviewsList.length);
+  };
+
+  const handlePrev = () => {
+    setCurrentIndex((prev) => (prev - 1 + reviewsList.length) % reviewsList.length);
+  };
+
+  // Visible items slicing for carousel (3 items visible on desktop)
+  const visibleReviews = [
+    reviewsList[currentIndex % reviewsList.length],
+    reviewsList[(currentIndex + 1) % reviewsList.length],
+    reviewsList[(currentIndex + 2) % reviewsList.length],
+  ];
+
+  return (
+    <section id="reviews" className="py-16 lg:py-24 bg-[#EFECE6] scroll-mt-20 overflow-hidden">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        {/* Header matching requested style */}
+        <div className="text-center max-w-3xl mx-auto mb-12">
+          <div className="flex items-center justify-center gap-4 mb-2">
+            <span className="h-[1px] w-12 bg-[#3A2E26]/20"></span>
+            <span className="text-[#8C7A5B] font-bold text-xs uppercase tracking-widest">Reviews</span>
+            <span className="h-[1px] w-12 bg-[#3A2E26]/20"></span>
+          </div>
+          
+          <h2 className="font-serif-brand text-3xl sm:text-4xl lg:text-5xl font-normal text-[#3A2E26] mt-2">
+            What Our Customers Say
+          </h2>
+
+          <div className="flex items-center justify-center gap-2 text-xs sm:text-sm text-[#3A2E26]/70 mt-3 font-medium">
+            <ShieldCheck className="w-4 h-4 text-[#8C7A5B]" />
+            <span>4.9 / 5 · Verified by Google · 2,400+ reviews</span>
+          </div>
+        </div>
+
+        {/* Carousel Container */}
+        <div className="relative max-w-6xl mx-auto px-4 sm:px-10">
+          
+          {/* Previous Arrow Button */}
+          <button
+            onClick={handlePrev}
+            className="absolute left-0 sm:-left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/90 shadow-md border border-[#3A2E26]/10 flex items-center justify-center text-[#3A2E26] hover:bg-[#8C7A5B] hover:text-white transition-all cursor-pointer"
+            aria-label="Previous review"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+
+          {/* Review Cards Grid / Carousel */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 transition-all duration-500 ease-in-out">
+            {visibleReviews.map((rev, idx) => (
+              <div
+                key={`${rev.id}-${idx}`}
+                className="bg-[#F6F4F0] p-6 sm:p-8 rounded-2xl border border-[#3A2E26]/10 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between min-h-[220px]"
+              >
+                <div>
+                  {/* Author Header */}
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 rounded-full bg-[#8C7A5B] text-white font-serif-brand font-bold text-lg flex items-center justify-center shadow-xs shrink-0">
+                      {rev.initial}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-sm sm:text-base text-[#3A2E26] leading-snug">
+                        {rev.name}
+                      </h3>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <div className="flex text-[#8C7A5B]">
+                          {[...Array(rev.rating)].map((_, i) => (
+                            <Star key={i} className="w-3.5 h-3.5 fill-current" />
+                          ))}
+                        </div>
+                        <span className="text-[10px] text-[#3A2E26]/60 font-medium flex items-center gap-0.5">
+                          <ShieldCheck className="w-3 h-3 text-[#8C7A5B]" />
+                          {rev.verified}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Comment */}
+                  <p className="text-xs sm:text-sm text-[#3A2E26]/80 italic leading-relaxed font-light">
+                    {rev.comment}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Next Arrow Button */}
+          <button
+            onClick={handleNext}
+            className="absolute right-0 sm:-right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-[#8C7A5B] shadow-md flex items-center justify-center text-white hover:bg-[#77674b] transition-all cursor-pointer"
+            aria-label="Next review"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+
+        </div>
+
+        {/* Carousel Indicators / Dots */}
+        <div className="flex justify-center items-center gap-2 mt-8">
+          {reviewsList.map((_, idx) => (
+            <button
+              key={idx}
+              onClick={() => setCurrentIndex(idx)}
+              className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${
+                currentIndex % reviewsList.length === idx ? 'w-6 bg-[#8C7A5B]' : 'w-2 bg-[#3A2E26]/20'
+              }`}
+              aria-label={`Go to slide ${idx + 1}`}
+            />
+          ))}
+        </div>
+
+      </div>
+    </section>
+  );
+}
