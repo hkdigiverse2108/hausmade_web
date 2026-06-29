@@ -6,7 +6,7 @@ export const PACK_OPTIONS = [
     id: 'single',
     title: 'Single Soap Bar (75g)',
     count: 1,
-    basePrice: 9.00,
+    basePrice: 299.00,
     savingsBadge: null,
     popular: false,
     bestValue: false,
@@ -16,7 +16,7 @@ export const PACK_OPTIONS = [
     id: 'pack-2',
     title: 'Pack of 2',
     count: 2,
-    basePrice: 16.20, // 10% off
+    basePrice: 538.00, // ~10% off
     savingsBadge: 'Save 10%',
     popular: false,
     bestValue: false,
@@ -26,7 +26,7 @@ export const PACK_OPTIONS = [
     id: 'pack-3',
     title: 'Pack of 3',
     count: 3,
-    basePrice: 21.60, // 20% off
+    basePrice: 717.00, // ~20% off
     savingsBadge: 'Save 20%',
     popular: true,
     bestValue: false,
@@ -36,7 +36,7 @@ export const PACK_OPTIONS = [
     id: 'pack-5',
     title: 'Pack of 5',
     count: 5,
-    basePrice: 31.50, // 30% off
+    basePrice: 1046.00, // ~30% off
     savingsBadge: 'Save 30%',
     popular: false,
     bestValue: true,
@@ -232,7 +232,7 @@ export default function ProductSelector({ onAddToCart, selectedPack, setSelected
                   Select Pack Size
                 </label>
                 <span className="text-xs text-[#7A8B6F] font-semibold">
-                  ${unitPrice} / soap bar
+                  ₹{unitPrice} / soap bar
                 </span>
               </div>
 
@@ -276,9 +276,9 @@ export default function ProductSelector({ onAddToCart, selectedPack, setSelected
 
                       <div className="mt-3 flex items-baseline justify-between">
                         <div className="flex items-baseline gap-1.5">
-                          <span className="text-xl font-bold text-[#3A2E26]">${pPrice}</span>
+                          <span className="text-xl font-bold text-[#3A2E26]">₹{pPrice}</span>
                         </div>
-                        <span className="text-xs text-[#3A2E26]/60">${pUnit} / bar</span>
+                        <span className="text-xs text-[#3A2E26]/60">₹{pUnit} / bar</span>
                       </div>
                     </button>
                   );
@@ -318,7 +318,7 @@ export default function ProductSelector({ onAddToCart, selectedPack, setSelected
               >
                 <span>Add To Cart</span>
                 <span className="bg-white/20 px-3 py-1 rounded-xl text-sm font-semibold">
-                  ${totalPrice}
+                  ₹{totalPrice}
                 </span>
               </button>
             </div>
@@ -327,7 +327,7 @@ export default function ProductSelector({ onAddToCart, selectedPack, setSelected
             <div className="pt-4 grid grid-cols-3 gap-2 text-center text-xs text-[#3A2E26]/70 border-t border-[#3A2E26]/10">
               <div className="flex flex-col items-center gap-1">
                 <Truck className="w-4 h-4 text-[#7A8B6F]" />
-                <span>Free Shipping over $35</span>
+                <span>Free Shipping over ₹499</span>
               </div>
               <div className="flex flex-col items-center gap-1">
                 <RotateCcw className="w-4 h-4 text-[#7A8B6F]" />

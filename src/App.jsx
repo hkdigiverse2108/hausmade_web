@@ -11,6 +11,7 @@ import FAQ from './components/FAQ';
 import Footer from './components/Footer';
 import CartDrawer from './components/CartDrawer';
 import CheckoutModal from './components/CheckoutModal';
+import LoginModal from './components/LoginModal';
 import SocialProofToast from './components/SocialProofToast';
 import StickyMobileBar from './components/StickyMobileBar';
 
@@ -18,6 +19,8 @@ export default function App() {
   const [cartItems, setCartItems] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [user, setUser] = useState(null);
   const [wishlistCount, setWishlistCount] = useState(1); // Default saved item
   
   // Product state shared between selector and mobile bar
@@ -77,6 +80,8 @@ export default function App() {
           onOpenCart={() => setIsCartOpen(true)}
           wishlistCount={wishlistCount}
           onOpenWishlist={() => alert(`You have ${wishlistCount} saved Hausmade™ items in your wishlist!`)}
+          onOpenLogin={() => setIsLoginOpen(true)}
+          user={user}
         />
       </div>
 
@@ -116,6 +121,12 @@ export default function App() {
         onClose={() => setIsCheckoutOpen(false)}
         cartItems={cartItems}
         onOrderComplete={() => setCartItems([])}
+      />
+
+      <LoginModal
+        isOpen={isLoginOpen}
+        onClose={() => setIsLoginOpen(false)}
+        onLoginSuccess={(userData) => setUser(userData)}
       />
 
       <SocialProofToast />

@@ -23,7 +23,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
 
   const rawSubtotal = cartItems.reduce((acc, item) => acc + parseFloat(item.totalPrice), 0);
   const discountAmount = (rawSubtotal * discount).toFixed(2);
-  const shippingFee = rawSubtotal >= 35 || rawSubtotal === 0 ? 0 : 4.99;
+  const shippingFee = rawSubtotal >= 499 || rawSubtotal === 0 ? 0 : 49;
   const grandTotal = (rawSubtotal - parseFloat(discountAmount) + shippingFee).toFixed(2);
 
   const handleApplyCoupon = (e) => {
@@ -175,7 +175,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
               <div className="bg-[#F5F1E8] p-4 rounded-2xl space-y-2 text-sm text-[#3A2E26]">
                 <div className="flex justify-between">
                   <span>Items ({cartItems.length}):</span>
-                  <span className="font-bold">${rawSubtotal.toFixed(2)}</span>
+                  <span className="font-bold">₹{rawSubtotal.toFixed(2)}</span>
                 </div>
                 
                 {/* Coupon Input */}
@@ -196,12 +196,12 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
                   </button>
                 </div>
                 {couponApplied && (
-                  <p className="text-xs text-[#7A8B6F] font-bold">✓ Promo HAUS10 applied! Saved ${discountAmount}</p>
+                  <p className="text-xs text-[#7A8B6F] font-bold">✓ Promo HAUS10 applied! Saved ₹{discountAmount}</p>
                 )}
 
                 <div className="flex justify-between font-bold text-base pt-2 border-t border-gray-300">
                   <span>Total Amount:</span>
-                  <span className="text-[#C97C5D]">${grandTotal}</span>
+                  <span className="text-[#C97C5D]">₹{grandTotal}</span>
                 </div>
               </div>
 
@@ -271,7 +271,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
                 onClick={handlePlaceOrder}
                 className="w-full py-4 bg-[#7A8B6F] hover:bg-[#68775E] text-white font-bold rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2 text-base"
               >
-                <span>Complete & Place Order (${grandTotal})</span>
+                <span>Complete & Place Order (₹{grandTotal})</span>
                 <ShieldCheck className="w-5 h-5" />
               </button>
             </div>

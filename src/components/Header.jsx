@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, Menu, X, Sparkles, Heart } from 'lucide-react';
+import { ShoppingBag, Menu, X, Sparkles, Heart, User } from 'lucide-react';
 
-export default function Header({ cartCount, onOpenCart, wishlistCount, onOpenWishlist }) {
+export default function Header({ cartCount, onOpenCart, wishlistCount, onOpenWishlist, onOpenLogin, user }) {
 
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -66,8 +66,17 @@ export default function Header({ cartCount, onOpenCart, wishlistCount, onOpenWis
             ))}
           </nav>
 
-          {/* Wishlist & Cart Buttons */}
-          <div className="flex items-center space-x-2 sm:space-x-4">
+          {/* Wishlist, Cart & User Login Buttons */}
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            <button
+              onClick={onOpenLogin}
+              className="flex items-center gap-1.5 p-2 text-[#3A2E26] hover:text-[#C97C5D] transition-colors rounded-full hover:bg-[#3A2E26]/5 cursor-pointer text-xs font-semibold"
+              aria-label="User account"
+            >
+              <User className="w-6 h-6" />
+              <span className="hidden lg:inline">{user ? user.name : 'Sign In'}</span>
+            </button>
+
             <button
               onClick={onOpenWishlist}
               className="relative p-2 text-[#3A2E26] hover:text-[#C97C5D] transition-colors rounded-full hover:bg-[#3A2E26]/5 cursor-pointer"

@@ -59,7 +59,7 @@ export default function CartDrawer({ isOpen, onClose, cartItems, onUpdateQuantit
                     <p className="text-xs text-[#7A8B6F] font-semibold mt-0.5">
                       {item.isSubscription ? `Subscribed (${item.frequency})` : 'One-Time Purchase'}
                     </p>
-                    <p className="text-xs text-[#3A2E26]/60">${item.unitPrice} / bar</p>
+                    <p className="text-xs text-[#3A2E26]/60">₹{item.unitPrice} / bar</p>
                     
                     <div className="flex items-center justify-between mt-3">
                       <div className="flex items-center border border-[#3A2E26]/20 rounded-lg bg-[#F5F1E8]">
@@ -77,7 +77,7 @@ export default function CartDrawer({ isOpen, onClose, cartItems, onUpdateQuantit
                           +
                         </button>
                       </div>
-                      <span className="font-bold text-[#3A2E26] text-sm">${item.totalPrice}</span>
+                      <span className="font-bold text-[#3A2E26] text-sm">₹{item.totalPrice}</span>
                     </div>
                   </div>
                   <button
@@ -97,12 +97,12 @@ export default function CartDrawer({ isOpen, onClose, cartItems, onUpdateQuantit
               <div className="space-y-2 text-sm text-[#3A2E26]">
                 <div className="flex justify-between">
                   <span className="text-[#3A2E26]/70">Subtotal</span>
-                  <span className="font-bold">${subtotal}</span>
+                  <span className="font-bold">₹{subtotal}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-[#3A2E26]/70">Shipping</span>
                   <span className="font-bold text-[#7A8B6F]">
-                    {parseFloat(subtotal) >= 35 ? 'FREE' : '$4.99'}
+                    {parseFloat(subtotal) >= 499 ? 'FREE' : '₹49'}
                   </span>
                 </div>
               </div>
