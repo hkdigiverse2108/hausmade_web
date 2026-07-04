@@ -1360,6 +1360,72 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                           className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
                         />
                       </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Story Image</label>
+                        <div className="flex gap-3">
+                          <input
+                            type="text"
+                            placeholder="Image URL or upload below"
+                            value={settingsForm.story.image_url || ''}
+                            onChange={(e) => setSettingsForm({
+                              ...settingsForm,
+                              story: { ...settingsForm.story, image_url: e.target.value }
+                            })}
+                            className="flex-1 px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          />
+                          <label className="bg-[#E6D5C3]/30 hover:bg-[#E6D5C3]/50 text-[#3A2E26] font-bold text-xs px-4 rounded-2xl flex items-center justify-center cursor-pointer border border-[#E6D5C3]/50 transition-colors shrink-0">
+                            <Plus className="w-4 h-4 mr-1" /> Upload Image
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={async (e) => {
+                                const file = e.target.files[0];
+                                if (!file) return;
+                                setSaving(true);
+                                try {
+                                  const res = await uploadImage(file);
+                                  setSettingsForm(prev => ({
+                                    ...prev,
+                                    story: { ...prev.story, image_url: res.url }
+                                  }));
+                                  showNotification('Story image uploaded successfully!');
+                                } catch (err) {
+                                  showNotification('Failed to upload story image', 'error');
+                                } finally {
+                                  setSaving(false);
+                                }
+                              }}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Artisan / Author Name</label>
+                          <input
+                            type="text"
+                            value={settingsForm.story.author_name || ''}
+                            onChange={(e) => setSettingsForm({
+                              ...settingsForm,
+                              story: { ...settingsForm.story, author_name: e.target.value }
+                            })}
+                            className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Artisan / Author Title</label>
+                          <input
+                            type="text"
+                            value={settingsForm.story.author_title || ''}
+                            onChange={(e) => setSettingsForm({
+                              ...settingsForm,
+                              story: { ...settingsForm.story, author_title: e.target.value }
+                            })}
+                            className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
 

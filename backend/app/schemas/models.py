@@ -86,6 +86,9 @@ class StorySettings(BaseModel):
     subtitle: str
     paragraph1: str
     paragraph2: str
+    image_url: str = ""
+    author_name: str = ""
+    author_title: str = ""
 
 class ContactSettings(BaseModel):
     email: str

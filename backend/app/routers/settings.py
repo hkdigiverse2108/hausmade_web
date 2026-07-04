@@ -41,7 +41,10 @@ async def get_site_settings():
                     "title": "From our kitchen counter to your daily sanctuary.",
                     "subtitle": "Our Heritage",
                     "paragraph1": "Elena started Hausmade Soap after years of battling dry, itchy skin from synthetic ingredients.",
-                    "paragraph2": "Elena started Hausmade Soap after years of battling dry, itchy skin from synthetic ingredients."
+                    "paragraph2": "Elena started Hausmade Soap after years of battling dry, itchy skin from synthetic ingredients.",
+                    "image_url": "/images/founder-workshop.png",
+                    "author_name": "Elena Vance — Master Artisan",
+                    "author_title": "Hand-pouring batches in Vermont"
                 },
                 "contact": {
                     "email": "info@hausmade.in",
@@ -78,6 +81,13 @@ async def get_site_settings():
             }
             await settings_collection.insert_one(settings)
         else:
+            if "image_url" not in settings.get("story", {}):
+                story = settings.get("story", {})
+                story["image_url"] = story.get("image_url", "/images/founder-workshop.png")
+                story["author_name"] = story.get("author_name", "Elena Vance — Master Artisan")
+                story["author_title"] = story.get("author_title", "Hand-pouring batches in Vermont")
+                settings["story"] = story
+                await settings_collection.update_one({"key": "site_settings"}, {"$set": {"story": story}})
             if "logo_url" not in settings:
                 settings["logo_url"] = ""
                 await settings_collection.update_one({"key": "site_settings"}, {"$set": {"logo_url": ""}})

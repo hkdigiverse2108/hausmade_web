@@ -6,6 +6,9 @@ export default function Story({ settings }) {
   const subtitle = settings?.subtitle || "Our Heritage";
   const paragraph1 = settings?.paragraph1 || "PureBotanica began in the autumn of 2018 when our founder Elena could not find a commercial soap that didn’t leave her skin dry, itchy, and irritated by synthetic dyes and fake fragrances.";
   const paragraph2 = settings?.paragraph2 || "We went back to ancient cold-process saponification roots: slowly combining raw organic butter, wildflower honey, and steam-distilled essential oils. Every single bar is poured by hand, cut with guitar wire, and cured for 6 full weeks to ensure a long-lasting, ultra-creamy bar.";
+  const imageUrl = settings?.image_url || "/images/founder-workshop.png";
+  const authorName = settings?.author_name || "Elena Vance — Master Artisan";
+  const authorTitle = settings?.author_title || "Hand-pouring batches in Vermont";
 
   return (
     <section id="story" className="py-16 lg:py-24 bg-[#7A8B6F]/10 scroll-mt-20 relative overflow-hidden">
@@ -19,13 +22,13 @@ export default function Story({ settings }) {
               <div className="absolute -inset-3 rounded-3xl bg-[#C97C5D]/20 blur-lg" />
               <div className="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white">
                 <img
-                  src="/images/founder-workshop.png"
+                  src={imageUrl}
                   alt="Founder Crafting Soap in Workshop"
                   className="w-full h-[280px] sm:h-[400px] md:h-[480px] object-cover"
                 />
                 <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-md p-4 rounded-2xl border border-white/50 shadow-md">
-                  <p className="font-serif-brand font-bold text-sm text-[#3A2E26]">Elena Vance — Master Artisan</p>
-                  <p className="text-xs text-[#7A8B6F] font-medium">Hand-pouring batches in Vermont</p>
+                  <p className="font-serif-brand font-bold text-sm text-[#3A2E26]">{authorName}</p>
+                  <p className="text-xs text-[#7A8B6F] font-medium">{authorTitle}</p>
                 </div>
               </div>
             </div>
