@@ -4,14 +4,14 @@
   html {
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
-    overflow-x: hidden;
+    overflow-x: clip;
   }
   
   body {
     font-family: 'Inter', sans-serif;
     background-color: #F5F1E8;
     color: #3A2E26;
-    overflow-x: hidden;
+    overflow-x: clip;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }

@@ -336,7 +336,7 @@ export default function App() {
           </button>
         </div>
       )}
-      <div className="sticky top-0 z-50 shadow-xs">
+      <div className="w-full">
         <AnnouncementBanner settings={siteSettings.announcement} />
         <Header
           cartCount={cartItems.reduce((acc, item) => acc + item.quantity, 0)}
