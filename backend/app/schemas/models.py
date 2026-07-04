@@ -126,6 +126,7 @@ class SiteSettingsModel(BaseModel):
     subscription: SubscriptionSettings
     faqs: List[FAQItem] = []
     ingredients: List[IngredientItem] = []
+    ingredients_active: bool = True
 
 class ReviewSubmitModel(BaseModel):
     productId: str

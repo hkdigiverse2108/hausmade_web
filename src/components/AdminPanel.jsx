@@ -76,7 +76,8 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       button_text: ''
     },
     faqs: [],
-    ingredients: []
+    ingredients: [],
+    ingredients_active: true
   });
 
   useEffect(() => {
@@ -85,7 +86,8 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
         ...settings,
         logo_url: settings.logo_url || '',
         faqs: settings.faqs || [],
-        ingredients: settings.ingredients || []
+        ingredients: settings.ingredients || [],
+        ingredients_active: settings.ingredients_active !== undefined ? settings.ingredients_active : true
       });
     }
   }, [settings]);
@@ -1711,7 +1713,21 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                   {/* Ingredients Editor */}
                   <div className="bg-white rounded-3xl p-6 border border-[#E6D5C3]/30 shadow-sm space-y-4">
                     <div className="flex items-center justify-between border-b border-[#E6D5C3]/20 pb-2 flex-wrap gap-2">
-                      <h3 className="text-lg font-bold">Ingredients List</h3>
+                      <div className="flex items-center gap-4">
+                        <h3 className="text-lg font-bold">Ingredients List</h3>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className="sr-only peer"
+                            checked={settingsForm.ingredients_active}
+                            onChange={(e) => setSettingsForm({ ...settingsForm, ingredients_active: e.target.checked })}
+                          />
+                          <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#7A8B6F]"></div>
+                          <span className="ml-2 text-xs font-bold text-[#3A2E26]/70 uppercase tracking-wide">
+                            {settingsForm.ingredients_active ? 'Active' : 'Deactive'}
+                          </span>
+                        </label>
+                      </div>
                       <button
                         type="button"
                         onClick={() => {

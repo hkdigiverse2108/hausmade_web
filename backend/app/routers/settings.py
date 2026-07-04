@@ -132,6 +132,9 @@ async def get_site_settings():
                 ]
                 settings["ingredients"] = default_ingredients
                 await settings_collection.update_one({"key": "site_settings"}, {"$set": {"ingredients": default_ingredients}})
+            if "ingredients_active" not in settings:
+                settings["ingredients_active"] = True
+                await settings_collection.update_one({"key": "site_settings"}, {"$set": {"ingredients_active": True}})
             
         if "_id" in settings:
             settings["_id"] = str(settings["_id"])

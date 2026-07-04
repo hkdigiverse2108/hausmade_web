@@ -370,7 +370,9 @@ export default function App() {
           activeImageIndex={activeImageIndex}
           setActiveImageIndex={setActiveImageIndex}
         />
-        <Ingredients settings={siteSettings} />
+        {siteSettings.ingredients_active !== false && (
+          <Ingredients settings={siteSettings} />
+        )}
         <Story settings={siteSettings.story} />
         <Reviews />
         <FAQ settings={siteSettings} />
