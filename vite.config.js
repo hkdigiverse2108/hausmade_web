@@ -5,5 +5,20 @@ import tailwindcss from '@tailwindcss/vite'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  server: {
+    watch: {
+      ignored: [
+        '**/backend/**',
+        '**/*.json',
+        '**/users.json',
+        '**/orders.json',
+        '**/otps.json',
+        '**/products.json',
+        '**/coupons.json',
+        '**/settings.json',
+        '**/reviews.json'
+      ]
+    }
+  }
 })
 
