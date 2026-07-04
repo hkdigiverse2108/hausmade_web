@@ -325,6 +325,15 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
                               {p.savingsBadge}
                             </span>
                           )}
+                          {isOutOfStock ? (
+                            <span className="text-[11px] font-bold text-red-600 mt-1 flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span> Out of Stock
+                            </span>
+                          ) : (
+                            <span className="text-[11px] font-bold text-green-700 mt-1 flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> In Stock ({p.stock} left)
+                            </span>
+                          )}
                         </div>
                       </div>
 
