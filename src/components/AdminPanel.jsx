@@ -75,7 +75,8 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       card_description: '',
       button_text: ''
     },
-    faqs: []
+    faqs: [],
+    ingredients: []
   });
 
   useEffect(() => {
@@ -83,7 +84,8 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       setSettingsForm({
         ...settings,
         logo_url: settings.logo_url || '',
-        faqs: settings.faqs || []
+        faqs: settings.faqs || [],
+        ingredients: settings.ingredients || []
       });
     }
   }, [settings]);
@@ -1696,6 +1698,102 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                     ...settingsForm,
                                     faqs: updatedFaqs
                                   });
+                                }}
+                                className="w-full px-4 py-2.5 bg-white border border-[#E6D5C3]/40 rounded-xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
+                              />
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Ingredients Editor */}
+                  <div className="bg-white rounded-3xl p-6 border border-[#E6D5C3]/30 shadow-sm space-y-4">
+                    <div className="flex items-center justify-between border-b border-[#E6D5C3]/20 pb-2 flex-wrap gap-2">
+                      <h3 className="text-lg font-bold">Ingredients List</h3>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const current = settingsForm.ingredients || [];
+                          setSettingsForm({
+                            ...settingsForm,
+                            ingredients: [...current, { name: '', benefit: '', icon: 'Sparkles' }]
+                          });
+                        }}
+                        className="px-3.5 py-1.5 bg-[#7A8B6F] hover:bg-[#68785c] text-white text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1 shrink-0"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Add Ingredient
+                      </button>
+                    </div>
+
+                    <div className="space-y-4">
+                      {(!settingsForm.ingredients || settingsForm.ingredients.length === 0) ? (
+                        <p className="text-xs text-[#3A2E26]/60 italic py-2">No ingredients defined. Default storefront ingredients will be shown.</p>
+                      ) : (
+                        settingsForm.ingredients.map((ing, idx) => (
+                          <div key={idx} className="p-4 bg-[#FDFBF7] border border-[#E6D5C3]/30 rounded-2xl space-y-3 relative group">
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs font-bold text-[#8C7A5B] uppercase tracking-wider">Ingredient #{idx + 1}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = [...settingsForm.ingredients];
+                                  updated.splice(idx, 1);
+                                  setSettingsForm({ ...settingsForm, ingredients: updated });
+                                }}
+                                className="text-red-500 hover:text-red-700 text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" /> Remove
+                              </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                              <div className="md:col-span-2">
+                                <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/50 mb-1">Name</label>
+                                <input
+                                  type="text"
+                                  placeholder="e.g. Pure Kashmiri Kesar"
+                                  required
+                                  value={ing.name}
+                                  onChange={(e) => {
+                                    const updated = [...settingsForm.ingredients];
+                                    updated[idx] = { ...updated[idx], name: e.target.value };
+                                    setSettingsForm({ ...settingsForm, ingredients: updated });
+                                  }}
+                                  className="w-full px-4 py-2 bg-white border border-[#E6D5C3]/40 rounded-xl text-sm focus:outline-none focus:border-[#3A2E26] font-bold text-[#3A2E26]"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/50 mb-1">Icon</label>
+                                <select
+                                  value={ing.icon || 'Sparkles'}
+                                  onChange={(e) => {
+                                    const updated = [...settingsForm.ingredients];
+                                    updated[idx] = { ...updated[idx], icon: e.target.value };
+                                    setSettingsForm({ ...settingsForm, ingredients: updated });
+                                  }}
+                                  className="w-full px-4 py-2 bg-white border border-[#E6D5C3]/40 rounded-xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                                >
+                                  <option value="Sparkles">✨ Sparkles</option>
+                                  <option value="HeartHandshake">🤝 Heart</option>
+                                  <option value="Flower2">🌸 Flower</option>
+                                  <option value="Droplets">💧 Droplets</option>
+                                  <option value="Leaf">🍃 Leaf</option>
+                                </select>
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/50 mb-1">Benefit Description</label>
+                              <textarea
+                                placeholder="Describe the ingredient benefit..."
+                                required
+                                rows="2"
+                                value={ing.benefit}
+                                onChange={(e) => {
+                                  const updated = [...settingsForm.ingredients];
+                                  updated[idx] = { ...updated[idx], benefit: e.target.value };
+                                  setSettingsForm({ ...settingsForm, ingredients: updated });
                                 }}
                                 className="w-full px-4 py-2.5 bg-white border border-[#E6D5C3]/40 rounded-xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
                               />

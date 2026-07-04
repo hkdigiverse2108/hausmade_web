@@ -123,6 +123,15 @@ async def get_site_settings():
                 ]
                 settings["faqs"] = default_faqs
                 await settings_collection.update_one({"key": "site_settings"}, {"$set": {"faqs": default_faqs}})
+            if "ingredients" not in settings:
+                default_ingredients = [
+                    {"name": "Pure Kashmiri Kesar (Saffron)", "benefit": "Known for skin-glowing properties, reduces post-shave hyperpigmentation and calms razor burn.", "icon": "Sparkles"},
+                    {"name": "Organic Shea Butter Cushion", "benefit": "Creates a rich protective barrier on skin so razors glide smoothly without nicks or irritation.", "icon": "HeartHandshake"},
+                    {"name": "Steam-Distilled Sandalwood Oil", "benefit": "Provides an authentic earthy botanical scent while naturally calming shaved skin follicles.", "icon": "Flower2"},
+                    {"name": "Cold-Pressed Coconut Glycerin", "benefit": "Whips into a dense micro-foam lather that holds moisture against hair follicles for a close shave.", "icon": "Droplets"}
+                ]
+                settings["ingredients"] = default_ingredients
+                await settings_collection.update_one({"key": "site_settings"}, {"$set": {"ingredients": default_ingredients}})
             
         if "_id" in settings:
             settings["_id"] = str(settings["_id"])

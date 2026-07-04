@@ -112,6 +112,11 @@ class FAQItem(BaseModel):
     q: str
     a: str
 
+class IngredientItem(BaseModel):
+    name: str
+    benefit: str
+    icon: str = "Sparkles"
+
 class SiteSettingsModel(BaseModel):
     logo_url: str = ""
     announcement: AnnouncementSettings
@@ -120,6 +125,7 @@ class SiteSettingsModel(BaseModel):
     contact: ContactSettings
     subscription: SubscriptionSettings
     faqs: List[FAQItem] = []
+    ingredients: List[IngredientItem] = []
 
 class ReviewSubmitModel(BaseModel):
     productId: str

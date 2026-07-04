@@ -1,50 +1,38 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Sparkles, Flower2, Droplets, HeartHandshake, CheckCircle2, XCircle, Leaf } from 'lucide-react';
 
-export default function Ingredients() {
+export default function Ingredients({ settings }) {
   const [visibleCards, setVisibleCards] = useState([]);
   const [tableVisible, setTableVisible] = useState(false);
   const sectionRef = useRef(null);
   const tableRef = useRef(null);
 
-  const ingredients = [
-    {
-      name: 'Pure Kashmiri Kesar (Saffron)',
-      icon: Sparkles,
-      benefit: 'Known for skin-glowing properties, reduces post-shave hyperpigmentation and calms razor burn.',
-      gradient: 'from-[#C97C5D]/20 to-[#E8A87C]/10',
-      iconBg: 'bg-gradient-to-br from-[#C97C5D] to-[#E8A87C]',
-      glow: 'shadow-[#C97C5D]/20',
-      accent: '#C97C5D'
-    },
-    {
-      name: 'Organic Shea Butter Cushion',
-      icon: HeartHandshake,
-      benefit: 'Creates a rich protective barrier on skin so razors glide smoothly without nicks or irritation.',
-      gradient: 'from-[#7A8B6F]/20 to-[#A3B899]/10',
-      iconBg: 'bg-gradient-to-br from-[#7A8B6F] to-[#A3B899]',
-      glow: 'shadow-[#7A8B6F]/20',
-      accent: '#7A8B6F'
-    },
-    {
-      name: 'Steam-Distilled Sandalwood Oil',
-      icon: Flower2,
-      benefit: 'Provides an authentic earthy botanical scent while naturally calming shaved skin follicles.',
-      gradient: 'from-[#8C7A5B]/20 to-[#B8A88A]/10',
-      iconBg: 'bg-gradient-to-br from-[#8C7A5B] to-[#B8A88A]',
-      glow: 'shadow-[#8C7A5B]/20',
-      accent: '#8C7A5B'
-    },
-    {
-      name: 'Cold-Pressed Coconut Glycerin',
-      icon: Droplets,
-      benefit: 'Whips into a dense micro-foam lather that holds moisture against hair follicles for a close shave.',
-      gradient: 'from-[#5B8C7A]/20 to-[#89B8A3]/10',
-      iconBg: 'bg-gradient-to-br from-[#5B8C7A] to-[#89B8A3]',
-      glow: 'shadow-[#5B8C7A]/20',
-      accent: '#5B8C7A'
-    }
+  // Icon mapping for dynamic ingredients from admin
+  const iconMap = { Sparkles, Flower2, Droplets, HeartHandshake, Leaf, CheckCircle2 };
+
+  // Visual style presets that cycle through for each ingredient
+  const stylePresets = [
+    { gradient: 'from-[#C97C5D]/20 to-[#E8A87C]/10', iconBg: 'bg-gradient-to-br from-[#C97C5D] to-[#E8A87C]', glow: 'shadow-[#C97C5D]/20', accent: '#C97C5D' },
+    { gradient: 'from-[#7A8B6F]/20 to-[#A3B899]/10', iconBg: 'bg-gradient-to-br from-[#7A8B6F] to-[#A3B899]', glow: 'shadow-[#7A8B6F]/20', accent: '#7A8B6F' },
+    { gradient: 'from-[#8C7A5B]/20 to-[#B8A88A]/10', iconBg: 'bg-gradient-to-br from-[#8C7A5B] to-[#B8A88A]', glow: 'shadow-[#8C7A5B]/20', accent: '#8C7A5B' },
+    { gradient: 'from-[#5B8C7A]/20 to-[#89B8A3]/10', iconBg: 'bg-gradient-to-br from-[#5B8C7A] to-[#89B8A3]', glow: 'shadow-[#5B8C7A]/20', accent: '#5B8C7A' },
   ];
+
+  const fallbackIngredients = [
+    { name: 'Pure Kashmiri Kesar (Saffron)', icon: 'Sparkles', benefit: 'Known for skin-glowing properties, reduces post-shave hyperpigmentation and calms razor burn.' },
+    { name: 'Organic Shea Butter Cushion', icon: 'HeartHandshake', benefit: 'Creates a rich protective barrier on skin so razors glide smoothly without nicks or irritation.' },
+    { name: 'Steam-Distilled Sandalwood Oil', icon: 'Flower2', benefit: 'Provides an authentic earthy botanical scent while naturally calming shaved skin follicles.' },
+    { name: 'Cold-Pressed Coconut Glycerin', icon: 'Droplets', benefit: 'Whips into a dense micro-foam lather that holds moisture against hair follicles for a close shave.' }
+  ];
+
+  const rawIngredients = settings?.ingredients && settings.ingredients.length > 0 ? settings.ingredients : fallbackIngredients;
+
+  // Merge dynamic data with visual styles
+  const ingredients = rawIngredients.map((item, idx) => ({
+    ...item,
+    icon: iconMap[item.icon] || Sparkles,
+    ...stylePresets[idx % stylePresets.length]
+  }));
 
   const comparison = [
     { feature: 'Dense Shaving Cushion Lather', commercial: false, pure: true, detail: 'Commercial foams collapse quickly; PureBotanica holds dense foam' },
