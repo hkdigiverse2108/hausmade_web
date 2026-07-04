@@ -14,8 +14,8 @@ export default function CartDrawer({ isOpen, onClose, cartItems, onUpdateQuantit
         onClick={onClose} 
       />
 
-      <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-        <div className="w-screen max-w-md bg-[#F5F1E8] shadow-2xl flex flex-col justify-between border-l border-[#3A2E26]/10 animate-slideLeft">
+      <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-10">
+        <div className="w-screen max-w-[100vw] sm:max-w-md bg-[#F5F1E8] shadow-2xl flex flex-col justify-between border-l border-[#3A2E26]/10 animate-slideLeft">
           
           {/* Header */}
           <div className="p-6 bg-white border-b border-[#3A2E26]/10 flex items-center justify-between">

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import AnnouncementBanner from './components/AnnouncementBanner';
 import Header from './components/Header';
 import Hero from './components/Hero';
@@ -12,16 +12,189 @@ import Footer from './components/Footer';
 import CartDrawer from './components/CartDrawer';
 import CheckoutModal from './components/CheckoutModal';
 import LoginModal from './components/LoginModal';
+import OrderHistoryModal from './components/OrderHistoryModal';
+import ProfileModal from './components/ProfileModal';
+import WishlistModal from './components/WishlistModal';
+import AdminPanel from './components/AdminPanel';
+import ReviewModal from './components/ReviewModal';
+import { getUserProfile, getProducts, getSiteSettings } from './utils/api';
+
+
 import SocialProofToast from './components/SocialProofToast';
 import StickyMobileBar from './components/StickyMobileBar';
+import { useAuth0 } from '@auth0/auth0-react';
+import { Sparkles, X } from 'lucide-react';
+
+
 
 export default function App() {
+  const { user: auth0User, isAuthenticated: isAuth0Authenticated, logout: auth0Logout, getIdTokenClaims } = useAuth0();
+  const [localUser, setLocalUser] = useState(() => {
+    const saved = localStorage.getItem('hausmade_user');
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [localToken, setLocalToken] = useState(() => localStorage.getItem('hausmade_token'));
+  const [auth0Token, setAuth0Token] = useState(null);
+  
   const [cartItems, setCartItems] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
-  const [user, setUser] = useState(null);
-  const [wishlistCount, setWishlistCount] = useState(1); // Default saved item
+  const [isOrderHistoryOpen, setIsOrderHistoryOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [wishlistItems, setWishlistItems] = useState(() => {
+    const saved = localStorage.getItem('hausmade_wishlist');
+    return saved ? JSON.parse(saved) : [
+      {
+        id: 'pack-3',
+        title: 'Pack of 3',
+        count: 3,
+        basePrice: 717.00,
+        savingsBadge: 'Save 20%',
+        popular: true,
+        bestValue: false,
+        image: '/images/pack-3.png'
+      }
+    ];
+  });
+  const [isWishlistOpen, setIsWishlistOpen] = useState(false);
+  const [openCheckoutAfterLogin, setOpenCheckoutAfterLogin] = useState(false);
+  const [notification, setNotification] = useState(null);
+  const [products, setProducts] = useState(PACK_OPTIONS);
+  const [showAdminView, setShowAdminView] = useState(true);
+  const [isReviewOpen, setIsReviewOpen] = useState(false);
+  const [reviewProduct, setReviewProduct] = useState(null);
+
+  const handleOpenWriteReview = useCallback((product) => {
+    setIsOrderHistoryOpen(false);
+    setReviewProduct(product);
+    setIsReviewOpen(true);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('hausmade_wishlist', JSON.stringify(wishlistItems));
+  }, [wishlistItems]);
+  const [siteSettings, setSiteSettings] = useState({
+    announcement: {
+      text: "Use promo code HAUS10 for extra 10% OFF at checkout!",
+      active: true
+    },
+    hero: {
+      badge: "Hausmade™ Luxury Bath Element",
+      title_normal_1: "Reveal your",
+      title_italic: "artisanal beauty",
+      title_normal_2: "with Kesar.",
+      description: "Purely handmade cleansing bar infused with real saffron extract, camphor, and 100% coconut oil. Naturally removes sun tan, fades dark spots, and brightens your daily complexing glow."
+    },
+    story: {
+      title: "From our kitchen counter to your daily sanctuary.",
+      subtitle: "Our Heritage",
+      paragraph1: "PureBotanica began in the autumn of 2018 when our founder Elena could not find a commercial soap that didn’t leave her skin dry, itchy, and irritated by synthetic dyes and fake fragrances.",
+      paragraph2: "We went back to ancient cold-process saponification roots: slowly combining raw organic butter, wildflower honey, and steam-distilled essential oils. Every single bar is poured by hand, cut with guitar wire, and cured for 6 full weeks to ensure a long-lasting, ultra-creamy bar."
+    },
+    contact: {
+      email: "info@hausmade.in",
+      phone: "+91 76000 81431",
+      address: "305 Muktidham Society, Near Sitanagar Chowk, Surat - 395 010 (Guj.)"
+    }
+  });
+
+  const fetchProductsList = () => {
+    getProducts()
+      .then(data => {
+        if (data && data.length > 0) {
+          setProducts(data);
+        }
+      })
+      .catch(err => console.error("Error loading products:", err));
+  };
+
+  const fetchSiteSettings = () => {
+    getSiteSettings()
+      .then(data => {
+        if (data && data.announcement) {
+          setSiteSettings(data);
+        }
+      })
+      .catch(err => console.error("Error loading site settings:", err));
+  };
+
+  useEffect(() => {
+    fetchProductsList();
+    fetchSiteSettings();
+  }, []);
+
+  const showNotification = useCallback((message, type = 'success') => {
+    setNotification({ message, type });
+  }, []);
+
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => setNotification(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
+
+
+
+  useEffect(() => {
+    if (isAuth0Authenticated) {
+      getIdTokenClaims().then(claims => {
+        if (claims) {
+          setAuth0Token(claims.__raw);
+        }
+      }).catch(err => console.error("Error fetching Auth0 token:", err));
+    } else {
+      setAuth0Token(null);
+    }
+  }, [isAuth0Authenticated, getIdTokenClaims]);
+
+  const user = auth0User || localUser;
+  const isAuthenticated = isAuth0Authenticated || !!localUser;
+  const activeToken = auth0Token || localToken;
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      const pending = localStorage.getItem('hausmade_pending_checkout');
+      if (pending === 'true') {
+        setIsCheckoutOpen(true);
+        localStorage.removeItem('hausmade_pending_checkout');
+      }
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (activeToken) {
+      getUserProfile(activeToken).then(data => {
+        setLocalUser(data.user);
+        localStorage.setItem('hausmade_user', JSON.stringify(data.user));
+      }).catch(err => console.error("Error syncing profile:", err));
+    }
+  }, [activeToken]);
+
+
+  const handleLogout = useCallback(() => {
+    if (isAuth0Authenticated) {
+      auth0Logout({ logoutParams: { returnTo: window.location.origin } });
+    } else {
+      localStorage.removeItem('hausmade_user');
+      localStorage.removeItem('hausmade_token');
+      setLocalUser(null);
+      setLocalToken(null);
+    }
+  }, [isAuth0Authenticated, auth0Logout]);
+
+  const handleOpenCheckout = () => {
+    if (isAuthenticated) {
+      setIsCheckoutOpen(true);
+    } else {
+      localStorage.setItem('hausmade_pending_checkout', 'true');
+      setOpenCheckoutAfterLogin(true);
+      setIsLoginOpen(true);
+    }
+  };
+
+
   
   // Product state shared between selector and mobile bar
   const [selectedPack, setSelectedPack] = useState('pack-3');
@@ -44,6 +217,39 @@ export default function App() {
     setIsCartOpen(true);
   };
 
+  const handleBuyNow = (itemToAdd) => {
+    setCartItems(prev => {
+      const existingIdx = prev.findIndex(i => i.packId === itemToAdd.packId && i.isSubscription === itemToAdd.isSubscription);
+      if (existingIdx > -1) {
+        const updated = [...prev];
+        const newQty = updated[existingIdx].quantity + itemToAdd.quantity;
+        const newTotal = (parseFloat(itemToAdd.packPrice) * newQty).toFixed(2);
+        updated[existingIdx] = { ...updated[existingIdx], quantity: newQty, totalPrice: newTotal };
+        return updated;
+      }
+      return [...prev, itemToAdd];
+    });
+    handleOpenCheckout();
+  };
+
+  const handleAddToWishlist = (packItem) => {
+    setWishlistItems(prev => {
+      const exists = prev.some(item => item.id === packItem.id);
+      if (exists) {
+        showNotification(`${packItem.title} removed from wishlist`, 'info');
+        return prev.filter(item => item.id !== packItem.id);
+      } else {
+        showNotification(`${packItem.title} added to wishlist!`, 'success');
+        return [...prev, packItem];
+      }
+    });
+  };
+
+  const handleRemoveFromWishlist = (packItem) => {
+    setWishlistItems(prev => prev.filter(item => item.id !== packItem.id));
+    showNotification(`${packItem.title} removed from wishlist`, 'info');
+  };
+
   const handleUpdateQuantity = (index, newQty) => {
     if (newQty <= 0) {
       handleRemoveItem(index);
@@ -62,7 +268,8 @@ export default function App() {
     setCartItems(prev => prev.filter((_, i) => i !== index));
   };
 
-  const currentPack = PACK_OPTIONS.find(p => p.id === selectedPack) || PACK_OPTIONS[2];
+  const activeProducts = products.filter(p => p.active !== false);
+  const currentPack = activeProducts.find(p => p.id === selectedPack) || activeProducts[2] || activeProducts[0] || PACK_OPTIONS[0];
   const discountMultiplier = isSubscription ? 0.85 : 1.0;
   const currentPrice = (currentPack.basePrice * discountMultiplier).toFixed(2);
 
@@ -71,25 +278,88 @@ export default function App() {
     if (el) el.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const handleViewStorefront = useCallback(() => {
+    setShowAdminView(false);
+    fetchProductsList();
+  }, []);
+
+  const isAdminView = user?.is_admin && showAdminView;
+
   return (
+    <>
+      {/* Notification Toast — shared between admin and storefront */}
+      {notification && (
+        <div className="fixed top-6 right-4 z-[9999] bg-[#FDFBF7]/95 backdrop-blur-md p-4 rounded-2xl border border-[#3A2E26]/10 shadow-2xl max-w-xs flex items-center gap-3 animate-slideLeft text-[#3A2E26]">
+          <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+            notification.type === 'success' ? 'bg-[#7A8B6F]/10 text-[#7A8B6F]' : 'bg-[#C97C5D]/10 text-[#C97C5D]'
+          }`}>
+            <Sparkles className="w-4 h-4 animate-pulse" />
+          </div>
+          <div className="flex-1 text-xs font-bold leading-tight text-left">
+            {notification.message}
+          </div>
+          <button onClick={() => setNotification(null)} className="text-[#3A2E26]/40 hover:text-[#3A2E26] cursor-pointer">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* Admin Panel — kept mounted when admin, visibility toggled */}
+      {user?.is_admin && (
+        <div style={{ display: isAdminView ? 'block' : 'none' }}>
+          <AdminPanel 
+            token={activeToken} 
+            onLogout={handleLogout} 
+            showNotification={showNotification} 
+            onViewStorefront={handleViewStorefront}
+            settings={siteSettings}
+            onUpdateSettings={fetchSiteSettings}
+          />
+        </div>
+      )}
+
+      {/* Storefront — hidden when admin view is active */}
+      {!isAdminView && (
     <div className="min-h-screen flex flex-col selection:bg-[#7A8B6F] selection:text-white">
+      {user?.is_admin && (
+        <div className="bg-purple-950 text-[#E6D5C3] px-4 py-2 flex items-center justify-between text-xs font-semibold z-[100] border-b border-[#E6D5C3]/20">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-green-500 animate-ping"></span>
+            <span>Logged in as <strong>Administrator</strong> (Storefront Preview Mode)</span>
+          </div>
+          <button 
+            onClick={() => setShowAdminView(true)}
+            className="bg-[#E6D5C3]/15 hover:bg-[#E6D5C3]/30 text-white px-3 py-1 rounded-lg font-bold transition-all text-[10px] uppercase tracking-wider cursor-pointer border border-[#E6D5C3]/30"
+          >
+            Go to Admin Dashboard
+          </button>
+        </div>
+      )}
       <div className="sticky top-0 z-50 shadow-xs">
-        <AnnouncementBanner />
+        <AnnouncementBanner settings={siteSettings.announcement} />
         <Header
           cartCount={cartItems.reduce((acc, item) => acc + item.quantity, 0)}
           onOpenCart={() => setIsCartOpen(true)}
-          wishlistCount={wishlistCount}
-          onOpenWishlist={() => alert(`You have ${wishlistCount} saved Hausmade™ items in your wishlist!`)}
-          onOpenLogin={() => setIsLoginOpen(true)}
+          wishlistCount={wishlistItems.length}
+          onOpenWishlist={() => setIsWishlistOpen(true)}
           user={user}
+          isAuthenticated={isAuthenticated}
+          onLogout={handleLogout}
+          onOpenLogin={() => setIsLoginOpen(true)}
+          onOpenOrderHistory={() => setIsOrderHistoryOpen(true)}
+          onOpenProfile={() => setIsProfileOpen(true)}
         />
       </div>
 
       <main className="flex-1">
-        <Hero />
-        <SubscribeSave />
+        <Hero settings={siteSettings.hero} />
+        <SubscribeSave settings={siteSettings.subscription} />
         <ProductSelector
+          products={products}
           onAddToCart={handleAddToCart}
+          onBuyNow={handleBuyNow}
+          onAddToWishlist={handleAddToWishlist}
+          wishlistItems={wishlistItems}
           selectedPack={selectedPack}
           setSelectedPack={setSelectedPack}
           isSubscription={isSubscription}
@@ -100,12 +370,12 @@ export default function App() {
           setActiveImageIndex={setActiveImageIndex}
         />
         <Ingredients />
-        <Story />
+        <Story settings={siteSettings.story} />
         <Reviews />
         <FAQ />
       </main>
 
-      <Footer />
+      <Footer settings={siteSettings.contact} />
 
       <CartDrawer
         isOpen={isCartOpen}
@@ -113,7 +383,7 @@ export default function App() {
         cartItems={cartItems}
         onUpdateQuantity={handleUpdateQuantity}
         onRemoveItem={handleRemoveItem}
-        onOpenCheckout={() => setIsCheckoutOpen(true)}
+        onOpenCheckout={handleOpenCheckout}
       />
 
       <CheckoutModal
@@ -121,15 +391,69 @@ export default function App() {
         onClose={() => setIsCheckoutOpen(false)}
         cartItems={cartItems}
         onOrderComplete={() => setCartItems([])}
+        token={activeToken}
+        user={user}
       />
 
       <LoginModal
         isOpen={isLoginOpen}
         onClose={() => setIsLoginOpen(false)}
-        onLoginSuccess={(userData) => setUser(userData)}
+        showNotification={showNotification}
+        onLoginSuccess={(userData) => {
+          setLocalUser(userData);
+          setLocalToken(localStorage.getItem('hausmade_token'));
+          if (openCheckoutAfterLogin) {
+            setIsCheckoutOpen(true);
+            setOpenCheckoutAfterLogin(false);
+            localStorage.removeItem('hausmade_pending_checkout');
+          }
+        }}
       />
 
+      <OrderHistoryModal
+        isOpen={isOrderHistoryOpen}
+        onClose={() => setIsOrderHistoryOpen(false)}
+        token={activeToken}
+        onWriteReview={handleOpenWriteReview}
+      />
+
+      <ReviewModal
+        isOpen={isReviewOpen}
+        onClose={() => setIsReviewOpen(false)}
+        product={reviewProduct}
+        token={activeToken}
+        showNotification={showNotification}
+      />
+
+      <ProfileModal
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        user={user}
+        token={activeToken}
+        onProfileUpdate={(updatedUser) => {
+          setLocalUser(updatedUser);
+        }}
+        showNotification={showNotification}
+        wishlistItems={wishlistItems}
+        onRemoveFromWishlist={handleRemoveFromWishlist}
+        onAddToCart={handleAddToCart}
+        onBuyNow={handleBuyNow}
+        onLogout={handleLogout}
+      />
+
+      <WishlistModal
+        isOpen={isWishlistOpen}
+        onClose={() => setIsWishlistOpen(false)}
+        wishlistItems={wishlistItems}
+        onRemoveFromWishlist={handleRemoveFromWishlist}
+        onAddToCart={handleAddToCart}
+        onBuyNow={handleBuyNow}
+      />
+
+
+
       <SocialProofToast />
+
 
       <StickyMobileBar
         packTitle={currentPack.title}
@@ -151,5 +475,7 @@ export default function App() {
         onScrollToSelector={scrollToSelector}
       />
     </div>
+      )}
+    </>
   );
 }

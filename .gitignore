@@ -22,3 +22,25 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment Variables & Secrets
+.env
+backend/.env
+app/config/*.env
+
+# Local Databases
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!.oxlintrc.json
+!*plugin.json
+!*metadata.json
+!*transcript.json
+!*skills.json
+!*plugin.json
+!*metadata.json
+!*transcript.json
+!*skills.json
+!*db.json
+!*settings.json

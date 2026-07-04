@@ -1,30 +1,36 @@
 import React from 'react';
 import { Leaf, Award, ShieldCheck, ArrowRight, Star } from 'lucide-react';
 
-export default function Hero() {
+export default function Hero({ settings }) {
+  const badge = settings?.badge || "Hausmade™ Luxury Bath Element";
+  const title_normal_1 = settings?.title_normal_1 || "Reveal your";
+  const title_italic = settings?.title_italic || "artisanal beauty";
+  const title_normal_2 = settings?.title_normal_2 || "with Kesar.";
+  const description = settings?.description || "Purely handmade cleansing bar infused with real saffron extract, camphor, and 100% coconut oil. Naturally removes sun tan, fades dark spots, and brightens your daily complexing glow.";
+
   return (
-    <section className="pt-28 pb-16 lg:pt-36 lg:pb-24 relative overflow-hidden">
+    <section className="pt-10 pb-10 sm:pt-16 sm:pb-16 lg:pt-20 lg:pb-24 relative overflow-hidden">
       {/* Soft background glow accents */}
       <div className="absolute top-10 left-1/2 -translate-x-1/2 w-96 h-96 bg-[#7A8B6F]/15 rounded-full blur-3xl -z-10 pointer-events-none" />
       <div className="absolute top-40 right-10 w-80 h-80 bg-[#C97C5D]/15 rounded-full blur-3xl -z-10 pointer-events-none" />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-8 items-center">
           
           {/* Left Column: Headline & Value Prop */}
           <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
             
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#C97C5D]/15 text-[#C97C5D] text-xs sm:text-sm font-semibold tracking-wide uppercase">
               <Star className="w-4 h-4 fill-current" />
-              <span>Hausmade™ Luxury Bath Element</span>
+              <span>{badge}</span>
             </div>
 
-            <h1 className="font-serif-brand text-4xl sm:text-5xl lg:text-6xl font-normal tracking-tight text-[#3A2E26] leading-[1.15]">
-              Reveal your <span className="italic font-light text-[#C97C5D]">artisanal beauty</span> with Kesar.
+            <h1 className="font-serif-brand text-3xl sm:text-5xl lg:text-6xl font-normal tracking-tight text-[#3A2E26] leading-[1.15]">
+              {title_normal_1} <span className="italic font-light text-[#C97C5D]">{title_italic}</span> {title_normal_2}
             </h1>
 
-            <p className="text-lg sm:text-xl text-[#3A2E26]/80 max-w-2xl mx-auto lg:mx-0 font-light leading-relaxed">
-              Purely handmade cleansing bar infused with real saffron extract, camphor, and 100% coconut oil. Naturally removes sun tan, fades dark spots, and brightens your daily complexing glow.
+            <p className="text-base sm:text-xl text-[#3A2E26]/80 max-w-2xl mx-auto lg:mx-0 font-light leading-relaxed">
+              {description}
             </p>
 
 
@@ -47,14 +53,14 @@ export default function Hero() {
             </div>
 
             {/* Social proof quick rating */}
-            <div className="pt-4 flex items-center justify-center lg:justify-start gap-3 text-sm text-[#3A2E26]/70">
+            <div className="pt-4 flex flex-wrap items-center justify-center lg:justify-start gap-2 sm:gap-3 text-xs sm:text-sm text-[#3A2E26]/70">
               <div className="flex text-[#C97C5D]">
                 {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-4 h-4 fill-current" />
+                  <Star key={i} className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current" />
                 ))}
               </div>
               <span className="font-medium text-[#3A2E26]">4.8 / 5.0 rating</span>
-              <span>•</span>
+              <span className="hidden sm:inline">•</span>
               <span>Over 2,400+ happy bathers</span>
             </div>
           </div>
@@ -67,11 +73,11 @@ export default function Hero() {
                 <img
                   src="/images/soap-hero.png"
                   alt="Handcrafted Botanical Soap Bar"
-                  className="w-full h-[420px] sm:h-[480px] object-cover hover:scale-105 transition-transform duration-700"
+                  className="w-full h-[280px] sm:h-[420px] md:h-[480px] object-cover hover:scale-105 transition-transform duration-700"
                 />
-                <div className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-md p-4 rounded-2xl border border-white/40 shadow-lg flex items-center justify-between">
+                <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4 bg-white/90 backdrop-blur-md p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-white/40 shadow-lg flex items-center justify-between gap-2">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-[#C97C5D]">Royal Saffron Formula</p>
+                    <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-[#C97C5D]">Royal Saffron Formula</p>
                     <p className="font-serif-brand font-bold text-[#3A2E26] text-sm sm:text-base">Pure Kesar Artisanal Shaving Puck</p>
 
                   </div>
@@ -84,7 +90,7 @@ export default function Hero() {
         </div>
 
         {/* Trust Strip Beneath Hero */}
-        <div className="mt-16 pt-8 border-t border-[#3A2E26]/10 grid grid-cols-1 md:grid-cols-3 gap-6 text-center md:text-left">
+        <div className="mt-10 sm:mt-16 pt-6 sm:pt-8 border-t border-[#3A2E26]/10 grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 text-center sm:text-left">
           <div className="flex items-center justify-center md:justify-start gap-3.5 p-3 rounded-2xl bg-white/40 border border-white/60">
             <div className="p-2.5 rounded-xl bg-[#7A8B6F]/15 text-[#7A8B6F]">
               <Leaf className="w-6 h-6" />

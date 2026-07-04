@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+pymongo
+pydantic
+python-dotenv
+bcrypt
+pyjwt
+cloudinary
+python-multipart
+cryptography
+motor
+
+

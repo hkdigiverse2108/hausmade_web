@@ -2,26 +2,30 @@ import React, { useState } from 'react';
 import { Sparkles, Send, Heart, Share2, Globe, MessageCircle } from 'lucide-react';
 
 
-export default function Footer() {
-  const [email, setEmail] = useState('');
+export default function Footer({ settings }) {
+  const [subscriberEmail, setSubscriberEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
+
+  const contactEmail = settings?.email || "info@hausmade.in";
+  const contactPhone = settings?.phone || "+91 76000 81431";
+  const contactAddress = settings?.address || "305 Muktidham Society, Near Sitanagar Chowk, Surat - 395 010 (Guj.)";
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (email) {
+    if (subscriberEmail) {
       setSubscribed(true);
-      setEmail('');
+      setSubscriberEmail('');
     }
   };
 
   return (
     <footer className="bg-[#3A2E26] text-[#F5F1E8] pt-16 pb-12 border-t border-[#3A2E26]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-12 pb-12 border-b border-white/10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-8 sm:gap-12 pb-12 border-b border-white/10">
           
           {/* Brand Col */}
-          <div className="md:col-span-4 space-y-4">
+          <div className="sm:col-span-2 md:col-span-4 space-y-4">
             <a href="#" className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-full bg-[#C97C5D] flex items-center justify-center text-white">
                 <Sparkles className="w-5 h-5" />
@@ -38,12 +42,12 @@ export default function Footer() {
             </p>
             <div className="pt-2 text-xs text-[#F5F1E8]/60 space-y-1">
               <p><strong className="text-white">Marketing By:</strong> HAUSMADE</p>
-              <p>305 Muktidham Society, Near Sitanagar Chowk, Surat - 395 010 (Guj.)</p>
+              <p>{contactAddress}</p>
             </div>
           </div>
 
           {/* Nav Links Col */}
-          <div className="md:col-span-4 grid grid-cols-2 gap-8">
+          <div className="sm:col-span-1 md:col-span-4 grid grid-cols-2 gap-6 sm:gap-8">
             <div>
               <h4 className="font-serif-brand font-bold text-sm text-white uppercase tracking-wider mb-4">Quick Links</h4>
               <ul className="space-y-2.5 text-sm text-[#F5F1E8]/70">
@@ -57,8 +61,8 @@ export default function Footer() {
             <div>
               <h4 className="font-serif-brand font-bold text-sm text-white uppercase tracking-wider mb-4">Customer Care</h4>
               <ul className="space-y-2.5 text-xs text-[#F5F1E8]/70">
-                <li><strong className="text-white block mb-0.5">Helpline:</strong> +91 76000 81431</li>
-                <li><strong className="text-white block mb-0.5">Email:</strong> info@hausmade.in</li>
+                <li><strong className="text-white block mb-0.5">Helpline:</strong> {contactPhone}</li>
+                <li><strong className="text-white block mb-0.5">Email:</strong> {contactEmail}</li>
                 <li><strong className="text-white block mb-0.5">Website:</strong> www.hausmade.in</li>
                 <li><span className="text-[#C97C5D] font-semibold">@HAUSMADE_SOAP</span></li>
               </ul>
@@ -67,7 +71,7 @@ export default function Footer() {
 
 
           {/* Newsletter Col */}
-          <div className="md:col-span-4 space-y-4">
+          <div className="sm:col-span-1 md:col-span-4 space-y-4">
             <h4 className="font-serif-brand font-bold text-sm text-white uppercase tracking-wider">Join The Botanical Journal</h4>
             <p className="text-sm text-[#F5F1E8]/70 font-light">
               Subscribe for secret small-batch batch drops, wellness tips, and 10% off your first order.
@@ -82,8 +86,8 @@ export default function Footer() {
                 <input
                   type="email"
                   required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={subscriberEmail}
+                  onChange={(e) => setSubscriberEmail(e.target.value)}
                   placeholder="Enter your email address..."
                   className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-[#7A8B6F]"
                 />
@@ -100,7 +104,7 @@ export default function Footer() {
             {/* Payment Badges Mock */}
             <div className="pt-2">
               <span className="text-[11px] text-white/40 block mb-2 uppercase tracking-wider">Guaranteed Safe Checkout</span>
-              <div className="flex items-center space-x-2 text-xs text-white/60 font-semibold">
+              <div className="flex flex-wrap items-center gap-2 text-xs text-white/60 font-semibold">
                 <span className="px-2 py-1 bg-white/10 rounded">VISA</span>
                 <span className="px-2 py-1 bg-white/10 rounded">Mastercard</span>
                 <span className="px-2 py-1 bg-white/10 rounded">Amex</span>

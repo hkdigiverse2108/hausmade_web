@@ -1,13 +1,25 @@
 import React from 'react';
 import { RefreshCw, Truck, Calendar, Sparkles, ShieldCheck, Tag, ArrowRight } from 'lucide-react';
 
-export default function SubscribeSave() {
+export default function SubscribeSave({ settings }) {
+  const badge = settings?.badge || "Subscribe & Save Club";
+  const title_normal = settings?.title_normal || "Never Run Out.";
+  const title_highlight = settings?.title_highlight || "Save 15% On Every Delivery";
+  const description = settings?.description || "Enjoy fresh, 100% cold-cured botanical soaps delivered directly to your door. Completely flexible schedule with zero long-term commitment.";
+  const perk1 = settings?.perk1 || "Free Priority Delivery";
+  const perk2 = settings?.perk2 || "Flexible 1, 2, 3 Mo. Cycle";
+  const perk3 = settings?.perk3 || "1-Click Easy Cancellation";
+  const card_badge = settings?.card_badge || "Instant VIP Perk";
+  const card_title = settings?.card_title || "Ready For Lather On Autopilot?";
+  const card_description = settings?.card_description || "Select subscription on any soap pack below to lock in your 15% discount.";
+  const button_text = settings?.button_text || "Configure Your Subscription";
+
   return (
     <section className="py-12 lg:py-16 bg-[#F5F1E8] relative overflow-hidden">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         
         {/* Main Banner Card */}
-        <div className="relative bg-gradient-to-br from-[#3A2E26] via-[#2D231C] to-[#3A2E26] rounded-3xl p-8 sm:p-12 border border-[#C97C5D]/30 shadow-2xl overflow-hidden text-white">
+        <div className="relative bg-gradient-to-br from-[#3A2E26] via-[#2D231C] to-[#3A2E26] rounded-2xl sm:rounded-3xl p-5 sm:p-8 md:p-12 border border-[#C97C5D]/30 shadow-2xl overflow-hidden text-white">
           
           {/* Ambient Background Decorative Glows */}
           <div className="absolute -top-24 -right-24 w-80 h-80 bg-[#C97C5D]/25 rounded-full blur-3xl pointer-events-none" />
@@ -21,19 +33,19 @@ export default function SubscribeSave() {
               {/* Badge */}
               <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#C97C5D]/20 border border-[#C97C5D]/40 text-[#E8A589] text-xs font-semibold uppercase tracking-widest backdrop-blur-md shadow-xs">
                 <RefreshCw className="w-3.5 h-3.5 animate-spin-slow text-[#C97C5D]" /> 
-                <span>Subscribe & Save Club</span>
+                <span>{badge}</span>
               </div>
 
               {/* Title */}
-              <h2 className="font-serif-brand text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-white leading-tight">
-                Never Run Out. <br className="hidden sm:inline" />
+              <h2 className="font-serif-brand text-2xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-white leading-tight">
+                {title_normal} <br className="hidden sm:inline" />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#E8A589] to-[#D88A6E]">
-                  Save 15% On Every Delivery
+                  {title_highlight}
                 </span>
               </h2>
 
               <p className="text-base sm:text-lg text-white/80 max-w-xl leading-relaxed font-light">
-                Enjoy fresh, 100% cold-cured botanical soaps delivered directly to your door. Completely flexible schedule with zero long-term commitment.
+                {description}
               </p>
 
               {/* Perks Grid */}
@@ -42,21 +54,21 @@ export default function SubscribeSave() {
                   <div className="p-2 rounded-xl bg-[#C97C5D]/20 text-[#E8A589]">
                     <Truck className="w-4 h-4" />
                   </div>
-                  <span className="text-xs sm:text-sm font-medium text-white/90">Free Priority Delivery</span>
+                  <span className="text-xs sm:text-sm font-medium text-white/90">{perk1}</span>
                 </div>
 
                 <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xs hover:bg-white/10 transition-colors">
                   <div className="p-2 rounded-xl bg-[#7A8B6F]/25 text-[#A3B897]">
                     <Calendar className="w-4 h-4" />
                   </div>
-                  <span className="text-xs sm:text-sm font-medium text-white/90">Flexible 1, 2, 3 Mo. Cycle</span>
+                  <span className="text-xs sm:text-sm font-medium text-white/90">{perk2}</span>
                 </div>
 
                 <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xs hover:bg-white/10 transition-colors">
                   <div className="p-2 rounded-xl bg-white/15 text-white">
                     <ShieldCheck className="w-4 h-4" />
                   </div>
-                  <span className="text-xs sm:text-sm font-medium text-white/90">1-Click Easy Cancellation</span>
+                  <span className="text-xs sm:text-sm font-medium text-white/90">{perk3}</span>
                 </div>
               </div>
             </div>
@@ -71,13 +83,13 @@ export default function SubscribeSave() {
 
                 <div>
                   <div className="inline-flex items-center gap-1 text-xs font-bold text-[#E8A589] uppercase tracking-wider mb-1">
-                    <Tag className="w-3.5 h-3.5" /> Instant VIP Perk
+                    <Tag className="w-3.5 h-3.5" /> {card_badge}
                   </div>
                   <h3 className="font-serif-brand font-bold text-2xl text-white">
-                    Ready For Lather On Autopilot?
+                    {card_title}
                   </h3>
                   <p className="text-xs sm:text-sm text-white/70 mt-1">
-                    Select subscription on any soap pack below to lock in your 15% discount.
+                    {card_description}
                   </p>
                 </div>
 
@@ -85,7 +97,7 @@ export default function SubscribeSave() {
                   href="#product-selector"
                   className="group inline-flex items-center justify-center gap-2 w-full py-4 px-6 bg-gradient-to-r from-[#C97C5D] to-[#D88A6E] hover:from-[#d68564] hover:to-[#c47a5e] text-white font-bold rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 text-sm sm:text-base transform hover:-translate-y-0.5"
                 >
-                  <span>Configure Your Subscription</span>
+                  <span>{button_text}</span>
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </a>
               </div>

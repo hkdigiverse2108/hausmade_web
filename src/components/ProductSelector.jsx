@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Star, Check, Plus, Minus, ShieldCheck, Truck, RotateCcw, Sparkles, RefreshCw } from 'lucide-react';
+import { Star, Check, Plus, Minus, ShieldCheck, Truck, RotateCcw, Sparkles, RefreshCw, Heart } from 'lucide-react';
 
 export const PACK_OPTIONS = [
   {
@@ -44,10 +44,11 @@ export const PACK_OPTIONS = [
   },
 ];
 
-export default function ProductSelector({ onAddToCart, selectedPack, setSelectedPack, isSubscription, setIsSubscription, quantity, setQuantity, activeImageIndex, setActiveImageIndex }) {
+export default function ProductSelector({ products = [], onAddToCart, onBuyNow, onAddToWishlist, wishlistItems = [], selectedPack, setSelectedPack, isSubscription, setIsSubscription, quantity, setQuantity, activeImageIndex, setActiveImageIndex }) {
   const [frequency, setFrequency] = useState('Every 2 Months');
 
-  const pack = PACK_OPTIONS.find(p => p.id === selectedPack) || PACK_OPTIONS[2];
+  const items = (products && products.length > 0 ? products : PACK_OPTIONS).filter(p => p.active !== false);
+  const pack = items.find(p => p.id === selectedPack) || items[2] || items[0];
 
   const images = [
     { src: pack.image, alt: `${pack.title} Hausmade Kesar Soap Packaging` },
@@ -59,6 +60,8 @@ export default function ProductSelector({ onAddToCart, selectedPack, setSelected
   const finalPricePerPack = (pack.basePrice * discountMultiplier).toFixed(2);
   const unitPrice = ((pack.basePrice * discountMultiplier) / pack.count).toFixed(2);
   const totalPrice = (finalPricePerPack * quantity).toFixed(2);
+  const isPackOutOfStock = pack.stock !== undefined && pack.stock <= 0;
+  const isPackLowStock = pack.stock !== undefined && pack.stock > 0 && pack.stock <= 5;
 
   const handleAdd = () => {
     onAddToCart({
@@ -75,13 +78,28 @@ export default function ProductSelector({ onAddToCart, selectedPack, setSelected
     });
   };
 
+  const handleBuy = () => {
+    onBuyNow({
+      packId: pack.id,
+      title: pack.title,
+      count: pack.count,
+      isSubscription,
+      frequency: isSubscription ? frequency : null,
+      unitPrice,
+      packPrice: finalPricePerPack,
+      quantity,
+      totalPrice,
+      image: images[0].src
+    });
+  };
+
   return (
     <section id="product-selector" className="py-16 lg:py-24 bg-[#F5F1E8] border-t border-b border-[#3A2E26]/10 scroll-mt-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         
         <div className="text-center max-w-3xl mx-auto mb-12">
           <span className="text-[#C97C5D] font-bold text-xs uppercase tracking-widest">Choose Your Ritual</span>
-          <h2 className="font-serif-brand text-3xl sm:text-4xl lg:text-5xl font-normal text-[#3A2E26] mt-2">
+          <h2 className="font-serif-brand text-2xl sm:text-4xl lg:text-5xl font-normal text-[#3A2E26] mt-2">
             Select Your Handmade Batch
           </h2>
           <p className="text-[#3A2E26]/70 mt-3 text-base sm:text-lg">
@@ -123,7 +141,7 @@ export default function ProductSelector({ onAddToCart, selectedPack, setSelected
           </div>
 
           {/* Right Side: Configuration & Add to Cart */}
-          <div className="lg:col-span-6 bg-white/70 backdrop-blur-sm p-6 sm:p-8 rounded-3xl border border-white/80 shadow-xl space-y-6">
+          <div className="lg:col-span-6 bg-white/70 backdrop-blur-sm p-4 sm:p-6 md:p-8 rounded-3xl border border-white/80 shadow-xl space-y-5 sm:space-y-6">
             
             <div>
               <div className="flex items-center justify-between">
@@ -225,53 +243,89 @@ export default function ProductSelector({ onAddToCart, selectedPack, setSelected
               )}
             </div>
 
-            {/* Pack Size Selector */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70">
-                  Select Pack Size
-                </label>
-                <span className="text-xs text-[#7A8B6F] font-semibold">
-                  ₹{unitPrice} / soap bar
-                </span>
-              </div>
+             {/* Pack Size Selector */}
+             <div className="space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70">
+                    Select Pack Size
+                  </label>
+                  <div className="flex items-center gap-2">
+                    {isPackLowStock && (
+                      <span className="text-xs text-[#C97C5D] font-bold animate-pulse">
+                        Only {pack.stock} left!
+                      </span>
+                    )}
+                    {isPackOutOfStock && (
+                      <span className="text-xs text-red-600 font-bold bg-red-50 border border-red-200 px-2 py-0.5 rounded-md">
+                        Out of Stock
+                      </span>
+                    )}
+                    <span className="text-xs text-[#7A8B6F] font-semibold">
+                      ₹{unitPrice} / soap bar
+                    </span>
+                  </div>
+                </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {PACK_OPTIONS.map((p) => {
+                {items.map((p) => {
                   const pPrice = (p.basePrice * discountMultiplier).toFixed(2);
                   const pUnit = ((p.basePrice * discountMultiplier) / p.count).toFixed(2);
                   const isSelected = selectedPack === p.id;
+                  const isWishlisted = wishlistItems.some(item => item.id === p.id);
+                  const isOutOfStock = p.stock !== undefined && p.stock <= 0;
 
                   return (
-                    <button
+                    <div
                       key={p.id}
-                      type="button"
                       onClick={() => setSelectedPack(p.id)}
-                      className={`relative p-4 rounded-2xl border-2 text-left transition-all duration-200 flex flex-col justify-between ${
+                      className={`relative p-4 rounded-2xl border-2 text-left transition-all duration-200 flex flex-col justify-between cursor-pointer select-none ${
                         isSelected
-                          ? 'border-[#7A8B6F] bg-white ring-2 ring-[#7A8B6F]/30 shadow-md scale-[1.01]'
+                          ? isOutOfStock
+                            ? 'border-red-400 bg-red-50/10 ring-2 ring-red-400/20 shadow-md scale-[1.01]'
+                            : 'border-[#7A8B6F] bg-white ring-2 ring-[#7A8B6F]/30 shadow-md scale-[1.01]'
                           : 'border-[#3A2E26]/15 bg-white/60 hover:bg-white hover:border-[#3A2E26]/30'
-                      }`}
+                      } ${isOutOfStock ? 'opacity-85' : ''}`}
                     >
+                      {/* Wishlist Icon Button */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onAddToWishlist(p);
+                        }}
+                        className="absolute top-3.5 right-3.5 p-1.5 rounded-full bg-[#C97C5D]/5 hover:bg-[#C97C5D]/15 text-[#C97C5D] transition-all cursor-pointer z-10"
+                        aria-label="Toggle wishlist"
+                        title={isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
+                      >
+                        <Heart className={`w-3.5 h-3.5 ${isWishlisted ? 'fill-[#C97C5D] text-[#C97C5D]' : 'text-[#3A2E26]/40 hover:text-[#C97C5D]'}`} />
+                      </button>
+
                       {/* Badges */}
                       {p.popular && (
-                        <span className="absolute -top-2.5 right-3 bg-[#7A8B6F] text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
+                        <span className="absolute -top-2.5 left-3 bg-[#7A8B6F] text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
                           Most Popular
                         </span>
                       )}
                       {p.bestValue && (
-                        <span className="absolute -top-2.5 right-3 bg-[#C97C5D] text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
+                        <span className="absolute -top-2.5 left-3 bg-[#C97C5D] text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
                           Best Value
                         </span>
                       )}
+                      {isOutOfStock && (
+                        <span className="absolute -top-2.5 left-3 bg-red-600 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm animate-pulse">
+                          Out of Stock
+                        </span>
+                      )}
 
-                      <div className="flex items-center justify-between w-full">
-                        <span className="font-bold text-[#3A2E26] text-base">{p.title}</span>
-                        {p.savingsBadge && (
-                          <span className="text-xs font-bold text-[#C97C5D] bg-[#C97C5D]/15 px-2 py-0.5 rounded-md">
-                            {p.savingsBadge}
-                          </span>
-                        )}
+                      <div className="flex items-start justify-between w-full pr-8">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-[#3A2E26] text-base">{p.title}</span>
+                          {p.savingsBadge && (
+                            <span className="inline-block mt-1.5 self-start text-[10px] font-bold text-[#C97C5D] bg-[#C97C5D]/15 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                              {p.savingsBadge}
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       <div className="mt-3 flex items-baseline justify-between">
@@ -280,51 +334,74 @@ export default function ProductSelector({ onAddToCart, selectedPack, setSelected
                         </div>
                         <span className="text-xs text-[#3A2E26]/60">₹{pUnit} / bar</span>
                       </div>
-                    </button>
+                    </div>
                   );
                 })}
               </div>
             </div>
+                    {/* Stepper, Add to Cart, Buy Now Row */}
+            <div className="pt-4 border-t border-[#3A2E26]/10 space-y-3">
+              <div className="flex items-center gap-3">
+                {/* Stepper */}
+                <div className="flex items-center justify-between border border-[#3A2E26]/20 rounded-2xl bg-white p-1 h-12 w-28 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    className="w-8 h-8 flex items-center justify-center text-[#3A2E26]/70 hover:text-[#3A2E26] hover:bg-[#F5F1E8] rounded-xl transition-all cursor-pointer"
+                    aria-label="Decrease quantity"
+                  >
+                    <Minus className="w-3.5 h-3.5" />
+                  </button>
+                  <span className="font-bold text-sm text-[#3A2E26] min-w-[1.25rem] text-center select-none">
+                    {quantity}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setQuantity(quantity + 1)}
+                    className="w-8 h-8 flex items-center justify-center text-[#3A2E26]/70 hover:text-[#3A2E26] hover:bg-[#F5F1E8] rounded-xl transition-all cursor-pointer"
+                    aria-label="Increase quantity"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </div>
 
-            {/* Quantity Stepper & Price Summary */}
-            <div className="pt-4 border-t border-[#3A2E26]/10 flex flex-col sm:flex-row items-center gap-4">
-              <div className="flex items-center border-2 border-[#3A2E26]/20 rounded-2xl bg-white p-1 w-full sm:w-auto justify-between sm:justify-start">
+                {/* Add to Cart Outline Button */}
                 <button
                   type="button"
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="p-2 text-[#3A2E26] hover:bg-[#F5F1E8] rounded-xl transition-colors"
-                  aria-label="Decrease quantity"
+                  onClick={handleAdd}
+                  disabled={isPackOutOfStock}
+                  className={`flex-1 h-12 border-2 text-xs font-bold uppercase tracking-widest rounded-2xl transition-all duration-300 flex items-center justify-center shadow-xs ${
+                    isPackOutOfStock
+                      ? 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed'
+                      : 'bg-white border-[#7A8B6F] text-[#7A8B6F] hover:bg-[#7A8B6F] hover:text-white cursor-pointer'
+                  }`}
                 >
-                  <Minus className="w-4 h-4" />
-                </button>
-                <span className="px-4 font-bold text-base text-[#3A2E26] min-w-[2.5rem] text-center">
-                  {quantity}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setQuantity(quantity + 1)}
-                  className="p-2 text-[#3A2E26] hover:bg-[#F5F1E8] rounded-xl transition-colors"
-                  aria-label="Increase quantity"
-                >
-                  <Plus className="w-4 h-4" />
+                  {isPackOutOfStock ? 'OUT OF STOCK' : 'ADD TO CART'}
                 </button>
               </div>
 
-              {/* Add to Cart Button */}
+              {/* Buy Now Solid Button */}
               <button
                 type="button"
-                onClick={handleAdd}
-                className="w-full flex-1 py-4 px-6 bg-[#7A8B6F] hover:bg-[#68775E] text-white font-bold text-base rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform active:scale-95 flex items-center justify-between"
+                onClick={handleBuy}
+                disabled={isPackOutOfStock}
+                className={`w-full h-12 font-bold text-xs uppercase tracking-widest rounded-2xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-3 ${
+                  isPackOutOfStock
+                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    : 'bg-[#C97C5D] hover:bg-[#b06749] text-white cursor-pointer'
+                }`}
               >
-                <span>Add To Cart</span>
-                <span className="bg-white/20 px-3 py-1 rounded-xl text-sm font-semibold">
-                  ₹{totalPrice}
-                </span>
+                <span>{isPackOutOfStock ? 'OUT OF STOCK' : 'BUY NOW'}</span>
+                {!isPackOutOfStock && (
+                  <span className="bg-white/20 px-2.5 py-1 rounded-xl text-[10px] font-bold tracking-normal normal-case">
+                    ₹{totalPrice}
+                  </span>
+                )}
               </button>
             </div>
 
             {/* Reassurance Icons */}
-            <div className="pt-4 grid grid-cols-3 gap-2 text-center text-xs text-[#3A2E26]/70 border-t border-[#3A2E26]/10">
+            <div className="pt-4 grid grid-cols-3 gap-1 sm:gap-2 text-center text-[10px] sm:text-xs text-[#3A2E26]/70 border-t border-[#3A2E26]/10">
               <div className="flex flex-col items-center gap-1">
                 <Truck className="w-4 h-4 text-[#7A8B6F]" />
                 <span>Free Shipping over ₹499</span>

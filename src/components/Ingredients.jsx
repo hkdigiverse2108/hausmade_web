@@ -40,11 +40,11 @@ export default function Ingredients() {
 
   return (
     <section id="ingredients" className="py-16 lg:py-24 bg-[#F5F1E8] scroll-mt-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         
         <div className="text-center max-w-3xl mx-auto mb-16">
           <span className="text-[#7A8B6F] font-bold text-xs uppercase tracking-widest">Pure & Honest</span>
-          <h2 className="font-serif-brand text-3xl sm:text-4xl lg:text-5xl font-normal text-[#3A2E26] mt-2">
+          <h2 className="font-serif-brand text-2xl sm:text-4xl lg:text-5xl font-normal text-[#3A2E26] mt-2">
             Ingredients You Can Pronounce
           </h2>
           <p className="text-[#3A2E26]/70 mt-3 text-base sm:text-lg">
@@ -53,20 +53,20 @@ export default function Ingredients() {
         </div>
 
         {/* Ingredients Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-20">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-12 sm:mb-20">
           {ingredients.map((item, idx) => {
             const Icon = item.icon;
             return (
               <div
                 key={idx}
-                className="bg-white/70 backdrop-blur-sm p-6 rounded-3xl border border-white/80 shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between"
+                className="bg-white/70 backdrop-blur-sm p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-white/80 shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between"
               >
                 <div>
-                  <div className={`w-12 h-12 rounded-2xl ${item.color} flex items-center justify-center mb-5`}>
-                    <Icon className="w-6 h-6" />
+                  <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl ${item.color} flex items-center justify-center mb-3 sm:mb-5`}>
+                    <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
                   </div>
-                  <h3 className="font-serif-brand font-bold text-xl text-[#3A2E26] mb-2">{item.name}</h3>
-                  <p className="text-sm text-[#3A2E26]/75 leading-relaxed">{item.benefit}</p>
+                  <h3 className="font-serif-brand font-bold text-sm sm:text-xl text-[#3A2E26] mb-1 sm:mb-2">{item.name}</h3>
+                  <p className="text-xs sm:text-sm text-[#3A2E26]/75 leading-relaxed">{item.benefit}</p>
                 </div>
               </div>
             );
@@ -74,7 +74,7 @@ export default function Ingredients() {
         </div>
 
         {/* Why It's Different Section / Comparison Chart */}
-        <div className="bg-white p-8 sm:p-12 rounded-3xl shadow-xl border border-[#3A2E26]/10 max-w-4xl mx-auto">
+        <div className="bg-white p-5 sm:p-8 md:p-12 rounded-2xl sm:rounded-3xl shadow-xl border border-[#3A2E26]/10 max-w-4xl mx-auto">
           <div className="text-center mb-8">
             <h3 className="font-serif-brand text-2xl sm:text-3xl font-bold text-[#3A2E26]">
               Why PureBotanica is Different

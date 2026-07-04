@@ -33,13 +33,13 @@ export default function FAQ() {
 
   return (
     <section id="faq" className="py-16 lg:py-24 bg-[#F5F1E8] scroll-mt-20">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8">
         
         <div className="text-center mb-12">
           <span className="text-[#7A8B6F] font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-1.5">
             <HelpCircle className="w-4 h-4" /> Got Questions?
           </span>
-          <h2 className="font-serif-brand text-3xl sm:text-4xl font-normal text-[#3A2E26] mt-2">
+          <h2 className="font-serif-brand text-2xl sm:text-4xl font-normal text-[#3A2E26] mt-2">
             Frequently Asked Questions
           </h2>
           <p className="text-[#3A2E26]/70 mt-2 text-sm sm:text-base">
@@ -58,7 +58,7 @@ export default function FAQ() {
                 <button
                   type="button"
                   onClick={() => setOpenIndex(isOpen ? null : idx)}
-                  className="w-full p-5 sm:p-6 text-left flex items-center justify-between gap-4 font-serif-brand font-bold text-lg text-[#3A2E26] hover:text-[#7A8B6F] transition-colors"
+                  className="w-full p-4 sm:p-5 md:p-6 text-left flex items-center justify-between gap-3 font-serif-brand font-bold text-base sm:text-lg text-[#3A2E26] hover:text-[#7A8B6F] transition-colors"
                 >
                   <span>{faq.q}</span>
                   <ChevronDown className={`w-5 h-5 text-[#7A8B6F] shrink-0 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />

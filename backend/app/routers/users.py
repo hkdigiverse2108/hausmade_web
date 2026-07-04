@@ -1,0 +1,171 @@
+from typing import List, Optional
+from datetime import datetime
+from fastapi import APIRouter, HTTPException, Depends
+from app.schemas.models import UserUpdate
+from app.database.connection import users_collection, orders_collection
+from app.dependencies.auth_deps import get_current_user_email, get_admin_user
+from app.security.auth import hash_password, verify_password
+
+router = APIRouter(tags=["Users & Admin"])
+
+@router.get("/api/user/profile")
+async def get_profile(current_user_email: str = Depends(get_current_user_email)):
+    print(f"\n[DIAGNOSTIC] get_profile called. current_user_email: '{current_user_email}'")
+    try:
+        all_users = await users_collection.find({}).to_list(length=None)
+        print(f"[DIAGNOSTIC] Total users in DB: {len(all_users)}")
+        for u in all_users:
+            print(f"  - User: id={u.get('_id')}, name='{u.get('name')}', email='{u.get('email')}', mobile='{u.get('mobile')}', auth0_sub='{u.get('auth0_sub')}'")
+    except Exception as e:
+        print(f"[DIAGNOSTIC] Error fetching users list: {e}")
+        
+    if not current_user_email:
+        raise HTTPException(status_code=401, detail="Authentication required")
+        
+    user = await users_collection.find_one({
+        "$or": [
+            {"email": current_user_email},
+            {"mobile": current_user_email},
+            {"auth0_sub": current_user_email}
+        ]
+    })
+    
+    if not user:
+        print(f"[DIAGNOSTIC] User NOT found in database for email/mobile/sub '{current_user_email}'")
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    return {
+        "status": "success",
+        "user": {
+            "name": user["name"],
+            "email": user.get("email", ""),
+            "mobile": user.get("mobile", ""),
+            "address_line1": user.get("address_line1", ""),
+            "address_line2": user.get("address_line2", ""),
+            "city": user.get("city", ""),
+            "state": user.get("state", ""),
+            "zip_code": user.get("zip_code", ""),
+            "country": user.get("country", ""),
+            "addresses": user.get("addresses", []),
+            "is_admin": user.get("is_admin", False)
+        }
+    }
+
+@router.post("/api/user/update")
+async def update_profile(user_data: UserUpdate, current_user_email: str = Depends(get_current_user_email)):
+    if not current_user_email:
+        raise HTTPException(status_code=401, detail="Authentication required")
+        
+    user = await users_collection.find_one({
+        "$or": [
+            {"email": current_user_email},
+            {"mobile": current_user_email},
+            {"auth0_sub": current_user_email}
+        ]
+    })
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    update_doc = {}
+    if user_data.name is not None:
+        update_doc["name"] = user_data.name
+    if user_data.email is not None:
+        new_email = user_data.email.lower()
+        if new_email != user.get("email"):
+            existing = await users_collection.find_one({"email": new_email})
+            if existing:
+                raise HTTPException(status_code=400, detail="Email already in use")
+            update_doc["email"] = new_email
+    if user_data.mobile is not None:
+        if user_data.mobile != user.get("mobile"):
+            existing = await users_collection.find_one({"mobile": user_data.mobile})
+            if existing:
+                raise HTTPException(status_code=400, detail="Mobile number already in use")
+            update_doc["mobile"] = user_data.mobile
+            
+    for field in ["address_line1", "address_line2", "city", "state", "zip_code", "country"]:
+        val = getattr(user_data, field)
+        if val is not None:
+            update_doc[field] = val
+
+    if user_data.addresses is not None:
+        update_doc["addresses"] = [addr.dict() for addr in user_data.addresses]
+
+    if user_data.password is not None:
+        if not user_data.current_password:
+            raise HTTPException(status_code=400, detail="Current password is required to change password")
+        
+        if user.get("password"):
+            if not verify_password(user_data.current_password, user["password"]):
+                raise HTTPException(status_code=400, detail="Incorrect current password")
+        
+        update_doc["password"] = hash_password(user_data.password)
+            
+    if update_doc:
+        await users_collection.update_one({"_id": user["_id"]}, {"$set": update_doc})
+        
+    updated_user = await users_collection.find_one({"_id": user["_id"]})
+    return {
+        "status": "success",
+        "user": {
+            "name": updated_user["name"],
+            "email": updated_user.get("email", ""),
+            "mobile": updated_user.get("mobile", ""),
+            "address_line1": updated_user.get("address_line1", ""),
+            "address_line2": updated_user.get("address_line2", ""),
+            "city": updated_user.get("city", ""),
+            "state": updated_user.get("state", ""),
+            "zip_code": updated_user.get("zip_code", ""),
+            "country": updated_user.get("country", ""),
+            "addresses": updated_user.get("addresses", []),
+            "is_admin": updated_user.get("is_admin", False)
+        }
+    }
+
+@router.get("/api/admin/stats")
+async def get_admin_stats(admin: dict = Depends(get_admin_user)):
+    orders = await orders_collection.find({}).to_list(length=None)
+    users = await users_collection.find({}).to_list(length=None)
+    
+    total_revenue = 0.0
+    for order in orders:
+        try:
+            total_revenue += float(order.get("grandTotal", 0.0))
+        except (ValueError, TypeError):
+            pass
+            
+    order_count = len(orders)
+    customer_count = sum(1 for u in users if not u.get("is_admin"))
+    
+    return {
+        "total_revenue": total_revenue,
+        "order_count": order_count,
+        "customer_count": customer_count
+    }
+
+@router.get("/api/admin/users")
+async def get_admin_users(admin: dict = Depends(get_admin_user)):
+    users = await users_collection.find({}).to_list(length=None)
+    cleaned_users = []
+    for user in users:
+        cleaned_users.append({
+            "id": str(user.get("_id")),
+            "name": user.get("name", ""),
+            "email": user.get("email", ""),
+            "mobile": user.get("mobile", ""),
+            "is_admin": user.get("is_admin", False),
+            "created_at": str(user.get("created_at", ""))
+        })
+    return cleaned_users
+
+@router.get("/api/admin/orders")
+async def get_admin_orders(admin: dict = Depends(get_admin_user)):
+    orders = await orders_collection.find({}).to_list(length=None)
+    for order in orders:
+        order["_id"] = str(order["_id"])
+    try:
+        orders.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    except Exception:
+        pass
+    return orders

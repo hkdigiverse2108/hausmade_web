@@ -1,26 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Star, ChevronLeft, ChevronRight, ShieldCheck } from 'lucide-react';
+import { getReviews } from '../utils/api';
 
 export default function Reviews() {
-  const reviewsList = [
+  const staticReviews = [
     {
-      id: 1,
-      name: 'Solanki Arjunsinh',
-      initial: 'S',
-      rating: 5,
-      verified: 'Google Verified',
-      comment: '"Nice design in whole nadiad. Must visit here. Very nice staff"'
-    },
-    {
-      id: 2,
-      name: 'Kalpna Patel',
-      initial: 'K',
-      rating: 5,
-      verified: 'Google Verified',
-      comment: '"Real diamond ring designs 0% making changes sahajanand jewellers best showroom and. Nice staff "'
-    },
-    {
-      id: 3,
+      id: 'static-1',
       name: 'Roselin Mogaria',
       initial: 'R',
       rating: 5,
@@ -28,7 +13,7 @@ export default function Reviews() {
       comment: '"Nice design. Must visit here . Good staff service"'
     },
     {
-      id: 4,
+      id: 'static-2',
       name: 'Sarah M.',
       initial: 'S',
       rating: 5,
@@ -36,22 +21,38 @@ export default function Reviews() {
       comment: '"Saved my sensitive winter skin! Switching to the 3-pack of lavender oat soap transformed my shower routine. Creamy lather!"'
     },
     {
-      id: 5,
+      id: 'static-3',
       name: 'David K.',
       initial: 'D',
       rating: 5,
       verified: 'Verified Bather',
       comment: '"Lasts twice as long as store soap. One bar lasted me nearly 4 weeks in the shower. The Subscribe & Save option is great."'
-    },
-    {
-      id: 6,
-      name: 'Emily R.',
-      initial: 'E',
-      rating: 5,
-      verified: 'Verified Bather',
-      comment: '"Zero plastic waste and divine smell. Arrived in paper packaging! The scent isn’t artificial — just natural calming herbs."'
     }
   ];
+
+  const [reviewsList, setReviewsList] = useState(staticReviews);
+
+  useEffect(() => {
+    async function loadReviews() {
+      try {
+        const fetched = await getReviews();
+        if (fetched && fetched.length > 0) {
+          const formatted = fetched.map(r => ({
+            id: r.id || r._id,
+            name: r.userName,
+            initial: r.userName ? r.userName.charAt(0).toUpperCase() : 'V',
+            rating: r.rating,
+            verified: 'Verified Buyer',
+            comment: `"${r.comment}"`
+          }));
+          setReviewsList([...staticReviews, ...formatted]);
+        }
+      } catch (err) {
+        console.error('Failed to load dynamic reviews:', err);
+      }
+    }
+    loadReviews();
+  }, []);
 
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -80,7 +81,7 @@ export default function Reviews() {
 
   return (
     <section id="reviews" className="py-16 lg:py-24 bg-[#EFECE6] scroll-mt-20 overflow-hidden">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         
         {/* Header matching requested style */}
         <div className="text-center max-w-3xl mx-auto mb-12">
@@ -90,7 +91,7 @@ export default function Reviews() {
             <span className="h-[1px] w-12 bg-[#3A2E26]/20"></span>
           </div>
           
-          <h2 className="font-serif-brand text-3xl sm:text-4xl lg:text-5xl font-normal text-[#3A2E26] mt-2">
+          <h2 className="font-serif-brand text-2xl sm:text-4xl lg:text-5xl font-normal text-[#3A2E26] mt-2">
             What Our Customers Say
           </h2>
 
@@ -101,23 +102,23 @@ export default function Reviews() {
         </div>
 
         {/* Carousel Container */}
-        <div className="relative max-w-6xl mx-auto px-4 sm:px-10">
+        <div className="relative max-w-6xl mx-auto px-8 sm:px-10">
           
           {/* Previous Arrow Button */}
           <button
             onClick={handlePrev}
-            className="absolute left-0 sm:-left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/90 shadow-md border border-[#3A2E26]/10 flex items-center justify-center text-[#3A2E26] hover:bg-[#8C7A5B] hover:text-white transition-all cursor-pointer"
+            className="absolute -left-1 sm:-left-2 top-1/2 -translate-y-1/2 z-10 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/90 shadow-md border border-[#3A2E26]/10 flex items-center justify-center text-[#3A2E26] hover:bg-[#8C7A5B] hover:text-white transition-all cursor-pointer"
             aria-label="Previous review"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
 
           {/* Review Cards Grid / Carousel */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 transition-all duration-500 ease-in-out">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 transition-all duration-500 ease-in-out">
             {visibleReviews.map((rev, idx) => (
               <div
                 key={`${rev.id}-${idx}`}
-                className="bg-[#F6F4F0] p-6 sm:p-8 rounded-2xl border border-[#3A2E26]/10 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between min-h-[220px]"
+                className={`bg-[#F6F4F0] p-5 sm:p-6 md:p-8 rounded-2xl border border-[#3A2E26]/10 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between min-h-[180px] sm:min-h-[220px] ${idx > 0 ? 'hidden md:flex' : ''}`}
               >
                 <div>
                   {/* Author Header */}
@@ -155,7 +156,7 @@ export default function Reviews() {
           {/* Next Arrow Button */}
           <button
             onClick={handleNext}
-            className="absolute right-0 sm:-right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-[#8C7A5B] shadow-md flex items-center justify-center text-white hover:bg-[#77674b] transition-all cursor-pointer"
+            className="absolute -right-1 sm:-right-2 top-1/2 -translate-y-1/2 z-10 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#8C7A5B] shadow-md flex items-center justify-center text-white hover:bg-[#77674b] transition-all cursor-pointer"
             aria-label="Next review"
           >
             <ChevronRight className="w-5 h-5" />

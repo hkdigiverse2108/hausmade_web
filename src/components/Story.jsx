@@ -1,12 +1,17 @@
 import React from 'react';
 import { Heart, Sparkles, Sprout } from 'lucide-react';
 
-export default function Story() {
+export default function Story({ settings }) {
+  const title = settings?.title || "From our kitchen counter to your daily sanctuary.";
+  const subtitle = settings?.subtitle || "Our Heritage";
+  const paragraph1 = settings?.paragraph1 || "PureBotanica began in the autumn of 2018 when our founder Elena could not find a commercial soap that didn’t leave her skin dry, itchy, and irritated by synthetic dyes and fake fragrances.";
+  const paragraph2 = settings?.paragraph2 || "We went back to ancient cold-process saponification roots: slowly combining raw organic butter, wildflower honey, and steam-distilled essential oils. Every single bar is poured by hand, cut with guitar wire, and cured for 6 full weeks to ensure a long-lasting, ultra-creamy bar.";
+
   return (
     <section id="story" className="py-16 lg:py-24 bg-[#7A8B6F]/10 scroll-mt-20 relative overflow-hidden">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
           
           {/* Workshop Image Frame */}
           <div className="lg:col-span-6 relative order-2 lg:order-1">
@@ -16,7 +21,7 @@ export default function Story() {
                 <img
                   src="/images/founder-workshop.png"
                   alt="Founder Crafting Soap in Workshop"
-                  className="w-full h-[400px] sm:h-[480px] object-cover"
+                  className="w-full h-[280px] sm:h-[400px] md:h-[480px] object-cover"
                 />
                 <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-md p-4 rounded-2xl border border-white/50 shadow-md">
                   <p className="font-serif-brand font-bold text-sm text-[#3A2E26]">Elena Vance — Master Artisan</p>
@@ -29,19 +34,19 @@ export default function Story() {
           {/* Story Narrative Text */}
           <div className="lg:col-span-6 space-y-6 order-1 lg:order-2">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#C97C5D]/15 text-[#C97C5D] text-xs font-bold uppercase tracking-wider">
-              <Heart className="w-3.5 h-3.5 fill-current" /> Our Heritage
+              <Heart className="w-3.5 h-3.5 fill-current" /> {subtitle}
             </div>
 
             <h2 className="font-serif-brand text-3xl sm:text-4xl lg:text-5xl font-normal text-[#3A2E26] leading-tight">
-              From our kitchen counter to your daily sanctuary.
+              {title}
             </h2>
 
             <p className="text-base sm:text-lg text-[#3A2E26]/80 leading-relaxed font-light">
-              PureBotanica began in the autumn of 2018 when our founder Elena could not find a commercial soap that didn’t leave her skin dry, itchy, and irritated by synthetic dyes and fake fragrances.
+              {paragraph1}
             </p>
 
             <p className="text-base sm:text-lg text-[#3A2E26]/80 leading-relaxed font-light">
-              We went back to ancient cold-process saponification roots: slowly combining raw organic butter, wildflower honey, and steam-distilled essential oils. Every single bar is poured by hand, cut with guitar wire, and cured for 6 full weeks to ensure a long-lasting, ultra-creamy bar.
+              {paragraph2}
             </p>
 
             {/* Micro Pillars */}
