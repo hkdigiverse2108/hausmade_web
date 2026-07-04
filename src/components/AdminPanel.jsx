@@ -400,7 +400,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     setEditingCoupon(c);
     setCouponForm({
       code: c.code,
-      discount: c.discount,
+      discount: c.discount * 100,
       description: c.description || '',
       active: c.active !== undefined ? c.active : true,
       lifetime: c.lifetime !== undefined ? c.lifetime : true,
@@ -412,15 +412,16 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
 
   const handleSaveCoupon = async (e) => {
     e.preventDefault();
-    if (!couponForm.code || couponForm.discount < 0 || couponForm.discount > 1) {
-      showNotification('Please enter a valid code and discount between 0 and 1 (e.g. 0.10 for 10%)', 'error');
+    const discountVal = parseFloat(couponForm.discount) || 0;
+    if (!couponForm.code || discountVal <= 0 || discountVal > 100) {
+      showNotification('Please enter a valid code and discount percentage between 1 and 100 (e.g. 15 for 15%)', 'error');
       return;
     }
     setSaving(true);
     try {
       const payload = {
         ...couponForm,
-        discount: parseFloat(couponForm.discount) || 0
+        discount: discountVal / 100
       };
       
       if (editingCoupon) {
@@ -1812,19 +1813,19 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Discount Rate (0 to 1)</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Discount Rate (1% to 100%)</label>
                 <input
                   type="number"
                   required
-                  min="0.01"
-                  max="1.00"
-                  step="0.01"
-                  placeholder="e.g. 0.15 for 15% off"
+                  min="1"
+                  max="100"
+                  step="1"
+                  placeholder="e.g. 15 for 15% off"
                   value={couponForm.discount}
                   onChange={(e) => setCouponForm({ ...couponForm, discount: e.target.value })}
                   className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
                 />
-                <span className="text-[10px] text-green-700 font-bold block mt-1">Calculated value: {(parseFloat(couponForm.discount || 0) * 100).toFixed(0)}% off total price</span>
+                <span className="text-[10px] text-green-700 font-bold block mt-1">Calculated value: {parseFloat(couponForm.discount || 0)}% off total price</span>
               </div>
 
               <div>
