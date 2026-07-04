@@ -65,8 +65,6 @@ export default function Reviews() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const maxIndex = Math.max(0, reviewsList.length - (isMobile ? 1 : 3));
-
   // Auto-slide every 4.5 seconds
   useEffect(() => {
     if (reviewsList.length === 0) return;
@@ -78,17 +76,20 @@ export default function Reviews() {
 
   const handleNext = () => {
     if (reviewsList.length === 0) return;
-    setCurrentIndex((prev) => (prev + 1) > maxIndex ? 0 : prev + 1);
+    setCurrentIndex((prev) => (prev + 1) % reviewsList.length);
   };
 
   const handlePrev = () => {
     if (reviewsList.length === 0) return;
-    setCurrentIndex((prev) => (prev - 1) < 0 ? maxIndex : prev - 1);
+    setCurrentIndex((prev) => (prev - 1 + reviewsList.length) % reviewsList.length);
   };
 
   const handleDotClick = (idx) => {
     setCurrentIndex(idx);
   };
+
+  // Duplicate list to allow seamless loop sliding on desktop viewports
+  const displayReviews = [...reviewsList, ...reviewsList];
 
   return (
     <section id="reviews" className="py-16 lg:py-24 bg-[#EFECE6] scroll-mt-20 overflow-hidden">
@@ -130,7 +131,7 @@ export default function Reviews() {
               className="flex transition-transform duration-500 ease-in-out"
               style={{ transform: `translateX(-${currentIndex * (isMobile ? 100 : 33.3333)}%)` }}
             >
-              {reviewsList.map((rev, idx) => (
+              {displayReviews.map((rev, idx) => (
                 <div
                   key={`${rev.id}-${idx}`}
                   className="w-full md:w-1/3 shrink-0 px-2 sm:px-3"
@@ -184,7 +185,7 @@ export default function Reviews() {
 
         {/* Carousel Indicators / Dots */}
         <div className="flex justify-center items-center gap-2 mt-8">
-          {Array.from({ length: maxIndex + 1 }).map((_, idx) => (
+          {reviewsList.map((_, idx) => (
             <button
               key={idx}
               onClick={() => handleDotClick(idx)}
