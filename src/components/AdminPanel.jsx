@@ -1094,15 +1094,16 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                 <td className="p-4 align-middle text-gray-600">{c.description || 'No description provided'}</td>
                                 <td className="p-4 align-middle">
                                   <button
+                                    type="button"
                                     onClick={() => handleToggleCouponActive(c)}
-                                    className="focus:outline-none cursor-pointer hover:scale-105 transition-transform"
-                                    title="Click to toggle status"
+                                    className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+                                    style={{ backgroundColor: c.active ? '#7A8B6F' : '#E6D5C3' }}
+                                    title={c.active ? "Click to Deactivate" : "Click to Activate"}
                                   >
-                                    {c.active ? (
-                                      <span className="px-2.5 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded-full text-xs font-bold uppercase tracking-wider">Active</span>
-                                    ) : (
-                                      <span className="px-2.5 py-0.5 bg-gray-100 text-gray-500 border border-gray-200 rounded-full text-xs font-bold uppercase tracking-wider">Inactive</span>
-                                    )}
+                                    <span
+                                      className="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out"
+                                      style={{ transform: c.active ? 'translateX(20px)' : 'translateX(0px)' }}
+                                    />
                                   </button>
                                 </td>
                                 <td className="p-4 pr-6 align-middle text-right">
