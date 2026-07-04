@@ -65,12 +65,12 @@ export default function Reviews() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Auto-slide every 4.5 seconds
+  // Auto-slide every 5 seconds
   useEffect(() => {
     if (reviewsList.length === 0) return;
     const timer = setInterval(() => {
       handleNext();
-    }, 4500);
+    }, 5000);
     return () => clearInterval(timer);
   }, [currentIndex, reviewsList.length, isMobile]);
 
