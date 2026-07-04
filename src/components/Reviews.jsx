@@ -55,7 +55,6 @@ export default function Reviews() {
   }, []);
 
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [slideDirection, setSlideDirection] = useState('next');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
@@ -66,43 +65,30 @@ export default function Reviews() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  const maxIndex = Math.max(0, reviewsList.length - (isMobile ? 1 : 3));
+
   // Auto-slide every 4.5 seconds
   useEffect(() => {
+    if (reviewsList.length === 0) return;
     const timer = setInterval(() => {
       handleNext();
     }, 4500);
     return () => clearInterval(timer);
-  }, [currentIndex, reviewsList.length]);
+  }, [currentIndex, reviewsList.length, isMobile]);
 
   const handleNext = () => {
-    setSlideDirection('next');
-    setCurrentIndex((prev) => (prev + 1) % reviewsList.length);
+    if (reviewsList.length === 0) return;
+    setCurrentIndex((prev) => (prev + 1) > maxIndex ? 0 : prev + 1);
   };
 
   const handlePrev = () => {
-    setSlideDirection('prev');
-    setCurrentIndex((prev) => (prev - 1 + reviewsList.length) % reviewsList.length);
+    if (reviewsList.length === 0) return;
+    setCurrentIndex((prev) => (prev - 1) < 0 ? maxIndex : prev - 1);
   };
 
   const handleDotClick = (idx) => {
-    setSlideDirection(idx > currentIndex ? 'next' : 'prev');
     setCurrentIndex(idx);
   };
-
-  // Get exactly the items to display based on screen layout
-  const getVisibleReviews = () => {
-    if (reviewsList.length === 0) return [];
-    if (isMobile) {
-      return [reviewsList[currentIndex % reviewsList.length]];
-    }
-    return [
-      reviewsList[currentIndex % reviewsList.length],
-      reviewsList[(currentIndex + 1) % reviewsList.length],
-      reviewsList[(currentIndex + 2) % reviewsList.length],
-    ];
-  };
-
-  const visibleReviews = getVisibleReviews();
 
   return (
     <section id="reviews" className="py-16 lg:py-24 bg-[#EFECE6] scroll-mt-20 overflow-hidden">
@@ -138,18 +124,16 @@ export default function Reviews() {
             <ChevronLeft className="w-5 h-5" />
           </button>
 
-          {/* Review Cards Grid with Keyframe-driven slide animation */}
+          {/* Review Cards Grid with smooth CSS track sliding */}
           <div className="w-full overflow-hidden min-h-[220px]">
             <div 
-              key={currentIndex}
-              className={`grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 ${
-                slideDirection === 'next' ? 'animate-review-next' : 'animate-review-prev'
-              }`}
+              className="flex transition-transform duration-500 ease-in-out"
+              style={{ transform: `translateX(-${currentIndex * (isMobile ? 100 : 33.3333)}%)` }}
             >
-              {visibleReviews.map((rev, idx) => (
+              {reviewsList.map((rev, idx) => (
                 <div
                   key={`${rev.id}-${idx}`}
-                  className="w-full"
+                  className="w-full md:w-1/3 shrink-0 px-2 sm:px-3"
                 >
                   <div className="bg-[#F6F4F0] p-5 sm:p-6 md:p-8 rounded-2xl border border-[#3A2E26]/10 shadow-sm hover:shadow-lg hover:-translate-y-2 hover:scale-[1.02] hover:border-[#8C7A5B]/30 active:scale-[0.98] transition-all duration-300 ease-out flex flex-col justify-between h-full min-h-[180px] sm:min-h-[220px] cursor-pointer select-none">
                     <div>
@@ -200,7 +184,7 @@ export default function Reviews() {
 
         {/* Carousel Indicators / Dots */}
         <div className="flex justify-center items-center gap-2 mt-8">
-          {reviewsList.map((_, idx) => (
+          {Array.from({ length: maxIndex + 1 }).map((_, idx) => (
             <button
               key={idx}
               onClick={() => handleDotClick(idx)}
