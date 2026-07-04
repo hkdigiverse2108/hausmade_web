@@ -62,7 +62,7 @@ export default function Header({ cartCount, onOpenCart, wishlistCount, onOpenWis
 
   return (
     <header 
-      className={`w-full transition-all duration-300 ${
+      className={`sticky top-0 z-50 w-full transition-all duration-300 ${
         scrolled 
           ? 'bg-[#F5F1E8]/95 backdrop-blur-md shadow-sm border-b border-[#3A2E26]/10 py-3.5' 
           : 'bg-[#F5F1E8] py-4'
