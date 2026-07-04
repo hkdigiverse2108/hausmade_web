@@ -58,8 +58,6 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
     }
   }, [user, isOpen]);
 
-  if (!isOpen) return null;
-
   const rawSubtotal = cartItems.reduce((acc, item) => acc + parseFloat(item.totalPrice), 0);
   const discountAmount = (rawSubtotal * discount).toFixed(2);
   const isFreeShipping = appliedCoupon && (appliedCoupon.discount === 0 || appliedCoupon.code.toUpperCase().includes('FREE') || appliedCoupon.description?.toLowerCase().includes('free'));
@@ -163,6 +161,8 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
       }
     }
   }, [user, isOpen]);
+
+  if (!isOpen) return null;
 
   const handleFormChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
