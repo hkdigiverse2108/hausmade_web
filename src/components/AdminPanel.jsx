@@ -454,6 +454,20 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     }
   };
 
+  const handleToggleCouponActive = async (couponObj) => {
+    try {
+      const updated = {
+        ...couponObj,
+        active: !couponObj.active
+      };
+      await adminUpdateCoupon(couponObj.code, updated, token);
+      showNotification(`Coupon ${couponObj.code} ${!couponObj.active ? 'activated' : 'deactivated'} successfully!`, 'success');
+      fetchAdminData(true);
+    } catch (err) {
+      showNotification(err.message || 'Failed to toggle status', 'error');
+    }
+  };
+
   const handleSaveSettings = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -1079,11 +1093,17 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                 <td className="p-4 align-middle font-semibold text-green-700 font-mono">{(c.discount * 100).toFixed(0)}% Off</td>
                                 <td className="p-4 align-middle text-gray-600">{c.description || 'No description provided'}</td>
                                 <td className="p-4 align-middle">
-                                  {c.active ? (
-                                    <span className="px-2.5 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded-full text-xs font-bold uppercase tracking-wider">Active</span>
-                                  ) : (
-                                    <span className="px-2.5 py-0.5 bg-gray-100 text-gray-500 border border-gray-200 rounded-full text-xs font-bold uppercase tracking-wider">Inactive</span>
-                                  )}
+                                  <button
+                                    onClick={() => handleToggleCouponActive(c)}
+                                    className="focus:outline-none cursor-pointer hover:scale-105 transition-transform"
+                                    title="Click to toggle status"
+                                  >
+                                    {c.active ? (
+                                      <span className="px-2.5 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded-full text-xs font-bold uppercase tracking-wider">Active</span>
+                                    ) : (
+                                      <span className="px-2.5 py-0.5 bg-gray-100 text-gray-500 border border-gray-200 rounded-full text-xs font-bold uppercase tracking-wider">Inactive</span>
+                                    )}
+                                  </button>
                                 </td>
                                 <td className="p-4 pr-6 align-middle text-right">
                                   <div className="flex justify-end items-center gap-2">
