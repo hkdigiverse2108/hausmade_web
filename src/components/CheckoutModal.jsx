@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, CheckCircle2, ShieldCheck, CreditCard, Truck, Smartphone, Banknote, ArrowRight, Sparkles, Loader2, Compass, Navigation } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { placeOrder, updateUserProfile, validateCoupon, getActiveCoupons } from '../utils/api';
 
 export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderComplete, token, user }) {
@@ -103,6 +104,36 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
       const data = await validateCoupon(coupon.trim());
       setDiscount(data.discount);
       setCouponApplied(true);
+
+      // Trigger beautiful firecrackers / confetti celebration!
+      confetti({
+        particleCount: 120,
+        spread: 70,
+        origin: { y: 0.65 },
+        colors: ['#7A8B6F', '#C97C5D', '#3A2E26', '#E6D5C3']
+      });
+
+      // Side bursts simulating firecrackers
+      setTimeout(() => {
+        confetti({
+          particleCount: 50,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0 },
+          colors: ['#7A8B6F', '#C97C5D', '#E6D5C3']
+        });
+      }, 150);
+
+      setTimeout(() => {
+        confetti({
+          particleCount: 50,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1 },
+          colors: ['#7A8B6F', '#C97C5D', '#E6D5C3']
+        });
+      }, 300);
+
     } catch (err) {
       alert(err.message || 'Invalid coupon code.');
     }
