@@ -74,7 +74,7 @@ export default function Ingredients() {
         </div>
 
         {/* Why It's Different Section / Comparison Chart */}
-        <div className="bg-white p-5 sm:p-8 md:p-12 rounded-2xl sm:rounded-3xl shadow-xl border border-[#3A2E26]/10 max-w-4xl mx-auto">
+        <div className="bg-[#EFECE6] p-6 sm:p-10 md:p-12 rounded-3xl shadow-xl border border-[#3A2E26]/10 max-w-4xl mx-auto transform transition-all duration-500 hover:shadow-2xl hover:-translate-y-1">
           <div className="text-center mb-8">
             <h3 className="font-serif-brand text-2xl sm:text-3xl font-bold text-[#3A2E26]">
               Why PureBotanica is Different
@@ -84,27 +84,37 @@ export default function Ingredients() {
             </p>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="overflow-hidden rounded-2xl border border-[#3A2E26]/10 shadow-sm bg-white/50 backdrop-blur-sm">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b-2 border-[#3A2E26]/10">
-                  <th className="py-4 px-4 font-bold text-sm text-[#3A2E26]">Botanical Quality</th>
-                  <th className="py-4 px-4 font-bold text-sm text-center text-gray-400">Mass-Market Bars</th>
-                  <th className="py-4 px-4 font-bold text-sm text-center text-[#7A8B6F] bg-[#7A8B6F]/10 rounded-t-xl">PureBotanica Soap</th>
+                <tr className="border-b border-[#3A2E26]/10 bg-[#3A2E26]/5">
+                  <th className="py-5 px-5 font-bold text-sm text-[#3A2E26]">Botanical Quality</th>
+                  <th className="py-5 px-5 font-bold text-sm text-center text-gray-500">Mass-Market Bars</th>
+                  <th className="py-5 px-5 font-bold text-sm text-center text-[#7A8B6F] bg-[#7A8B6F]/10 relative">
+                    <span className="relative z-10 flex flex-col items-center">
+                      PureBotanica Soap
+                      <span className="text-[10px] uppercase tracking-wider text-[#7A8B6F] bg-white border border-[#7A8B6F]/20 px-2 py-0.5 rounded-full mt-1 font-semibold animate-pulse">
+                        Best Choice
+                      </span>
+                    </span>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#3A2E26]/5 text-sm sm:text-base">
                 {comparison.map((row, index) => (
-                  <tr key={index} className="hover:bg-[#F5F1E8]/40 transition-colors">
-                    <td className="py-4 px-4">
-                      <p className="font-semibold text-[#3A2E26]">{row.feature}</p>
+                  <tr 
+                    key={index} 
+                    className="group hover:bg-[#7A8B6F]/5 transition-all duration-300 transform hover:scale-[1.01]"
+                  >
+                    <td className="py-5 px-5 transition-all duration-300 group-hover:pl-7">
+                      <p className="font-semibold text-[#3A2E26] group-hover:text-[#7A8B6F] transition-colors">{row.feature}</p>
                       <p className="text-xs text-[#3A2E26]/60 mt-0.5">{row.detail}</p>
                     </td>
-                    <td className="py-4 px-4 text-center">
-                      <XCircle className="w-6 h-6 text-red-400 mx-auto" />
+                    <td className="py-5 px-5 text-center">
+                      <XCircle className="w-6 h-6 text-red-400 mx-auto transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" />
                     </td>
-                    <td className="py-4 px-4 text-center bg-[#7A8B6F]/5">
-                      <CheckCircle2 className="w-6 h-6 text-[#7A8B6F] mx-auto" />
+                    <td className="py-5 px-5 text-center bg-[#7A8B6F]/5 group-hover:bg-[#7A8B6F]/10 transition-colors">
+                      <CheckCircle2 className="w-6 h-6 text-[#7A8B6F] mx-auto transition-all duration-300 group-hover:scale-125 group-hover:rotate-6" />
                     </td>
                   </tr>
                 ))}
