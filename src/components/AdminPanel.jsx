@@ -57,6 +57,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   });
   const [stats, setStats] = useState({ total_revenue: 0, order_count: 0, customer_count: 0 });
   const [settingsForm, setSettingsForm] = useState({
+    logo_url: '',
     announcement: { text: '', active: true },
     hero: { badge: '', title_normal_1: '', title_italic: '', title_normal_2: '', description: '' },
     story: { title: '', subtitle: '', paragraph1: '', paragraph2: '' },
@@ -78,7 +79,10 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
 
   useEffect(() => {
     if (settings) {
-      setSettingsForm(settings);
+      setSettingsForm({
+        ...settings,
+        logo_url: settings.logo_url || ''
+      });
     }
   }, [settings]);
   const [orders, setOrders] = useState([]);
@@ -376,6 +380,20 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       showNotification('Image uploaded successfully!');
     } catch (err) {
       showNotification(err.message || 'Failed to upload image', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+  const handleLogoImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setSaving(true);
+    try {
+      const res = await uploadImage(file);
+      setSettingsForm(prev => ({ ...prev, logo_url: res.url }));
+      showNotification('Logo image uploaded successfully!');
+    } catch (err) {
+      showNotification(err.message || 'Failed to upload logo image', 'error');
     } finally {
       setSaving(false);
     }
@@ -1134,11 +1152,50 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                 </div>
               )}
 
-              {activeTab === 'settings' && (
+               {activeTab === 'settings' && (
                 <form onSubmit={handleSaveSettings} className="space-y-8 animate-fadeIn text-[#3A2E26]">
                   <div>
                     <h2 className="text-2xl font-bold tracking-tight">Site Content & Settings</h2>
-                    <p className="text-sm text-[#3A2E26]/70">Modify announcements, hero headlines, brand story details, and customer care contact fields.</p>
+                    <p className="text-sm text-[#3A2E26]/70">Modify brand logo, announcements, hero headlines, brand story details, and customer care contact fields.</p>
+                  </div>
+
+                  {/* Brand Logo Settings */}
+                  <div className="bg-white rounded-3xl p-6 border border-[#E6D5C3]/30 shadow-sm space-y-4">
+                    <h3 className="text-lg font-bold border-b border-[#E6D5C3]/20 pb-2">Brand Identity & Logo</h3>
+                    <div className="grid grid-cols-1 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Brand Logo Image</label>
+                        <div className="flex gap-3">
+                          <input
+                            type="text"
+                            placeholder="Enter image URL or upload custom logo"
+                            value={settingsForm.logo_url}
+                            onChange={(e) => setSettingsForm({
+                              ...settingsForm,
+                              logo_url: e.target.value
+                            })}
+                            className="flex-1 px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          />
+                          <label className="bg-[#E6D5C3]/30 hover:bg-[#E6D5C3]/50 text-[#3A2E26] font-bold text-xs px-4 rounded-2xl flex items-center justify-center cursor-pointer border border-[#E6D5C3]/50 transition-colors shrink-0">
+                            <Plus className="w-4 h-4 mr-1" /> Upload Logo
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleLogoImageUpload}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
+                        {settingsForm.logo_url && (
+                          <div className="mt-3 flex items-center gap-4 p-3 bg-[#FDFBF7] border border-[#E6D5C3]/20 rounded-2xl w-fit">
+                            <div className="w-12 h-12 rounded-full bg-[#C97C5D] flex items-center justify-center overflow-hidden">
+                              <img src={settingsForm.logo_url} alt="Logo Preview" className="w-full h-full object-cover" />
+                            </div>
+                            <span className="text-xs text-gray-500 font-medium">Header preview format</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
                   {/* Announcement Banner Settings */}

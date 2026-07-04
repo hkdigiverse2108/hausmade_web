@@ -25,6 +25,7 @@ async def get_site_settings():
         if not settings:
             settings = {
                 "key": "site_settings",
+                "logo_url": "",
                 "announcement": {
                     "text": "Use promo code HAUS10 for extra 10% OFF at checkout!",
                     "active": True
@@ -39,8 +40,8 @@ async def get_site_settings():
                 "story": {
                     "title": "From our kitchen counter to your daily sanctuary.",
                     "subtitle": "Our Heritage",
-                    "paragraph1": "PureBotanica began in the autumn of 2018 when our founder Elena could not find a commercial soap that didn’t leave her skin dry, itchy, and irritated by synthetic dyes and fake fragrances.",
-                    "paragraph2": "We went back to ancient cold-process saponification roots: slowly combining raw organic butter, wildflower honey, and steam-distilled essential oils. Every single bar is poured by hand, cut with guitar wire, and cured for 6 full weeks to ensure a long-lasting, ultra-creamy bar."
+                    "paragraph1": "Elena started Hausmade Soap after years of battling dry, itchy skin from synthetic ingredients.",
+                    "paragraph2": "Elena started Hausmade Soap after years of battling dry, itchy skin from synthetic ingredients."
                 },
                 "contact": {
                     "email": "info@hausmade.in",
@@ -51,6 +52,9 @@ async def get_site_settings():
             }
             await settings_collection.insert_one(settings)
         else:
+            if "logo_url" not in settings:
+                settings["logo_url"] = ""
+                await settings_collection.update_one({"key": "site_settings"}, {"$set": {"logo_url": ""}})
             if "subscription" not in settings:
                 settings["subscription"] = default_subscription
                 await settings_collection.update_one({"key": "site_settings"}, {"$set": {"subscription": default_subscription}})

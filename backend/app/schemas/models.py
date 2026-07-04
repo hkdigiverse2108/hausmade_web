@@ -106,6 +106,7 @@ class SubscriptionSettings(BaseModel):
     button_text: str
 
 class SiteSettingsModel(BaseModel):
+    logo_url: str = ""
     announcement: AnnouncementSettings
     hero: HeroSettings
     story: StorySettings

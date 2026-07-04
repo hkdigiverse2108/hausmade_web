@@ -349,6 +349,7 @@ export default function App() {
         onOpenOrderHistory={() => setIsOrderHistoryOpen(true)}
         onOpenProfile={() => setIsProfileOpen(true)}
         onOpenAdminLogin={() => setIsAdminLoginOpen(true)}
+        settings={siteSettings}
       />
 
       <main className="flex-1">

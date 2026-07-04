@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ShoppingBag, Menu, X, Sparkles, Heart, User } from 'lucide-react';
 
-export default function Header({ cartCount, onOpenCart, wishlistCount, onOpenWishlist, user, isAuthenticated, onLogout, onOpenLogin, onOpenOrderHistory, onOpenProfile, onOpenAdminLogin }) {
+export default function Header({ cartCount, onOpenCart, wishlistCount, onOpenWishlist, user, isAuthenticated, onLogout, onOpenLogin, onOpenOrderHistory, onOpenProfile, onOpenAdminLogin, settings }) {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -77,8 +77,12 @@ export default function Header({ cartCount, onOpenCart, wishlistCount, onOpenWis
             onClick={handleLogoClick}
             className="flex items-center gap-2 sm:gap-2.5 group shrink-0 cursor-default"
           >
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#C97C5D] flex items-center justify-center text-white transition-transform group-hover:scale-105 shadow-sm cursor-default">
-              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 cursor-default" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#C97C5D] flex items-center justify-center text-white transition-transform group-hover:scale-105 shadow-sm cursor-default overflow-hidden shrink-0">
+              {settings?.logo_url ? (
+                <img src={settings.logo_url} alt="Logo" className="w-full h-full object-cover" />
+              ) : (
+                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 cursor-default" />
+              )}
             </div>
             <div>
               <span className="font-serif-brand text-lg sm:text-2xl font-bold tracking-tight text-[#3A2E26] block leading-none cursor-default">
