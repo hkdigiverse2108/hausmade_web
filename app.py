@@ -20,9 +20,22 @@ def main():
     frontend_dir = os.path.join(root_dir, "frontend")
     backend_dir = os.path.join(root_dir, "backend")
 
-    # Service commands
-    backend_cmd = "python -m uvicorn app.main:app --reload --port 8005"
-    frontend_cmd = "npm run dev"
+    # Load ports from .env file dynamically
+    ports = {"PORT_FRONTEND": "5173", "PORT_BACKEND": "8005"}
+    env_path = os.path.join(root_dir, ".env")
+    if os.path.exists(env_path):
+        with open(env_path, "r") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, value = line.split("=", 1)
+                    key = key.strip()
+                    if key in ports:
+                        ports[key] = value.strip()
+
+    # Service commands using dynamic ports
+    backend_cmd = f"python -m uvicorn app.main:app --reload --port {ports['PORT_BACKEND']}"
+    frontend_cmd = f"npm run dev -- --port {ports['PORT_FRONTEND']}"
 
     processes = []
     try:
@@ -39,8 +52,8 @@ def main():
 
         print("\n" + "="*50)
         print(" BOTH SERVICES RUNNING CONCURRENTLY!")
-        print(" - Backend: http://127.0.0.1:8005")
-        print(" - Frontend: http://localhost:5173 (typically)")
+        print(f" - Backend: http://127.0.0.1:{ports['PORT_BACKEND']}")
+        print(f" - Frontend: http://localhost:{ports['PORT_FRONTEND']}")
         print(" Press Ctrl+C to terminate both servers.")
         print("="*50 + "\n")
 

@@ -14,13 +14,15 @@ import cloudinary
 import cloudinary.uploader
 from dotenv import load_dotenv, find_dotenv
 
-from app.config.settings import (
+from .config.settings import (
     CLOUDINARY_CLOUD_NAME,
     CLOUDINARY_API_KEY,
-    CLOUDINARY_API_SECRET
+    CLOUDINARY_API_SECRET,
+    PORT_FRONTEND,
+    PORT_BACKEND
 )
-from app.database.connection import initialize_db, seed_admin_and_data_func
-from app.routers import auth, products, orders, coupons, settings, reviews, users
+from .database.connection import initialize_db, seed_admin_and_data_func
+from .routers import auth, products, orders, coupons, settings, reviews, users
 
 load_dotenv(find_dotenv())
 
@@ -85,14 +87,14 @@ async def startup_event():
     # Seed default collections
     await seed_admin_and_data_func()
 
-# Allow requests from the React frontend development server
+# Allow requests from the React frontend development server dynamically
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:8005",
-        "http://127.0.0.1:8005"
+        f"http://localhost:{PORT_FRONTEND}",
+        f"http://127.0.0.1:{PORT_FRONTEND}",
+        f"http://localhost:{PORT_BACKEND}",
+        f"http://127.0.0.1:{PORT_BACKEND}"
     ],
     allow_credentials=True,
     allow_methods=["*"],
