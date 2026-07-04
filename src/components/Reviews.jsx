@@ -55,6 +55,7 @@ export default function Reviews() {
   }, []);
 
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [slideDirection, setSlideDirection] = useState('next');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
@@ -65,23 +66,43 @@ export default function Reviews() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const maxIndex = Math.max(0, reviewsList.length - (isMobile ? 1 : 3));
-
   // Auto-slide every 4.5 seconds
   useEffect(() => {
     const timer = setInterval(() => {
       handleNext();
     }, 4500);
     return () => clearInterval(timer);
-  }, [currentIndex, isMobile, reviewsList.length]);
+  }, [currentIndex, reviewsList.length]);
 
   const handleNext = () => {
-    setCurrentIndex((prev) => (prev >= maxIndex ? 0 : prev + 1));
+    setSlideDirection('next');
+    setCurrentIndex((prev) => (prev + 1) % reviewsList.length);
   };
 
   const handlePrev = () => {
-    setCurrentIndex((prev) => (prev === 0 ? maxIndex : prev - 1));
+    setSlideDirection('prev');
+    setCurrentIndex((prev) => (prev - 1 + reviewsList.length) % reviewsList.length);
   };
+
+  const handleDotClick = (idx) => {
+    setSlideDirection(idx > currentIndex ? 'next' : 'prev');
+    setCurrentIndex(idx);
+  };
+
+  // Get exactly the items to display based on screen layout
+  const getVisibleReviews = () => {
+    if (reviewsList.length === 0) return [];
+    if (isMobile) {
+      return [reviewsList[currentIndex % reviewsList.length]];
+    }
+    return [
+      reviewsList[currentIndex % reviewsList.length],
+      reviewsList[(currentIndex + 1) % reviewsList.length],
+      reviewsList[(currentIndex + 2) % reviewsList.length],
+    ];
+  };
+
+  const visibleReviews = getVisibleReviews();
 
   return (
     <section id="reviews" className="py-16 lg:py-24 bg-[#EFECE6] scroll-mt-20 overflow-hidden">
@@ -106,27 +127,29 @@ export default function Reviews() {
         </div>
 
         {/* Carousel Container */}
-        <div className="relative max-w-6xl mx-auto px-8 sm:px-10 overflow-hidden">
+        <div className="relative max-w-6xl mx-auto px-8 sm:px-10">
           
           {/* Previous Arrow Button */}
           <button
             onClick={handlePrev}
-            className="absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 z-10 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/90 shadow-md border border-[#3A2E26]/10 flex items-center justify-center text-[#3A2E26] hover:bg-[#8C7A5B] hover:text-white transition-all cursor-pointer"
+            className="absolute -left-1 sm:-left-2 top-1/2 -translate-y-1/2 z-10 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/90 shadow-md border border-[#3A2E26]/10 flex items-center justify-center text-[#3A2E26] hover:bg-[#8C7A5B] hover:text-white transition-all cursor-pointer"
             aria-label="Previous review"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
 
-          {/* Review Cards Grid / Sliding Carousel Track */}
-          <div className="w-full overflow-hidden">
+          {/* Review Cards Grid with Keyframe-driven slide animation */}
+          <div className="w-full overflow-hidden min-h-[220px]">
             <div 
-              className="flex transition-transform duration-500 ease-in-out"
-              style={{ transform: `translateX(-${currentIndex * (isMobile ? 100 : 33.333)}%)` }}
+              key={currentIndex}
+              className={`grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 ${
+                slideDirection === 'next' ? 'animate-review-next' : 'animate-review-prev'
+              }`}
             >
-              {reviewsList.map((rev) => (
+              {visibleReviews.map((rev, idx) => (
                 <div
-                  key={rev.id}
-                  className="w-full md:w-1/3 shrink-0 px-2 sm:px-3"
+                  key={`${rev.id}-${idx}`}
+                  className="w-full"
                 >
                   <div className="bg-[#F6F4F0] p-5 sm:p-6 md:p-8 rounded-2xl border border-[#3A2E26]/10 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between h-full min-h-[180px] sm:min-h-[220px]">
                     <div>
@@ -167,7 +190,7 @@ export default function Reviews() {
           {/* Next Arrow Button */}
           <button
             onClick={handleNext}
-            className="absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 z-10 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#8C7A5B] shadow-md flex items-center justify-center text-white hover:bg-[#77674b] transition-all cursor-pointer"
+            className="absolute -right-1 sm:-right-2 top-1/2 -translate-y-1/2 z-10 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#8C7A5B] shadow-md flex items-center justify-center text-white hover:bg-[#77674b] transition-all cursor-pointer"
             aria-label="Next review"
           >
             <ChevronRight className="w-5 h-5" />
@@ -177,10 +200,10 @@ export default function Reviews() {
 
         {/* Carousel Indicators / Dots */}
         <div className="flex justify-center items-center gap-2 mt-8">
-          {Array.from({ length: maxIndex + 1 }).map((_, idx) => (
+          {reviewsList.map((_, idx) => (
             <button
               key={idx}
-              onClick={() => setCurrentIndex(idx)}
+              onClick={() => handleDotClick(idx)}
               className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${
                 currentIndex === idx ? 'w-6 bg-[#8C7A5B]' : 'w-2 bg-[#3A2E26]/20'
               }`}

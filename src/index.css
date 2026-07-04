@@ -82,6 +82,17 @@
 .animate-slideUp { animation: slideUp 0.35s ease-out both; }
 .animate-slideDown { animation: slideDown 0.35s ease-out both; }
 
+@keyframes reviewSlideRight {
+  from { opacity: 0; transform: translateX(40px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes reviewSlideLeft {
+  from { opacity: 0; transform: translateX(-40px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.animate-review-next { animation: reviewSlideRight 0.45s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-review-prev { animation: reviewSlideLeft 0.45s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
 /* ===== RESPONSIVE OVERRIDES ===== */
 
 /* Extra small screens (320px - 374px) */
