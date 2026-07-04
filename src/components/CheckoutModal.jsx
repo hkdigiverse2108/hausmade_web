@@ -9,6 +9,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
   const [coupon, setCoupon] = useState('');
   const [discount, setDiscount] = useState(0);
   const [couponApplied, setCouponApplied] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [activeCoupons, setActiveCoupons] = useState([]);
 
   useEffect(() => {
@@ -34,6 +35,79 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
     pincode: '',
     state: 'Gujarat'
   });
+
+  useEffect(() => {
+    if (isOpen) {
+      // Reset coupon states on open
+      setCoupon('');
+      setDiscount(0);
+      setCouponApplied(false);
+      setAppliedCoupon(null);
+
+      if (user) {
+        setFormData({
+          fullName: user.name || '',
+          email: user.email || '',
+          phone: user.mobile || '',
+          address: '',
+          city: '',
+          pincode: '',
+          state: 'Gujarat'
+        });
+      }
+    }
+  }, [user, isOpen]);
+
+  if (!isOpen) return null;
+
+  const rawSubtotal = cartItems.reduce((acc, item) => acc + parseFloat(item.totalPrice), 0);
+  const discountAmount = (rawSubtotal * discount).toFixed(2);
+  const isFreeShipping = appliedCoupon && (appliedCoupon.discount === 0 || appliedCoupon.code.toUpperCase().includes('FREE') || appliedCoupon.description?.toLowerCase().includes('free'));
+  const shippingFee = (rawSubtotal >= 499 || rawSubtotal === 0 || isFreeShipping) ? 0 : 49;
+  const grandTotal = (rawSubtotal - parseFloat(discountAmount) + shippingFee).toFixed(2);
+
+  const handleApplyCoupon = async (e) => {
+    e.preventDefault();
+    if (!coupon.trim()) return;
+    try {
+      const data = await validateCoupon(coupon.trim());
+      setDiscount(data.discount);
+      setAppliedCoupon(data);
+      setCouponApplied(true);
+
+      // Trigger beautiful firecrackers / confetti celebration!
+      confetti({
+        particleCount: 120,
+        spread: 70,
+        origin: { y: 0.65 },
+        colors: ['#7A8B6F', '#C97C5D', '#3A2E26', '#E6D5C3']
+      });
+
+      // Side bursts simulating firecrackers
+      setTimeout(() => {
+        confetti({
+          particleCount: 50,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0 },
+          colors: ['#7A8B6F', '#C97C5D', '#E6D5C3']
+        });
+      }, 150);
+
+      setTimeout(() => {
+        confetti({
+          particleCount: 50,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1 },
+          colors: ['#7A8B6F', '#C97C5D', '#E6D5C3']
+        });
+      }, 300);
+
+    } catch (err) {
+      alert(err.message || 'Invalid coupon code.');
+    }
+  };
 
   const getAvailableAddresses = () => {
     const list = [];
@@ -89,55 +163,6 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
       }
     }
   }, [user, isOpen]);
-
-  if (!isOpen) return null;
-
-  const rawSubtotal = cartItems.reduce((acc, item) => acc + parseFloat(item.totalPrice), 0);
-  const discountAmount = (rawSubtotal * discount).toFixed(2);
-  const shippingFee = rawSubtotal >= 499 || rawSubtotal === 0 ? 0 : 49;
-  const grandTotal = (rawSubtotal - parseFloat(discountAmount) + shippingFee).toFixed(2);
-
-  const handleApplyCoupon = async (e) => {
-    e.preventDefault();
-    if (!coupon.trim()) return;
-    try {
-      const data = await validateCoupon(coupon.trim());
-      setDiscount(data.discount);
-      setCouponApplied(true);
-
-      // Trigger beautiful firecrackers / confetti celebration!
-      confetti({
-        particleCount: 120,
-        spread: 70,
-        origin: { y: 0.65 },
-        colors: ['#7A8B6F', '#C97C5D', '#3A2E26', '#E6D5C3']
-      });
-
-      // Side bursts simulating firecrackers
-      setTimeout(() => {
-        confetti({
-          particleCount: 50,
-          angle: 60,
-          spread: 55,
-          origin: { x: 0 },
-          colors: ['#7A8B6F', '#C97C5D', '#E6D5C3']
-        });
-      }, 150);
-
-      setTimeout(() => {
-        confetti({
-          particleCount: 50,
-          angle: 120,
-          spread: 55,
-          origin: { x: 1 },
-          colors: ['#7A8B6F', '#C97C5D', '#E6D5C3']
-        });
-      }, 300);
-
-    } catch (err) {
-      alert(err.message || 'Invalid coupon code.');
-    }
-  };
 
   const handleFormChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
