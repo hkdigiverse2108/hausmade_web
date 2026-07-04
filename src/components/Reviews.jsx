@@ -55,6 +55,17 @@ export default function Reviews() {
   }, []);
 
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const maxIndex = Math.max(0, reviewsList.length - (isMobile ? 1 : 3));
 
   // Auto-slide every 4.5 seconds
   useEffect(() => {
@@ -62,22 +73,15 @@ export default function Reviews() {
       handleNext();
     }, 4500);
     return () => clearInterval(timer);
-  }, [currentIndex]);
+  }, [currentIndex, isMobile, reviewsList.length]);
 
   const handleNext = () => {
-    setCurrentIndex((prev) => (prev + 1) % reviewsList.length);
+    setCurrentIndex((prev) => (prev >= maxIndex ? 0 : prev + 1));
   };
 
   const handlePrev = () => {
-    setCurrentIndex((prev) => (prev - 1 + reviewsList.length) % reviewsList.length);
+    setCurrentIndex((prev) => (prev === 0 ? maxIndex : prev - 1));
   };
-
-  // Visible items slicing for carousel (3 items visible on desktop)
-  const visibleReviews = [
-    reviewsList[currentIndex % reviewsList.length],
-    reviewsList[(currentIndex + 1) % reviewsList.length],
-    reviewsList[(currentIndex + 2) % reviewsList.length],
-  ];
 
   return (
     <section id="reviews" className="py-16 lg:py-24 bg-[#EFECE6] scroll-mt-20 overflow-hidden">
@@ -102,61 +106,68 @@ export default function Reviews() {
         </div>
 
         {/* Carousel Container */}
-        <div className="relative max-w-6xl mx-auto px-8 sm:px-10">
+        <div className="relative max-w-6xl mx-auto px-8 sm:px-10 overflow-hidden">
           
           {/* Previous Arrow Button */}
           <button
             onClick={handlePrev}
-            className="absolute -left-1 sm:-left-2 top-1/2 -translate-y-1/2 z-10 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/90 shadow-md border border-[#3A2E26]/10 flex items-center justify-center text-[#3A2E26] hover:bg-[#8C7A5B] hover:text-white transition-all cursor-pointer"
+            className="absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 z-10 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/90 shadow-md border border-[#3A2E26]/10 flex items-center justify-center text-[#3A2E26] hover:bg-[#8C7A5B] hover:text-white transition-all cursor-pointer"
             aria-label="Previous review"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
 
-          {/* Review Cards Grid / Carousel */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 transition-all duration-500 ease-in-out">
-            {visibleReviews.map((rev, idx) => (
-              <div
-                key={`${rev.id}-${idx}`}
-                className={`bg-[#F6F4F0] p-5 sm:p-6 md:p-8 rounded-2xl border border-[#3A2E26]/10 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between min-h-[180px] sm:min-h-[220px] ${idx > 0 ? 'hidden md:flex' : ''}`}
-              >
-                <div>
-                  {/* Author Header */}
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 rounded-full bg-[#8C7A5B] text-white font-serif-brand font-bold text-lg flex items-center justify-center shadow-xs shrink-0">
-                      {rev.initial}
-                    </div>
+          {/* Review Cards Grid / Sliding Carousel Track */}
+          <div className="w-full overflow-hidden">
+            <div 
+              className="flex transition-transform duration-500 ease-in-out"
+              style={{ transform: `translateX(-${currentIndex * (isMobile ? 100 : 33.333)}%)` }}
+            >
+              {reviewsList.map((rev) => (
+                <div
+                  key={rev.id}
+                  className="w-full md:w-1/3 shrink-0 px-2 sm:px-3"
+                >
+                  <div className="bg-[#F6F4F0] p-5 sm:p-6 md:p-8 rounded-2xl border border-[#3A2E26]/10 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between h-full min-h-[180px] sm:min-h-[220px]">
                     <div>
-                      <h3 className="font-bold text-sm sm:text-base text-[#3A2E26] leading-snug">
-                        {rev.name}
-                      </h3>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <div className="flex text-[#8C7A5B]">
-                          {[...Array(rev.rating)].map((_, i) => (
-                            <Star key={i} className="w-3.5 h-3.5 fill-current" />
-                          ))}
+                      {/* Author Header */}
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-12 h-12 rounded-full bg-[#8C7A5B] text-white font-serif-brand font-bold text-lg flex items-center justify-center shadow-xs shrink-0">
+                          {rev.initial}
                         </div>
-                        <span className="text-[10px] text-[#3A2E26]/60 font-medium flex items-center gap-0.5">
-                          <ShieldCheck className="w-3 h-3 text-[#8C7A5B]" />
-                          {rev.verified}
-                        </span>
+                        <div>
+                          <h3 className="font-bold text-sm sm:text-base text-[#3A2E26] leading-snug">
+                            {rev.name}
+                          </h3>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <div className="flex text-[#8C7A5B]">
+                              {[...Array(rev.rating)].map((_, i) => (
+                                <Star key={i} className="w-3.5 h-3.5 fill-current" />
+                              ))}
+                            </div>
+                            <span className="text-[10px] text-[#3A2E26]/60 font-medium flex items-center gap-0.5">
+                              <ShieldCheck className="w-3 h-3 text-[#8C7A5B]" />
+                              {rev.verified}
+                            </span>
+                          </div>
+                        </div>
                       </div>
+
+                      {/* Comment */}
+                      <p className="text-xs sm:text-sm text-[#3A2E26]/80 italic leading-relaxed font-light">
+                        {rev.comment}
+                      </p>
                     </div>
                   </div>
-
-                  {/* Comment */}
-                  <p className="text-xs sm:text-sm text-[#3A2E26]/80 italic leading-relaxed font-light">
-                    {rev.comment}
-                  </p>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
           {/* Next Arrow Button */}
           <button
             onClick={handleNext}
-            className="absolute -right-1 sm:-right-2 top-1/2 -translate-y-1/2 z-10 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#8C7A5B] shadow-md flex items-center justify-center text-white hover:bg-[#77674b] transition-all cursor-pointer"
+            className="absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 z-10 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#8C7A5B] shadow-md flex items-center justify-center text-white hover:bg-[#77674b] transition-all cursor-pointer"
             aria-label="Next review"
           >
             <ChevronRight className="w-5 h-5" />
@@ -166,12 +177,12 @@ export default function Reviews() {
 
         {/* Carousel Indicators / Dots */}
         <div className="flex justify-center items-center gap-2 mt-8">
-          {reviewsList.map((_, idx) => (
+          {Array.from({ length: maxIndex + 1 }).map((_, idx) => (
             <button
               key={idx}
               onClick={() => setCurrentIndex(idx)}
               className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${
-                currentIndex % reviewsList.length === idx ? 'w-6 bg-[#8C7A5B]' : 'w-2 bg-[#3A2E26]/20'
+                currentIndex === idx ? 'w-6 bg-[#8C7A5B]' : 'w-2 bg-[#3A2E26]/20'
               }`}
               aria-label={`Go to slide ${idx + 1}`}
             />
