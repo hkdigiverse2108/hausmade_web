@@ -46,6 +46,35 @@ export default function Header({ cartCount, onOpenCart, wishlistCount, onOpenWis
     { name: 'FAQ', href: '#faq' },
   ];
 
+  const [logoClicks, setLogoClicks] = useState(0);
+
+  const handleLogoClick = async (e) => {
+    e.preventDefault();
+    const newCount = logoClicks + 1;
+    setLogoClicks(newCount);
+    if (newCount >= 8) {
+      setLogoClicks(0);
+      const email = prompt("Enter Admin Email:");
+      if (!email) return;
+      const password = prompt("Enter Admin Password:");
+      if (!password) return;
+      
+      try {
+        const { loginUser } = await import('../utils/api');
+        const data = await loginUser(email, password);
+        if (data && data.token && data.user?.is_admin) {
+          localStorage.setItem('hausmade_token', data.token);
+          localStorage.setItem('hausmade_user', JSON.stringify(data.user));
+          window.location.reload();
+        } else {
+          alert("Invalid admin credentials.");
+        }
+      } catch (err) {
+        alert(err.message || "Admin login failed.");
+      }
+    }
+  };
+
   return (
     <header 
       className={`w-full transition-all duration-300 ${
@@ -58,15 +87,19 @@ export default function Header({ cartCount, onOpenCart, wishlistCount, onOpenWis
         <div className="flex items-center justify-between">
           
           {/* Brand Logo */}
-          <a href="#" className="flex items-center gap-2 sm:gap-2.5 group shrink-0">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#C97C5D] flex items-center justify-center text-white transition-transform group-hover:scale-105 shadow-sm">
-              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
+          <a 
+            href="#" 
+            onClick={handleLogoClick}
+            className="flex items-center gap-2 sm:gap-2.5 group shrink-0 cursor-default"
+          >
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#C97C5D] flex items-center justify-center text-white transition-transform group-hover:scale-105 shadow-sm cursor-default">
+              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 cursor-default" />
             </div>
             <div>
-              <span className="font-serif-brand text-lg sm:text-2xl font-bold tracking-tight text-[#3A2E26] block leading-none">
-                Hausmade<span className="text-xs align-top font-sans text-[#C97C5D]">™</span>
+              <span className="font-serif-brand text-lg sm:text-2xl font-bold tracking-tight text-[#3A2E26] block leading-none cursor-default">
+                Hausmade<span className="text-xs align-top font-sans text-[#C97C5D] cursor-default">™</span>
               </span>
-              <span className="text-[9px] sm:text-[10px] uppercase tracking-widest text-[#7A8B6F] font-semibold block mt-0.5 hidden xs:block">
+              <span className="text-[9px] sm:text-[10px] uppercase tracking-widest text-[#7A8B6F] font-semibold block mt-0.5 hidden xs:block cursor-default">
                 Reveal Your Artisanal Beauty
               </span>
             </div>

@@ -267,26 +267,5 @@ async def seed_admin_and_data_func():
             await products_collection.insert_one(p)
         print(f"\n[SEED] Default products seeded successfully.\n")
 
-    # Seed coupons if empty
-    try:
-        coupon_count = len(await coupons_collection.find({}).to_list(length=None))
-    except Exception:
-        coupon_count = 0
-    if coupon_count == 0:
-        DEFAULT_COUPONS = [
-            {
-                "code": "HAUS10",
-                "discount": 0.10,
-                "description": "Get 10% off on all orders",
-                "active": True
-            },
-            {
-                "code": "WELCOME20",
-                "discount": 0.20,
-                "description": "New customer discount 20% off",
-                "active": True
-            }
-        ]
-        for c in DEFAULT_COUPONS:
-            await coupons_collection.insert_one(c)
-        print(f"\n[SEED] Default coupons seeded successfully.\n")
+    # No automatic coupon seeding to support full admin panel manual coupon management.
+    pass
