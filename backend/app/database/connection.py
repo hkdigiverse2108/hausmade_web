@@ -4,7 +4,7 @@ import uuid
 import asyncio
 from datetime import datetime
 from motor.motor_asyncio import AsyncIOMotorClient
-from app.config.settings import MONGODB_URI
+from app.config.settings import MONGODB_URI, ADMIN_EMAIL, ADMIN_PASSWORD
 from app.security.auth import hash_password
 
 use_local_json = False
@@ -196,20 +196,19 @@ async def initialize_db():
         use_local_json = True
 
 async def seed_admin_and_data_func():
-    admin_email = "admin@hausmade.com"
-    existing = await users_collection.find_one({"email": admin_email})
+    existing = await users_collection.find_one({"email": ADMIN_EMAIL})
     if not existing:
-        hashed_pwd = hash_password("adminsecret")
+        hashed_pwd = hash_password(ADMIN_PASSWORD)
         admin_doc = {
             "name": "Hausmade Owner",
-            "email": admin_email,
+            "email": ADMIN_EMAIL,
             "mobile": "9999999999",
             "password": hashed_pwd,
             "is_admin": True,
             "created_at": datetime.utcnow()
         }
         await users_collection.insert_one(admin_doc)
-        print(f"\n[SEED] Default admin user seeded successfully: {admin_email}\n")
+        print(f"\n[SEED] Default admin user seeded successfully: {ADMIN_EMAIL}\n")
 
     # Seed products if empty
     try:

@@ -15,3 +15,6 @@ CLOUDINARY_API_SECRET = os.getenv("CLOUDINARY_API_SECRET")
 
 ENV = os.getenv("ENV", "development")
 
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "admin@hausmade.com")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "adminsecret")
+
