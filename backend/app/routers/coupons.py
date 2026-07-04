@@ -22,7 +22,7 @@ async def get_active_coupons():
     try:
         all_active = await coupons_collection.find({"active": True}).to_list(length=None)
         valid_coupons = []
-        now = datetime.utcnow()
+        now = datetime.now()
         for coupon in all_active:
             if not coupon.get("lifetime", True):
                 start_date_str = coupon.get("start_date")
@@ -61,7 +61,7 @@ async def validate_coupon(code: str):
             
         # Date validity check
         if not coupon.get("lifetime", True):
-            now = datetime.utcnow()
+            now = datetime.now()
             
             start_date_str = coupon.get("start_date")
             end_date_str = coupon.get("end_date")
