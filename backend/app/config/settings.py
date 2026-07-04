@@ -15,6 +15,15 @@ CLOUDINARY_API_SECRET = os.getenv("CLOUDINARY_API_SECRET")
 
 ENV = os.getenv("ENV", "development")
 
-ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "admin@hausmade.com")
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "adminsecret")
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
+
+if not ADMIN_EMAIL or not ADMIN_PASSWORD:
+    # Ensure variables exist, fallback to warning or defaults ONLY if local dev setting
+    if os.getenv("ENV") == "production":
+        raise ValueError("Production Error: ADMIN_EMAIL and ADMIN_PASSWORD must be configured in environment variables!")
+    else:
+        # Development defaults if not specified
+        ADMIN_EMAIL = ADMIN_EMAIL or "admin@hausmade.com"
+        ADMIN_PASSWORD = ADMIN_PASSWORD or "adminsecret"
 
