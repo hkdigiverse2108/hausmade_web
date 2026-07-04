@@ -28,7 +28,8 @@ import {
   AlertCircle,
   Eye,
   Sliders,
-  MessageSquare
+  MessageSquare,
+  Star
 } from 'lucide-react';
 import { 
   getAdminStats, 
@@ -46,7 +47,8 @@ import {
   updateSiteSettings,
   adminGetReviews,
   adminApproveReview,
-  adminDeleteReview
+  adminDeleteReview,
+  adminUpdateReview
 } from '../utils/api';
 
 function AdminPanel({ token, onLogout, showNotification, onViewStorefront, settings, onUpdateSettings }) {
@@ -121,7 +123,17 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     code: '',
     discount: 0,
     description: '',
-    active: true
+    active: true,
+    lifetime: true,
+    start_date: '',
+    end_date: ''
+  });
+
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [editingReview, setEditingReview] = useState(null);
+  const [reviewForm, setReviewForm] = useState({
+    rating: 5,
+    comment: ''
   });
 
   const fetchAdminData = async (silent = false) => {
@@ -170,9 +182,34 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     try {
       await adminDeleteReview(reviewId, token);
       showNotification('Review deleted successfully.', 'success');
-      setReviews(prev => prev.filter(r => r.id !== reviewId));
+      setReviews(prev => prev.filter(r => r.id !== reviewId && r._id !== reviewId));
     } catch (err) {
       showNotification(err.message || 'Failed to delete review', 'error');
+    }
+  };
+
+  const handleOpenEditReview = (review) => {
+    setEditingReview(review);
+    setReviewForm({
+      rating: review.rating,
+      comment: review.comment
+    });
+    setIsReviewModalOpen(true);
+  };
+
+  const handleSaveReview = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const id = editingReview.id || editingReview._id;
+      await adminUpdateReview(id, reviewForm.rating, reviewForm.comment, token);
+      showNotification('Review updated successfully!', 'success');
+      setReviews(prev => prev.map(r => (r.id === id || r._id === id) ? { ...r, rating: parseInt(reviewForm.rating), comment: reviewForm.comment } : r));
+      setIsReviewModalOpen(false);
+    } catch (err) {
+      showNotification(err.message || 'Failed to update review', 'error');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -351,7 +388,10 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       code: '',
       discount: 0,
       description: '',
-      active: true
+      active: true,
+      lifetime: true,
+      start_date: '',
+      end_date: ''
     });
     setIsCouponModalOpen(true);
   };
@@ -362,7 +402,10 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       code: c.code,
       discount: c.discount,
       description: c.description || '',
-      active: c.active !== undefined ? c.active : true
+      active: c.active !== undefined ? c.active : true,
+      lifetime: c.lifetime !== undefined ? c.lifetime : true,
+      start_date: c.start_date || '',
+      end_date: c.end_date || ''
     });
     setIsCouponModalOpen(true);
   };
@@ -1543,6 +1586,13 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                         </button>
                                       )}
                                       <button
+                                        onClick={() => handleOpenEditReview(r)}
+                                        className="p-1.5 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                                        title="Edit Review"
+                                      >
+                                        <Edit className="w-4 h-4" />
+                                      </button>
+                                      <button
                                         onClick={() => handleDeleteReview(r.id || r._id)}
                                         className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                                         title="Delete Review"
@@ -1792,6 +1842,43 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                 <label className="flex items-center gap-2 text-sm font-semibold text-[#3A2E26] cursor-pointer py-1">
                   <input
                     type="checkbox"
+                    checked={couponForm.lifetime}
+                    onChange={(e) => setCouponForm({ ...couponForm, lifetime: e.target.checked })}
+                    className="w-4 h-4 text-[#7A8B6F] border-gray-300 rounded focus:ring-[#7A8B6F]"
+                  />
+                  <span>Lifetime Coupon (Runs indefinitely without date limits)</span>
+                </label>
+              </div>
+
+              {!couponForm.lifetime && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">Start Date & Time</label>
+                    <input
+                      type="datetime-local"
+                      required={!couponForm.lifetime}
+                      value={couponForm.start_date}
+                      onChange={(e) => setCouponForm({ ...couponForm, start_date: e.target.value })}
+                      className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">End Date & Time</label>
+                    <input
+                      type="datetime-local"
+                      required={!couponForm.lifetime}
+                      value={couponForm.end_date}
+                      onChange={(e) => setCouponForm({ ...couponForm, end_date: e.target.value })}
+                      className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="flex items-center gap-2 text-sm font-semibold text-[#3A2E26] cursor-pointer py-1">
+                  <input
+                    type="checkbox"
                     checked={couponForm.active}
                     onChange={(e) => setCouponForm({ ...couponForm, active: e.target.checked })}
                     className="w-4 h-4 text-[#7A8B6F] border-gray-300 rounded focus:ring-[#7A8B6F]"
@@ -1814,6 +1901,68 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                   className="px-5 py-2.5 bg-[#3A2E26] hover:bg-[#2A201A] text-white font-bold text-sm rounded-2xl shadow-sm transition-colors cursor-pointer flex items-center justify-center min-w-[5rem]"
                 >
                   {saving ? 'Saving...' : 'Save Coupon'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* Review Edit Modal */}
+      {isReviewModalOpen && (
+        <div className="fixed inset-0 bg-[#3A2E26]/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 border border-[#E6D5C3]/40 shadow-2xl relative animate-scaleUp">
+            <h3 className="text-xl font-bold mb-2 text-[#3A2E26]">Edit Customer Review</h3>
+            <p className="text-xs text-[#3A2E26]/60 mb-6">Modify customer rating and comment text directly.</p>
+
+            <form onSubmit={handleSaveReview} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">Rating Stars</label>
+                <div className="flex items-center gap-1.5 py-1 font-sans">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setReviewForm({ ...reviewForm, rating: star })}
+                      className="p-1 text-amber-500 hover:scale-110 transition-transform cursor-pointer"
+                    >
+                      <Star
+                        className={`w-6 h-6 ${
+                          star <= reviewForm.rating
+                            ? 'fill-amber-500 text-amber-500'
+                            : 'text-gray-300'
+                        }`}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">Comment / Content</label>
+                <textarea
+                  required
+                  rows="4"
+                  value={reviewForm.comment}
+                  onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
+                  placeholder="Review content details..."
+                  className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsReviewModalOpen(false)}
+                  className="px-5 py-2.5 border border-[#E6D5C3] hover:bg-gray-50 text-[#3A2E26] font-bold text-sm rounded-2xl transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-5 py-2.5 bg-[#3A2E26] hover:bg-[#2A201A] text-white font-bold text-sm rounded-2xl shadow-sm transition-colors cursor-pointer flex items-center justify-center min-w-[5rem]"
+                >
+                  {saving ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             </form>

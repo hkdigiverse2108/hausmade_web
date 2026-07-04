@@ -432,10 +432,34 @@ export async function adminDeleteReview(id, token) {
   return response.json();
 }
 
+export async function adminUpdateReview(id, rating, comment, token) {
+  const response = await fetch(`${API_URL}/api/admin/reviews/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ rating, comment })
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || 'Failed to update review');
+  }
+  return response.json();
+}
+
 export async function getRecentOrders() {
   const response = await fetch(`${API_URL}/api/public/recent-orders`);
   if (!response.ok) {
     throw new Error('Failed to fetch recent orders');
+  }
+  return response.json();
+}
+
+export async function getActiveCoupons() {
+  const response = await fetch(`${API_URL}/api/coupons/active`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch active coupons');
   }
   return response.json();
 }

@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, Depends
 from bson import ObjectId
-from app.schemas.models import ReviewSubmitModel
+from app.schemas.models import ReviewSubmitModel, ReviewUpdateModel
 from app.database.connection import reviews_collection, users_collection, orders_collection
 from app.dependencies.auth_deps import get_current_user_email, get_admin_user
 
@@ -125,6 +125,32 @@ async def delete_review(id: str, admin: dict = Depends(get_admin_user)):
             
         await reviews_collection.delete_one(query)
         return {"status": "success", "message": "Review deleted successfully"}
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.put("/api/admin/reviews/{id}")
+async def update_review(id: str, review: ReviewUpdateModel, admin: dict = Depends(get_admin_user)):
+    try:
+        query = {"id": id}
+        existing = await reviews_collection.find_one(query)
+        if not existing:
+            try:
+                query = {"_id": ObjectId(id)}
+                existing = await reviews_collection.find_one(query)
+            except Exception:
+                query = {"_id": id}
+                existing = await reviews_collection.find_one(query)
+                
+        if not existing:
+            raise HTTPException(status_code=404, detail="Review not found")
+            
+        await reviews_collection.update_one(query, {"$set": {
+            "rating": review.rating,
+            "comment": review.comment
+        }})
+        return {"status": "success", "message": "Review updated successfully"}
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e

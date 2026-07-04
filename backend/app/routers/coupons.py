@@ -1,3 +1,4 @@
+from datetime import datetime
 from fastapi import APIRouter, HTTPException, Depends
 from app.schemas.models import CouponModel
 from app.database.connection import coupons_collection
@@ -16,12 +17,71 @@ async def get_admin_coupons(admin: dict = Depends(get_admin_user)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/api/coupons/active")
+async def get_active_coupons():
+    try:
+        all_active = await coupons_collection.find({"active": True}).to_list(length=None)
+        valid_coupons = []
+        now = datetime.utcnow()
+        for coupon in all_active:
+            if not coupon.get("lifetime", True):
+                start_date_str = coupon.get("start_date")
+                end_date_str = coupon.get("end_date")
+                
+                if start_date_str:
+                    try:
+                        start_dt = datetime.fromisoformat(start_date_str.replace("Z", "+00:00")).replace(tzinfo=None)
+                        if now < start_dt:
+                            continue
+                    except ValueError:
+                        pass
+                if end_date_str:
+                    try:
+                        end_dt = datetime.fromisoformat(end_date_str.replace("Z", "+00:00")).replace(tzinfo=None)
+                        if now > end_dt:
+                            continue
+                    except ValueError:
+                        pass
+            
+            valid_coupons.append({
+                "code": coupon["code"],
+                "discount": coupon["discount"],
+                "description": coupon.get("description", "")
+            })
+        return valid_coupons
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/api/coupons/validate")
 async def validate_coupon(code: str):
     try:
         coupon = await coupons_collection.find_one({"code": code.upper(), "active": True})
         if not coupon:
             raise HTTPException(status_code=400, detail="Invalid or inactive coupon code")
+            
+        # Date validity check
+        if not coupon.get("lifetime", True):
+            now = datetime.utcnow()
+            
+            start_date_str = coupon.get("start_date")
+            end_date_str = coupon.get("end_date")
+            
+            if start_date_str:
+                try:
+                    start_dt = datetime.fromisoformat(start_date_str.replace("Z", "+00:00")).replace(tzinfo=None)
+                    if now < start_dt:
+                        raise HTTPException(status_code=400, detail="This coupon offer has not started yet")
+                except ValueError:
+                    pass
+                    
+            if end_date_str:
+                try:
+                    end_dt = datetime.fromisoformat(end_date_str.replace("Z", "+00:00")).replace(tzinfo=None)
+                    if now > end_dt:
+                        raise HTTPException(status_code=400, detail="This coupon offer has expired")
+                except ValueError:
+                    pass
+
         return {
             "code": coupon["code"],
             "discount": coupon["discount"],

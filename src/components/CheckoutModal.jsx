@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, CheckCircle2, ShieldCheck, CreditCard, Truck, Smartphone, Banknote, ArrowRight, Sparkles, Loader2, Compass, Navigation } from 'lucide-react';
-import { placeOrder, updateUserProfile, validateCoupon } from '../utils/api';
+import { placeOrder, updateUserProfile, validateCoupon, getActiveCoupons } from '../utils/api';
 
 export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderComplete, token, user }) {
   const [step, setStep] = useState('shipping'); // 'shipping', 'payment', 'success'
@@ -8,6 +8,15 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
   const [coupon, setCoupon] = useState('');
   const [discount, setDiscount] = useState(0);
   const [couponApplied, setCouponApplied] = useState(false);
+  const [activeCoupons, setActiveCoupons] = useState([]);
+
+  useEffect(() => {
+    if (isOpen) {
+      getActiveCoupons()
+        .then(data => setActiveCoupons(data))
+        .catch(err => console.error("Failed to load active coupons", err));
+    }
+  }, [isOpen]);
   const [orderId, setOrderId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -542,40 +551,66 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
                   ))}
                 </div>
 
-                {/* Coupon code */}
-                <div className="flex gap-2 pt-2 border-t border-[#3A2E26]/10">
-                  <input
-                    type="text"
-                    placeholder="PROMO CODE (HAUS10)"
-                    value={coupon}
-                    onChange={(e) => setCoupon(e.target.value)}
-                    className="flex-1 px-3 py-2 rounded-xl bg-white border border-[#3A2E26]/20 text-xs font-semibold uppercase tracking-wider focus:outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleApplyCoupon}
-                    className="px-4 py-2 bg-[#3A2E26] hover:bg-black text-white text-xs font-bold uppercase rounded-xl transition-all cursor-pointer"
-                  >
-                    Apply
-                  </button>
-                </div>
-                {couponApplied && (
-                  <p className="text-xs text-[#7A8B6F] font-bold">✓ Coupon HAUS10 applied! (10% off)</p>
-                )}
+                 {/* Coupon code */}
+                 <div className="space-y-2 pt-2 border-t border-[#3A2E26]/10">
+                   {activeCoupons.length > 0 && (
+                     <div>
+                       <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/60 mb-1">Select Active Offer</label>
+                       <select
+                         value={coupon}
+                         onChange={(e) => setCoupon(e.target.value)}
+                         className="w-full px-3 py-2 rounded-xl bg-white border border-[#3A2E26]/20 text-xs font-semibold focus:outline-none"
+                       >
+                         <option value="">-- Choose Coupon --</option>
+                         {activeCoupons.map((c) => (
+                           <option key={c.code} value={c.code}>
+                             {c.code} ({(c.discount * 100).toFixed(0)}% OFF) {c.description ? `- ${c.description}` : ''}
+                           </option>
+                         ))}
+                         <option value="custom_code">Or enter custom promo code...</option>
+                       </select>
+                     </div>
+                   )}
 
-                {/* Pricing totals */}
-                <div className="space-y-2 pt-3 border-t border-[#3A2E26]/10 text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Cart Subtotal:</span>
-                    <span className="font-semibold">₹{rawSubtotal.toFixed(2)}</span>
-                  </div>
-                  {couponApplied && (
-                    <div className="flex justify-between text-[#C97C5D]">
-                      <span>Discount (10%):</span>
-                      <span>-₹{discountAmount}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between">
+                   {(activeCoupons.length === 0 || coupon === 'custom_code' || !activeCoupons.some(c => c.code === coupon)) && (
+                     <div className="flex gap-2">
+                       <input
+                         type="text"
+                         placeholder="PROMO CODE"
+                         value={coupon === 'custom_code' ? '' : coupon}
+                         onChange={(e) => setCoupon(e.target.value.toUpperCase())}
+                         className="flex-1 px-3 py-2 rounded-xl bg-white border border-[#3A2E26]/20 text-xs font-semibold uppercase tracking-wider focus:outline-none"
+                       />
+                     </div>
+                   )}
+
+                   <div className="flex justify-end">
+                     <button
+                       type="button"
+                       onClick={handleApplyCoupon}
+                       className="px-4 py-1.5 bg-[#3A2E26] hover:bg-black text-white text-xs font-bold uppercase rounded-xl transition-all cursor-pointer"
+                     >
+                       Apply
+                     </button>
+                   </div>
+                 </div>
+                 {couponApplied && (
+                   <p className="text-xs text-[#7A8B6F] font-bold">✓ Coupon {coupon.toUpperCase()} applied! ({(discount * 100).toFixed(0)}% off)</p>
+                 )}
+ 
+                 {/* Pricing totals */}
+                 <div className="space-y-2 pt-3 border-t border-[#3A2E26]/10 text-xs">
+                   <div className="flex justify-between">
+                     <span className="text-gray-500">Cart Subtotal:</span>
+                     <span className="font-semibold">₹{rawSubtotal.toFixed(2)}</span>
+                   </div>
+                   {couponApplied && (
+                     <div className="flex justify-between text-[#C97C5D]">
+                       <span>Discount ({(discount * 100).toFixed(0)}%):</span>
+                       <span>-₹{discountAmount}</span>
+                     </div>
+                   )}
+                   <div className="flex justify-between">
                     <span className="text-gray-500">Shipping Delivery:</span>
                     <span className="font-semibold">{shippingFee === 0 ? 'FREE' : `₹${shippingFee.toFixed(2)}`}</span>
                   </div>

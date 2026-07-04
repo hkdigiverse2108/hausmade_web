@@ -18,6 +18,9 @@ class CouponModel(BaseModel):
     discount: float
     description: Optional[str] = None
     active: bool = True
+    lifetime: bool = True
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
 
 class UserRegister(BaseModel):
     name: str
@@ -139,3 +142,7 @@ class UserUpdate(BaseModel):
     addresses: Optional[List[AddressItem]] = None
     current_password: Optional[str] = None
     password: Optional[str] = None
+
+class ReviewUpdateModel(BaseModel):
+    rating: int
+    comment: str
