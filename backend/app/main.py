@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import cloudinary
 import cloudinary.uploader
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 
 from app.config.settings import (
     CLOUDINARY_CLOUD_NAME,
@@ -17,7 +17,7 @@ from app.config.settings import (
 from app.database.connection import initialize_db, seed_admin_and_data_func
 from app.routers import auth, products, orders, coupons, settings, reviews, users
 
-load_dotenv()
+load_dotenv(find_dotenv())
 
 # Cloudinary configuration
 cloudinary.config(

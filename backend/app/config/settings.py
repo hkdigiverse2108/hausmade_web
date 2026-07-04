@@ -1,7 +1,7 @@
 import os
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 
-load_dotenv()
+load_dotenv(find_dotenv())
 
 MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017/soap_db")
 JWT_SECRET = os.getenv("JWT_SECRET", "super_secret_hausmade_key_12345")
