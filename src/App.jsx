@@ -336,22 +336,20 @@ export default function App() {
           </button>
         </div>
       )}
-      <div className="w-full">
-        <AnnouncementBanner settings={siteSettings.announcement} />
-        <Header
-          cartCount={cartItems.reduce((acc, item) => acc + item.quantity, 0)}
-          onOpenCart={() => setIsCartOpen(true)}
-          wishlistCount={wishlistItems.length}
-          onOpenWishlist={() => setIsWishlistOpen(true)}
-          user={user}
-          isAuthenticated={isAuthenticated}
-          onLogout={handleLogout}
-          onOpenLogin={() => setIsLoginOpen(true)}
-          onOpenOrderHistory={() => setIsOrderHistoryOpen(true)}
-          onOpenProfile={() => setIsProfileOpen(true)}
-          onOpenAdminLogin={() => setIsAdminLoginOpen(true)}
-        />
-      </div>
+      <AnnouncementBanner settings={siteSettings.announcement} />
+      <Header
+        cartCount={cartItems.reduce((acc, item) => acc + item.quantity, 0)}
+        onOpenCart={() => setIsCartOpen(true)}
+        wishlistCount={wishlistItems.length}
+        onOpenWishlist={() => setIsWishlistOpen(true)}
+        user={user}
+        isAuthenticated={isAuthenticated}
+        onLogout={handleLogout}
+        onOpenLogin={() => setIsLoginOpen(true)}
+        onOpenOrderHistory={() => setIsOrderHistoryOpen(true)}
+        onOpenProfile={() => setIsProfileOpen(true)}
+        onOpenAdminLogin={() => setIsAdminLoginOpen(true)}
+      />
 
       <main className="flex-1">
         <Hero settings={siteSettings.hero} />
