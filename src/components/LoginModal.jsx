@@ -3,7 +3,7 @@ import { X, Mail, Lock, User, Sparkles, ArrowRight, ShieldCheck, Check, Phone, E
 import { useAuth0 } from '@auth0/auth0-react';
 import { registerUser, loginUser, sendOtp, verifyOtp } from '../utils/api';
 
-export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotification }) {
+export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotification, isAdminOnly = false }) {
   const { loginWithRedirect } = useAuth0();
 
   const handleGoogleLogin = () => {
@@ -44,6 +44,8 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotifi
   const [error, setError] = useState('');
 
   if (!isOpen) return null;
+
+  const isLogin = isAdminOnly ? true : isLoginTab;
 
   // Password Validation Criteria
   const passwordCriteria = {
@@ -108,7 +110,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotifi
     setError('');
 
     // Additional client-side check for signup password strength
-    if (!isLoginTab && strengthScore < 3) {
+    if (!isLogin && strengthScore < 3) {
       setError('Please make sure your password is at least "Good" before registering.');
       setLoading(false);
       return;
@@ -116,7 +118,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotifi
 
     try {
       let data;
-      if (isLoginTab) {
+      if (isLogin) {
         if (loginMethod === 'otp') {
           data = await verifyOtp(mobile, otp);
         } else {
@@ -126,6 +128,10 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotifi
           }
           data = await loginUser(identifier, password);
         }
+        
+        if (isAdminOnly && !data.user?.is_admin) {
+          throw new Error('Access denied. Administrator credentials required.');
+        }
       } else {
         data = await registerUser(name, email, mobile, password);
       }
@@ -134,7 +140,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotifi
       localStorage.setItem('hausmade_user', JSON.stringify(data.user));
       
       if (showNotification) {
-        showNotification(isLoginTab ? 'Welcome back! Logged in successfully.' : 'Account created successfully! Welcome to Hausmade™ Club.', 'success');
+        showNotification(isLogin ? 'Welcome back! Logged in successfully.' : 'Account created successfully! Welcome to Hausmade™ Club.', 'success');
       }
       
       if (onLoginSuccess) {
@@ -162,8 +168,12 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotifi
             <Sparkles className="w-5 h-5 animate-pulse" />
           </div>
           <div>
-            <h1 className="font-serif-brand text-xl font-bold tracking-tight text-[#3A2E26]">Hausmade™ Account</h1>
-            <p className="text-[9px] uppercase tracking-widest text-[#7A8B6F] font-bold">Sign In / Sign Up Gateway</p>
+            <h1 className="font-serif-brand text-xl font-bold tracking-tight text-[#3A2E26]">
+              {isAdminOnly ? 'Hausmade™ Admin Portal' : 'Hausmade™ Account'}
+            </h1>
+            <p className="text-[9px] uppercase tracking-widest text-[#7A8B6F] font-bold">
+              {isAdminOnly ? 'Authorized Access Only' : 'Sign In / Sign Up Gateway'}
+            </p>
           </div>
         </div>
 
@@ -171,7 +181,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotifi
           onClick={onClose}
           className="px-4 py-2 rounded-xl bg-[#3A2E26] hover:bg-[#3A2E26]/90 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
         >
-          <span>Exit Account Gate</span>
+          <span>{isAdminOnly ? 'Exit Admin Gate' : 'Exit Account Gate'}</span>
           <X className="w-4 h-4" />
         </button>
       </div>
@@ -216,53 +226,57 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotifi
                 <Sparkles className="w-5 h-5 animate-pulse" />
               </div>
               <h3 className="font-serif-brand text-xl font-bold tracking-tight text-[#3A2E26]">
-                {isLoginTab ? 'Welcome to Hausmade™' : 'Join Botanical'}
+                {isAdminOnly ? 'Admin Dashboard Login' : (isLogin ? 'Welcome to Hausmade™' : 'Join Botanical')}
               </h3>
               <p className="text-[11px] text-[#3A2E26]/70 mt-0.5 max-w-xs mx-auto">
-                {isLoginTab ? 'Sign in to access your orders, subscription & rewards' : 'Unlock 15% subscriber discounts & early releases'}
+                {isAdminOnly ? 'Log in with your administrator account' : (isLogin ? 'Sign in to access your orders, subscription & rewards' : 'Unlock 15% subscriber discounts & early releases')}
               </p>
             </div>
 
             {/* Tab Switcher */}
-            <div className="flex bg-[#3A2E26]/5 p-1 rounded-2xl mb-4 border border-[#3A2E26]/5">
-              <button
-                type="button"
-                onClick={() => { setIsLoginTab(true); setError(''); }}
-                className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer ${isLoginTab ? 'bg-[#3A2E26] text-white shadow-sm' : 'text-[#3A2E26]/60 hover:text-[#3A2E26]'}`}
-              >
-                Sign In
-              </button>
-              <button
-                type="button"
-                onClick={() => { setIsLoginTab(false); setError(''); }}
-                className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer ${!isLoginTab ? 'bg-[#3A2E26] text-white shadow-sm' : 'text-[#3A2E26]/60 hover:text-[#3A2E26]'}`}
-              >
-                Create Account
-              </button>
-            </div>
+            {!isAdminOnly && (
+              <div className="flex bg-[#3A2E26]/5 p-1 rounded-2xl mb-4 border border-[#3A2E26]/5">
+                <button
+                  type="button"
+                  onClick={() => { setIsLoginTab(true); setError(''); }}
+                  className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer ${isLoginTab ? 'bg-[#3A2E26] text-white shadow-sm' : 'text-[#3A2E26]/60 hover:text-[#3A2E26]'}`}
+                >
+                  Sign In
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setIsLoginTab(false); setError(''); }}
+                  className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer ${!isLoginTab ? 'bg-[#3A2E26] text-white shadow-sm' : 'text-[#3A2E26]/60 hover:text-[#3A2E26]'}`}
+                >
+                  Create Account
+                </button>
+              </div>
+            )}
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-3">
-              {isLoginTab ? (
+              {isLogin ? (
                 /* LOGIN FLOW */
                 <>
                   {/* Login Method Toggle */}
-                  <div className="flex justify-center gap-4 mb-2 text-xs font-semibold">
-                    <button
-                      type="button"
-                      onClick={() => { setLoginMethod('password'); setError(''); }}
-                      className={`pb-1 border-b-2 transition-all ${loginMethod === 'password' ? 'border-[#C97C5D] text-[#C97C5D]' : 'border-transparent text-[#3A2E26]/60'}`}
-                    >
-                      Password Login
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setLoginMethod('otp'); setError(''); }}
-                      className={`pb-1 border-b-2 transition-all ${loginMethod === 'otp' ? 'border-[#C97C5D] text-[#C97C5D]' : 'border-transparent text-[#3A2E26]/60'}`}
-                    >
-                      OTP Login
-                    </button>
-                  </div>
+                  {!isAdminOnly && (
+                    <div className="flex justify-center gap-4 mb-2 text-xs font-semibold">
+                      <button
+                        type="button"
+                        onClick={() => { setLoginMethod('password'); setError(''); }}
+                        className={`pb-1 border-b-2 transition-all ${loginMethod === 'password' ? 'border-[#C97C5D] text-[#C97C5D]' : 'border-transparent text-[#3A2E26]/60'}`}
+                      >
+                        Password Login
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setLoginMethod('otp'); setError(''); }}
+                        className={`pb-1 border-b-2 transition-all ${loginMethod === 'otp' ? 'border-[#C97C5D] text-[#C97C5D]' : 'border-transparent text-[#3A2E26]/60'}`}
+                      >
+                        OTP Login
+                      </button>
+                    </div>
+                  )}
 
                   {loginMethod === 'password' ? (
                     /* PASSWORD LOGIN */
@@ -518,37 +532,41 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotifi
                   </>
                 ) : (
                   <>
-                    <span>{isLoginTab ? (loginMethod === 'otp' && !otpSent ? 'Get OTP Code' : 'Sign In') : 'Create Account'}</span>
+                    <span>{isLogin ? (loginMethod === 'otp' && !otpSent ? 'Get OTP Code' : 'Sign In') : 'Create Account'}</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
               </button>
             </form>
 
-            {/* Separator */}
-            <div className="relative my-4">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-[#3A2E26]/10" />
-              </div>
-              <div className="relative flex justify-center text-[10px] font-bold uppercase tracking-wider">
-                <span className="bg-[#FDFBF7] px-3.5 text-[#3A2E26]/60">Or Securely Connect</span>
-              </div>
-            </div>
+            {!isAdminOnly && (
+              <>
+                {/* Separator */}
+                <div className="relative my-4">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-[#3A2E26]/10" />
+                  </div>
+                  <div className="relative flex justify-center text-[10px] font-bold uppercase tracking-wider">
+                    <span className="bg-[#FDFBF7] px-3.5 text-[#3A2E26]/60">Or Securely Connect</span>
+                  </div>
+                </div>
 
-            {/* Google Social Button */}
-            <button
-              type="button"
-              onClick={handleGoogleLogin}
-              className="w-full py-2.5 px-4 border border-[#3A2E26]/20 hover:bg-[#3A2E26]/5 text-[#3A2E26] font-bold rounded-2xl transition-all text-xs uppercase tracking-wider cursor-pointer flex items-center justify-center gap-2.5"
-            >
-              <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
-                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
-              </svg>
-              <span>Continue with Google</span>
-            </button>
+                {/* Google Social Button */}
+                <button
+                  type="button"
+                  onClick={handleGoogleLogin}
+                  className="w-full py-2.5 px-4 border border-[#3A2E26]/20 hover:bg-[#3A2E26]/5 text-[#3A2E26] font-bold rounded-2xl transition-all text-xs uppercase tracking-wider cursor-pointer flex items-center justify-center gap-2.5"
+                >
+                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
+                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
+                  </svg>
+                  <span>Continue with Google</span>
+                </button>
+              </>
+            )}
 
 
             {/* Security Assurance Footer */}

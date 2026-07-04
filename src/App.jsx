@@ -40,6 +40,7 @@ export default function App() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
   const [isOrderHistoryOpen, setIsOrderHistoryOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [wishlistItems, setWishlistItems] = useState(() => {
@@ -348,6 +349,7 @@ export default function App() {
           onOpenLogin={() => setIsLoginOpen(true)}
           onOpenOrderHistory={() => setIsOrderHistoryOpen(true)}
           onOpenProfile={() => setIsProfileOpen(true)}
+          onOpenAdminLogin={() => setIsAdminLoginOpen(true)}
         />
       </div>
 
@@ -407,6 +409,18 @@ export default function App() {
             setOpenCheckoutAfterLogin(false);
             localStorage.removeItem('hausmade_pending_checkout');
           }
+        }}
+      />
+
+      <LoginModal
+        isOpen={isAdminLoginOpen}
+        onClose={() => setIsAdminLoginOpen(false)}
+        showNotification={showNotification}
+        isAdminOnly={true}
+        onLoginSuccess={(userData) => {
+          setLocalUser(userData);
+          setLocalToken(localStorage.getItem('hausmade_token'));
+          setShowAdminView(true);
         }}
       />
 

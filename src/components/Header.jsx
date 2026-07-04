@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ShoppingBag, Menu, X, Sparkles, Heart, User } from 'lucide-react';
 
-export default function Header({ cartCount, onOpenCart, wishlistCount, onOpenWishlist, user, isAuthenticated, onLogout, onOpenLogin, onOpenOrderHistory, onOpenProfile }) {
+export default function Header({ cartCount, onOpenCart, wishlistCount, onOpenWishlist, user, isAuthenticated, onLogout, onOpenLogin, onOpenOrderHistory, onOpenProfile, onOpenAdminLogin }) {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -48,29 +48,14 @@ export default function Header({ cartCount, onOpenCart, wishlistCount, onOpenWis
 
   const [logoClicks, setLogoClicks] = useState(0);
 
-  const handleLogoClick = async (e) => {
+  const handleLogoClick = (e) => {
     e.preventDefault();
     const newCount = logoClicks + 1;
     setLogoClicks(newCount);
     if (newCount >= 8) {
       setLogoClicks(0);
-      const email = prompt("Enter Admin Email:");
-      if (!email) return;
-      const password = prompt("Enter Admin Password:");
-      if (!password) return;
-      
-      try {
-        const { loginUser } = await import('../utils/api');
-        const data = await loginUser(email, password);
-        if (data && data.token && data.user?.is_admin) {
-          localStorage.setItem('hausmade_token', data.token);
-          localStorage.setItem('hausmade_user', JSON.stringify(data.user));
-          window.location.reload();
-        } else {
-          alert("Invalid admin credentials.");
-        }
-      } catch (err) {
-        alert(err.message || "Admin login failed.");
+      if (onOpenAdminLogin) {
+        onOpenAdminLogin();
       }
     }
   };
