@@ -373,7 +373,7 @@ export default function App() {
         <Ingredients />
         <Story settings={siteSettings.story} />
         <Reviews />
-        <FAQ />
+        <FAQ settings={siteSettings} />
       </main>
 
       <Footer settings={siteSettings.contact} />

@@ -74,14 +74,16 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       card_title: '',
       card_description: '',
       button_text: ''
-    }
+    },
+    faqs: []
   });
 
   useEffect(() => {
     if (settings) {
       setSettingsForm({
         ...settings,
-        logo_url: settings.logo_url || ''
+        logo_url: settings.logo_url || '',
+        faqs: settings.faqs || []
       });
     }
   }, [settings]);
@@ -1554,6 +1556,87 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                           className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
                         />
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Frequently Asked Questions (FAQ) Settings */}
+                  <div className="bg-white rounded-3xl p-6 border border-[#E6D5C3]/30 shadow-sm space-y-4">
+                    <div className="flex items-center justify-between border-b border-[#E6D5C3]/20 pb-2 flex-wrap gap-2">
+                      <h3 className="text-lg font-bold">Frequently Asked Questions (FAQ)</h3>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const currentFaqs = settingsForm.faqs || [];
+                          setSettingsForm({
+                            ...settingsForm,
+                            faqs: [...currentFaqs, { q: '', a: '' }]
+                          });
+                        }}
+                        className="px-3.5 py-1.5 bg-[#7A8B6F] hover:bg-[#68785c] text-white text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1 shrink-0"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Add FAQ Item
+                      </button>
+                    </div>
+
+                    <div className="space-y-4">
+                      {(!settingsForm.faqs || settingsForm.faqs.length === 0) ? (
+                        <p className="text-xs text-[#3A2E26]/60 italic py-2">No FAQ items defined. Default storefront FAQs will be shown.</p>
+                      ) : (
+                        settingsForm.faqs.map((faq, idx) => (
+                          <div key={idx} className="p-4 bg-[#FDFBF7] border border-[#E6D5C3]/30 rounded-2xl space-y-3 relative group">
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs font-bold text-[#8C7A5B] uppercase tracking-wider">Question #{idx + 1}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updatedFaqs = [...settingsForm.faqs];
+                                  updatedFaqs.splice(idx, 1);
+                                  setSettingsForm({
+                                    ...settingsForm,
+                                    faqs: updatedFaqs
+                                  });
+                                }}
+                                className="text-red-500 hover:text-red-700 text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" /> Remove
+                              </button>
+                            </div>
+
+                            <div className="space-y-2">
+                              <input
+                                type="text"
+                                placeholder="Question (e.g. What is your shipping policy?)"
+                                required
+                                value={faq.q}
+                                onChange={(e) => {
+                                  const updatedFaqs = [...settingsForm.faqs];
+                                  updatedFaqs[idx].q = e.target.value;
+                                  setSettingsForm({
+                                    ...settingsForm,
+                                    faqs: updatedFaqs
+                                  });
+                                }}
+                                className="w-full px-4 py-2 bg-white border border-[#E6D5C3]/40 rounded-xl text-sm focus:outline-none focus:border-[#3A2E26] font-bold text-[#3A2E26]"
+                              />
+                              <textarea
+                                placeholder="Answer details..."
+                                required
+                                rows="3"
+                                value={faq.a}
+                                onChange={(e) => {
+                                  const updatedFaqs = [...settingsForm.faqs];
+                                  updatedFaqs[idx].a = e.target.value;
+                                  setSettingsForm({
+                                    ...settingsForm,
+                                    faqs: updatedFaqs
+                                  });
+                                }}
+                                className="w-full px-4 py-2.5 bg-white border border-[#E6D5C3]/40 rounded-xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
+                              />
+                            </div>
+                          </div>
+                        ))
+                      )}
                     </div>
                   </div>
 

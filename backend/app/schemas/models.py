@@ -105,6 +105,10 @@ class SubscriptionSettings(BaseModel):
     card_description: str
     button_text: str
 
+class FAQItem(BaseModel):
+    q: str
+    a: str
+
 class SiteSettingsModel(BaseModel):
     logo_url: str = ""
     announcement: AnnouncementSettings
@@ -112,6 +116,7 @@ class SiteSettingsModel(BaseModel):
     story: StorySettings
     contact: ContactSettings
     subscription: SubscriptionSettings
+    faqs: List[FAQItem] = []
 
 class ReviewSubmitModel(BaseModel):
     productId: str

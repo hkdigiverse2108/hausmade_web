@@ -48,7 +48,33 @@ async def get_site_settings():
                     "phone": "+91 76000 81431",
                     "address": "305 Muktidham Society, Near Sitanagar Chowk, Surat - 395 010 (Guj.)"
                 },
-                "subscription": default_subscription
+                "subscription": default_subscription,
+                "faqs": [
+                    {
+                        "q": "How long does one soap bar typically last?",
+                        "a": "When kept dry on a draining soap dish between uses, one PureBotanica bar lasts approximately 3 to 4 weeks for daily shower use by a single person. Because we cure our soap for 6 full weeks, our bars are firmer and last longer than high-water commercial bars."
+                    },
+                    {
+                        "q": "Is this soap safe for sensitive skin and eczema?",
+                        "a": "Yes, absolutely! Our French Lavender & Oat bar was specially formulated for sensitive and reactive skin. We use colloidal oats to calm inflammation and organic plant oils that restore the natural moisture barrier without synthetic detergents."
+                    },
+                    {
+                        "q": "What is your shipping policy?",
+                        "a": "We ship all orders in 100% plastic-free, recyclable cardboard boxes. Standard shipping takes 3-5 business days. All orders over $35 ship completely FREE!"
+                    },
+                    {
+                        "q": "How does the Subscribe & Save subscription work?",
+                        "a": "When you choose Subscribe & Save, you lock in an extra 15% discount on every order. We deliver fresh soap according to your selected frequency (every 1, 2, or 3 months). You can modify your schedule, pause, or cancel at any time directly from your email link."
+                    },
+                    {
+                        "q": "Are your soaps vegan and cruelty-free?",
+                        "a": "All our soap varieties are 100% cruelty-free and never tested on animals. Our formulations use pure plant oils, raw wildflower honey, and organic botanical powders."
+                    },
+                    {
+                        "q": "What is your 30-day return policy?",
+                        "a": "We want you to love your bathing experience! If you are not completely delighted with your purchase for any reason within 30 days, reach out to our customer care team and we will provide a full refund or exchange — no hassle required."
+                    }
+                ]
             }
             await settings_collection.insert_one(settings)
         else:
@@ -58,6 +84,35 @@ async def get_site_settings():
             if "subscription" not in settings:
                 settings["subscription"] = default_subscription
                 await settings_collection.update_one({"key": "site_settings"}, {"$set": {"subscription": default_subscription}})
+            if "faqs" not in settings:
+                default_faqs = [
+                    {
+                        "q": "How long does one soap bar typically last?",
+                        "a": "When kept dry on a draining soap dish between uses, one PureBotanica bar lasts approximately 3 to 4 weeks for daily shower use by a single person. Because we cure our soap for 6 full weeks, our bars are firmer and last longer than high-water commercial bars."
+                    },
+                    {
+                        "q": "Is this soap safe for sensitive skin and eczema?",
+                        "a": "Yes, absolutely! Our French Lavender & Oat bar was specially formulated for sensitive and reactive skin. We use colloidal oats to calm inflammation and organic plant oils that restore the natural moisture barrier without synthetic detergents."
+                    },
+                    {
+                        "q": "What is your shipping policy?",
+                        "a": "We ship all orders in 100% plastic-free, recyclable cardboard boxes. Standard shipping takes 3-5 business days. All orders over $35 ship completely FREE!"
+                    },
+                    {
+                        "q": "How does the Subscribe & Save subscription work?",
+                        "a": "When you choose Subscribe & Save, you lock in an extra 15% discount on every order. We deliver fresh soap according to your selected frequency (every 1, 2, or 3 months). You can modify your schedule, pause, or cancel at any time directly from your email link."
+                    },
+                    {
+                        "q": "Are your soaps vegan and cruelty-free?",
+                        "a": "All our soap varieties are 100% cruelty-free and never tested on animals. Our formulations use pure plant oils, raw wildflower honey, and organic botanical powders."
+                    },
+                    {
+                        "q": "What is your 30-day return policy?",
+                        "a": "We want you to love your bathing experience! If you are not completely delighted with your purchase for any reason within 30 days, reach out to our customer care team and we will provide a full refund or exchange — no hassle required."
+                    }
+                ]
+                settings["faqs"] = default_faqs
+                await settings_collection.update_one({"key": "site_settings"}, {"$set": {"faqs": default_faqs}})
             
         if "_id" in settings:
             settings["_id"] = str(settings["_id"])

@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { ChevronDown, HelpCircle } from 'lucide-react';
 
-export default function FAQ() {
+export default function FAQ({ settings }) {
   const [openIndex, setOpenIndex] = useState(0);
 
-  const faqs = [
+  const fallbackFaqs = [
     {
       q: 'How long does one soap bar typically last?',
       a: 'When kept dry on a draining soap dish between uses, one PureBotanica bar lasts approximately 3 to 4 weeks for daily shower use by a single person. Because we cure our soap for 6 full weeks, our bars are firmer and last longer than high-water commercial bars.'
@@ -30,6 +30,8 @@ export default function FAQ() {
       a: 'We want you to love your bathing experience! If you are not completely delighted with your purchase for any reason within 30 days, reach out to our customer care team and we will provide a full refund or exchange — no hassle required.'
     }
   ];
+
+  const faqs = settings?.faqs && settings.faqs.length > 0 ? settings.faqs : fallbackFaqs;
 
   return (
     <section id="faq" className="py-16 lg:py-24 bg-[#F5F1E8] scroll-mt-20">
