@@ -1,4 +1,9 @@
 import os
+import sys
+
+# Add the parent directory of 'app' to sys.path to resolve imports correctly
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import time
 from datetime import datetime
 from collections import defaultdict

@@ -21,7 +21,7 @@ def main():
     backend_dir = os.path.join(root_dir, "backend")
 
     # Service commands
-    backend_cmd = "uvicorn app.main:app --reload --port 8005"
+    backend_cmd = "python -m uvicorn app.main:app --reload --port 8005"
     frontend_cmd = "npm run dev"
 
     processes = []
