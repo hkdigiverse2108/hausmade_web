@@ -151,7 +151,7 @@ export default function Reviews() {
                   key={`${rev.id}-${idx}`}
                   className="w-full"
                 >
-                  <div className="bg-[#F6F4F0] p-5 sm:p-6 md:p-8 rounded-2xl border border-[#3A2E26]/10 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between h-full min-h-[180px] sm:min-h-[220px]">
+                  <div className="bg-[#F6F4F0] p-5 sm:p-6 md:p-8 rounded-2xl border border-[#3A2E26]/10 shadow-sm hover:shadow-lg hover:-translate-y-2 hover:scale-[1.02] hover:border-[#8C7A5B]/30 active:scale-[0.98] transition-all duration-300 ease-out flex flex-col justify-between h-full min-h-[180px] sm:min-h-[220px] cursor-pointer select-none">
                     <div>
                       {/* Author Header */}
                       <div className="flex items-center gap-3 mb-4">
