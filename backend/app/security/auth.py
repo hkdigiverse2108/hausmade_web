@@ -53,7 +53,7 @@ def verify_auth0_token(token: str) -> dict:
             token,
             signing_key.key,
             algorithms=["RS256"],
-            audience=AUTH0_AUDIENCE,
+            options={"verify_aud": False},
             issuer=f"https://{AUTH0_DOMAIN}/"
         )
         return payload
