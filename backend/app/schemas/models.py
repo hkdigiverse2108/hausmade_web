@@ -25,7 +25,7 @@ class CouponModel(BaseModel):
 class UserRegister(BaseModel):
     name: str
     email: EmailStr
-    mobile: str
+    mobile: Optional[str] = None
     password: str
 
 class UserLogin(BaseModel):
@@ -33,10 +33,12 @@ class UserLogin(BaseModel):
     password: str
 
 class SendOtpRequest(BaseModel):
-    mobile: str
+    mobile: Optional[str] = None
+    email: Optional[str] = None
 
 class VerifyOtpRequest(BaseModel):
-    mobile: str
+    mobile: Optional[str] = None
+    email: Optional[str] = None
     otp: str
 
 class CartItem(BaseModel):

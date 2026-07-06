@@ -186,13 +186,7 @@ export default function App() {
   }, [isAuth0Authenticated, auth0Logout]);
 
   const handleOpenCheckout = () => {
-    if (isAuthenticated) {
-      setIsCheckoutOpen(true);
-    } else {
-      localStorage.setItem('hausmade_pending_checkout', 'true');
-      setOpenCheckoutAfterLogin(true);
-      setIsLoginOpen(true);
-    }
+    setIsCheckoutOpen(true);
   };
 
 

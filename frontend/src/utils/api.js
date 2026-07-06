@@ -34,13 +34,14 @@ export async function loginUser(identifier, password) {
   return response.json();
 }
 
-export async function sendOtp(mobile) {
+export async function sendOtp(arg) {
+  const payload = typeof arg === 'object' ? arg : { mobile: arg };
   const response = await fetch(`${API_URL}/api/auth/send-otp`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ mobile }),
+    body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
@@ -51,13 +52,19 @@ export async function sendOtp(mobile) {
   return response.json();
 }
 
-export async function verifyOtp(mobile, otp) {
+export async function verifyOtp(arg1, arg2) {
+  let payload;
+  if (typeof arg1 === 'object') {
+    payload = { ...arg1, otp: arg2 };
+  } else {
+    payload = { mobile: arg1, otp: arg2 };
+  }
   const response = await fetch(`${API_URL}/api/auth/verify-otp`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ mobile, otp }),
+    body: JSON.stringify(payload),
   });
 
   if (!response.ok) {

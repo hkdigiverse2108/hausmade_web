@@ -7,13 +7,7 @@ export default function SocialProofToast() {
   const [visible, setVisible] = useState(false);
   const [realOrders, setRealOrders] = useState([]);
 
-  const mockOrders = [
-    { name: 'Priya S.', city: 'Mumbai', pack: 'Pack of 3 (Most Popular)', time: '2 minutes ago' },
-    { name: 'Rahul M.', city: 'Delhi', pack: 'Pack of 5 (Best Value)', time: '5 minutes ago' },
-    { name: 'Ananya R.', city: 'Bangalore', pack: 'Pack of 3', time: '12 minutes ago' },
-    { name: 'Vikram K.', city: 'Surat', pack: 'Pack of 2', time: '1 minute ago' },
-    { name: 'Sneha P.', city: 'Pune', pack: 'Single Soap Bar', time: '8 minutes ago' },
-  ];
+
 
   const getRelativeTime = (dateStr) => {
     if (!dateStr) return '1 minute ago';
@@ -71,12 +65,9 @@ export default function SocialProofToast() {
         pack: randomOrder.pack,
         time: getRelativeTime(randomOrder.created_at)
       });
-    } else {
-      const randomOrder = mockOrders[Math.floor(Math.random() * mockOrders.length)];
-      setToast(randomOrder);
+      setVisible(true);
+      setTimeout(() => setVisible(false), 5000);
     }
-    setVisible(true);
-    setTimeout(() => setVisible(false), 5000);
   };
 
   if (!visible || !toast) return null;
