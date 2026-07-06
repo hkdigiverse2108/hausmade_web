@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Mail, Lock, User, Sparkles, ArrowRight, ShieldCheck, Check, Phone, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { X, Mail, Lock, User, Sparkles, ArrowRight, ShieldCheck, Check, Phone, Eye, EyeOff, Loader2, Key } from 'lucide-react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { registerUser, loginUser, sendOtp, verifyOtp, socialLogin } from '../utils/api';
 
@@ -45,6 +45,12 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotifi
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Email OTP states
+  const [loginMethod, setLoginMethod] = useState(isAdminOnly ? 'password' : 'otp'); // 'password' or 'otp'
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpLoading, setOtpLoading] = useState(false);
+
   if (!isOpen) return null;
 
   const isLogin = isAdminOnly ? true : isLoginTab;
@@ -85,10 +91,36 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotifi
 
   const strengthDetails = getStrengthProgressStyle();
 
+  const handleSendOtp = async () => {
+    if (!email) {
+      setError('Please enter your Email Address first');
+      return;
+    }
+    setOtpLoading(true);
+    setError('');
+    try {
+      await sendOtp({ email: email });
+      setOtpSent(true);
+      if (showNotification) {
+        showNotification('Verification code sent to your email!', 'success');
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to send OTP code');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
+
+    if (isLogin && loginMethod === 'otp' && !otpSent) {
+      await handleSendOtp();
+      return;
+    }
+
+    setLoading(true);
 
     // Additional client-side check for signup password strength
     if (!isLogin && strengthScore < 3) {
@@ -103,7 +135,14 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotifi
         if (!email) {
           throw new Error('Please enter your Email Address');
         }
-        data = await loginUser(email, password);
+        if (loginMethod === 'otp') {
+          if (!otpCode) {
+            throw new Error('Please enter the verification code sent to your email');
+          }
+          data = await verifyOtp({ email: email }, otpCode);
+        } else {
+          data = await loginUser(email, password);
+        }
         
         if (isAdminOnly && !data.user?.is_admin) {
           throw new Error('Access denied. Administrator credentials required.');
@@ -202,32 +241,14 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotifi
                 <Sparkles className="w-5 h-5 animate-pulse" />
               </div>
               <h3 className="font-serif-brand text-xl font-bold tracking-tight text-[#3A2E26]">
-                {isAdminOnly ? 'Admin Dashboard Login' : (isLogin ? 'Welcome to Hausmade™' : 'Join Botanical')}
+                {isAdminOnly ? 'Admin Dashboard Login' : 'Welcome to Hausmade™'}
               </h3>
               <p className="text-[11px] text-[#3A2E26]/70 mt-0.5 max-w-xs mx-auto">
-                {isAdminOnly ? 'Log in with your administrator account' : (isLogin ? 'Sign in to access your orders, subscription & rewards' : 'Unlock 15% subscriber discounts & early releases')}
+                {isAdminOnly 
+                  ? 'Log in with your administrator account' 
+                  : 'Enter your email to sign in or create your account using a secure verification code (OTP)'}
               </p>
             </div>
-
-            {/* Tab Switcher */}
-            {!isAdminOnly && (
-              <div className="flex bg-[#3A2E26]/5 p-1 rounded-2xl mb-4 border border-[#3A2E26]/5">
-                <button
-                  type="button"
-                  onClick={() => { setIsLoginTab(true); setError(''); }}
-                  className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer ${isLoginTab ? 'bg-[#3A2E26] text-white shadow-sm' : 'text-[#3A2E26]/60 hover:text-[#3A2E26]'}`}
-                >
-                  Sign In
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setIsLoginTab(false); setError(''); }}
-                  className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer ${!isLoginTab ? 'bg-[#3A2E26] text-white shadow-sm' : 'text-[#3A2E26]/60 hover:text-[#3A2E26]'}`}
-                >
-                  Create Account
-                </button>
-              </div>
-            )}
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-3">
@@ -235,45 +256,92 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotifi
                 /* LOGIN FLOW */
                 <>
                   <div>
-                    <label className="block text-[11px] font-bold text-[#3A2E26] uppercase tracking-widest mb-1">
-                      Email Address
-                    </label>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-[11px] font-bold text-[#3A2E26] uppercase tracking-widest">
+                        Email Address
+                      </label>
+                    </div>
                     <div className="relative">
                       <Mail className="w-4 h-4 text-[#C97C5D] absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
                       <input
                         type="email"
                         required
+                        disabled={loginMethod === 'otp' && otpSent}
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="name@example.com"
-                        className="w-full pl-11 pr-4 py-2.5 rounded-2xl bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] placeholder:text-[#3A2E26]/40 focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/20 transition-all font-medium"
+                        className="w-full pl-11 pr-4 py-2.5 rounded-2xl bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] placeholder:text-[#3A2E26]/40 focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/20 transition-all font-medium disabled:bg-gray-50 disabled:text-[#3A2E26]/50"
                       />
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-[11px] font-bold text-[#3A2E26] uppercase tracking-widest mb-1">
-                      Password
-                    </label>
-                    <div className="relative">
-                      <Lock className="w-4 h-4 text-[#C97C5D] absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        required
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Enter password..."
-                        className="w-full pl-11 pr-12 py-2.5 rounded-2xl bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] placeholder:text-[#3A2E26]/40 focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/20 transition-all font-medium"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
+                  {loginMethod === 'password' ? (
+                    <div>
+                      <label className="block text-[11px] font-bold text-[#3A2E26] uppercase tracking-widest mb-1">
+                        Password
+                      </label>
+                      <div className="relative">
+                        <Lock className="w-4 h-4 text-[#C97C5D] absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          required
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="Enter password..."
+                          className="w-full pl-11 pr-12 py-2.5 rounded-2xl bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] placeholder:text-[#3A2E26]/40 focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/20 transition-all font-medium"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                        >
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    otpSent && (
+                      <div className="animate-fadeIn">
+                        <div className="flex justify-between items-center mb-1">
+                          <label className="block text-[11px] font-bold text-[#3A2E26] uppercase tracking-widest">
+                            Verification Code (OTP)
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOtpSent(false);
+                              setOtpCode('');
+                            }}
+                            className="text-[10px] font-bold text-[#C97C5D] hover:underline uppercase tracking-wider cursor-pointer"
+                          >
+                            Change Email
+                          </button>
+                        </div>
+                        <div className="relative">
+                          <Key className="w-4 h-4 text-[#C97C5D] absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                          <input
+                            type="text"
+                            required
+                            maxLength={6}
+                            value={otpCode}
+                            onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                            placeholder="Enter 6-digit code..."
+                            className="w-full pl-11 pr-4 py-2.5 rounded-2xl bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] placeholder:text-[#3A2E26]/40 focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/20 transition-all font-medium tracking-widest text-center"
+                          />
+                        </div>
+                        <div className="flex justify-end mt-1.5">
+                          <button
+                            type="button"
+                            onClick={handleSendOtp}
+                            disabled={otpLoading}
+                            className="text-[10px] font-bold text-[#3A2E26]/60 hover:text-[#3A2E26] hover:underline cursor-pointer disabled:opacity-50"
+                          >
+                            {otpLoading ? 'Sending...' : "Didn't receive code? Resend"}
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  )}
                 </>
               ) : (
                 /* REGISTRATION FLOW */
@@ -386,17 +454,23 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotifi
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || otpLoading}
                 className="w-full py-3 mt-4 bg-[#3A2E26] hover:bg-black text-white font-bold text-xs uppercase tracking-widest rounded-2xl shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? (
+                {loading || otpLoading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin text-white" />
                     <span>Processing...</span>
                   </>
                 ) : (
                   <>
-                    <span>{isLogin ? 'Sign In' : 'Create Account'}</span>
+                    <span>
+                      {isLogin 
+                        ? (loginMethod === 'otp' 
+                            ? (otpSent ? 'Verify & Sign In' : 'Send Verification Code') 
+                            : 'Sign In') 
+                        : 'Create Account'}
+                    </span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}

@@ -30,10 +30,11 @@ async def register(user_data: UserRegister):
     user_doc = {
         "name": user_data.name,
         "email": user_data.email.lower(),
-        "mobile": mobile_val,
         "password": hashed_pwd,
         "created_at": datetime.utcnow()
     }
+    if mobile_val:
+        user_doc["mobile"] = mobile_val
     
     await users_collection.insert_one(user_doc)
     token = create_jwt_token(user_data.email.lower())
@@ -43,7 +44,7 @@ async def register(user_data: UserRegister):
         "user": {
             "name": user_doc["name"],
             "email": user_doc["email"],
-            "mobile": user_doc["mobile"],
+            "mobile": user_doc.get("mobile", ""),
             "address_line1": "",
             "address_line2": "",
             "city": "",
@@ -142,7 +143,6 @@ async def verify_otp(request: VerifyOtpRequest):
             user_doc = {
                 "name": f"Member {email.split('@')[0]}",
                 "email": email,
-                "mobile": "",
                 "password": "",
                 "created_at": datetime.utcnow()
             }
@@ -163,7 +163,6 @@ async def verify_otp(request: VerifyOtpRequest):
         if not user:
             user_doc = {
                 "name": f"Member {mobile[-4:]}",
-                "email": "",
                 "mobile": mobile,
                 "password": "",
                 "created_at": datetime.utcnow()
