@@ -167,13 +167,20 @@ settings_collection = AsyncCollectionProxy("settings", "settings.json")
 reviews_collection = AsyncCollectionProxy("reviews", "reviews.json")
 subscriptions_collection = AsyncCollectionProxy("subscriptions", "subscriptions.json")
 
+def check_mongodb_connection(uri):
+    import pymongo
+    client = pymongo.MongoClient(uri, serverSelectionTimeoutMS=2000, connectTimeoutMS=2000)
+    client.admin.command('ping')
+    client.close()
+
 async def initialize_db():
     global motor_client, motor_db, use_local_json
     print("Connecting to MongoDB Atlas...")
     try:
-        motor_client = AsyncIOMotorClient(MONGODB_URI, serverSelectionTimeoutMS=2000)
-        await motor_client.admin.command('ping')
+        # Run the synchronous ping check in a separate thread to prevent blocking the event loop
+        await asyncio.to_thread(check_mongodb_connection, MONGODB_URI)
         
+        motor_client = AsyncIOMotorClient(MONGODB_URI, serverSelectionTimeoutMS=2000)
         db_name = MONGODB_URI.split('/')[-1].split('?')[0]
         if not db_name or db_name == "localhost:27017" or db_name.strip() == "":
             db_name = "soap_db"
