@@ -147,6 +147,14 @@ class IngredientItem(BaseModel):
     benefit: str
     icon: str = "Sparkles"
 
+class SubscriptionOffer(BaseModel):
+    id: str
+    name: str
+    durationMonths: int
+    deliveryFrequency: str
+    discountPct: float
+    active: bool = True
+
 class SiteSettingsModel(BaseModel):
     logo_url: str = ""
     announcement: AnnouncementSettings
@@ -164,6 +172,7 @@ class SiteSettingsModel(BaseModel):
     subscription_quantities: List[int] = [2, 4, 6]
     subscription_frequencies: List[str] = ["monthly", "every_3_months"]
     subscription_discount_pct: float = 15.0
+    subscription_offers: List[SubscriptionOffer] = []
 
 class ReviewSubmitModel(BaseModel):
     productId: str

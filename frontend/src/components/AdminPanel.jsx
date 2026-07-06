@@ -246,6 +246,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     subscription_durations: [6, 12],
     subscription_quantities: [1, 2, 3, 4, 5, 6],
     subscription_frequencies: ["monthly", "every_3_months"],
+    subscription_offers: [],
     social_links: { instagram: '', facebook: '', whatsapp: '', twitter: '', youtube: '' },
     faqs: [],
     ingredients: [],
@@ -297,6 +298,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
         JSON.stringify(settingsForm.faqs || []) !== JSON.stringify(settings.faqs || []) ||
         JSON.stringify(settingsForm.ingredients || []) !== JSON.stringify(settings.ingredients || []) ||
         JSON.stringify(settingsForm.trust_badges || []) !== JSON.stringify(settings.trust_badges || []) ||
+        JSON.stringify(settingsForm.subscription_offers || []) !== JSON.stringify(settings.subscription_offers || []) ||
         settingsForm.ingredients_active !== (settings.ingredients_active !== undefined ? settings.ingredients_active : true);
         
       if (hasChanged) {
@@ -308,6 +310,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
           subscription_durations: settings.subscription_durations || [6, 12],
           subscription_quantities: settings.subscription_quantities || [1, 2, 3, 4, 5, 6],
           subscription_frequencies: settings.subscription_frequencies || ["monthly", "every_3_months"],
+          subscription_offers: settings.subscription_offers || [],
           social_links: settings.social_links || { instagram: '', facebook: '', whatsapp: '', twitter: '', youtube: '' },
           faqs: settings.faqs || [],
           ingredients: settings.ingredients || [],
@@ -958,6 +961,42 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     }
   };
 
+  const handleFeatureCoupon = async (couponCode) => {
+    try {
+      const updatedSettings = {
+        ...settingsForm,
+        announcement: {
+          ...(settingsForm.announcement || {}),
+          coupon_code: couponCode
+        }
+      };
+      setSettingsForm(updatedSettings);
+      
+      // Save it directly to backend database so it updates immediately!
+      await updateSiteSettings(updatedSettings, token);
+      showNotification(`Coupon ${couponCode} is now featured in the banner!`, 'success');
+      
+      // Update preview in realtime
+      localStorage.setItem('hausmade_preview_settings', JSON.stringify(updatedSettings));
+      window.dispatchEvent(new Event('storage'));
+      
+      const iframe = document.getElementById('preview-storefront-frame');
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage({
+          type: 'update-preview-settings',
+          settings: updatedSettings
+        }, '*');
+      }
+      
+      // Fetch latest settings from server to keep everything in sync
+      if (onUpdateSettings) {
+        onUpdateSettings();
+      }
+    } catch (err) {
+      showNotification(err.message || 'Failed to update featured coupon', 'error');
+    }
+  };
+
   const handleUpdateSubscriptionStatus = async (orderId, newStatus) => {
     if (!window.confirm(`Are you sure you want to change this subscription status to ${newStatus}?`)) return;
     setSaving(true);
@@ -995,6 +1034,34 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       }
     } catch (err) {
       showNotification(err.message || 'Failed to save site settings', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveBannerSettings = async (e) => {
+    if (e) e.preventDefault();
+    setSaving(true);
+    try {
+      await updateSiteSettings(settingsForm, token);
+      showNotification('Coupon banner settings updated successfully!', 'success');
+      
+      // Update preview in realtime
+      localStorage.setItem('hausmade_preview_settings', JSON.stringify(settingsForm));
+      window.dispatchEvent(new Event('storage'));
+      const iframe = document.getElementById('preview-storefront-frame');
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage({
+          type: 'update-preview-settings',
+          settings: settingsForm
+        }, '*');
+      }
+
+      if (onUpdateSettings) {
+        onUpdateSettings();
+      }
+    } catch (err) {
+      showNotification(err.message || 'Failed to save banner settings', 'error');
     } finally {
       setSaving(false);
     }
@@ -2180,6 +2247,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                               <th className="p-4 pl-6">Coupon Code</th>
                               <th className="p-4">Discount Rate</th>
                               <th className="p-4">Offer Description</th>
+                              <th className="p-4 text-center">Featured Banner</th>
                               <th className="p-4">Status</th>
                               <th className="p-4 pr-6 text-right">Actions</th>
                             </tr>
@@ -2187,54 +2255,156 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                           <tbody className="divide-y divide-[#3A2E26]/10 text-xs">
                             {filteredCoupons.length === 0 ? (
                               <tr>
-                                <td colSpan="5" className="p-8 text-center text-[#3A2E26]/50">
+                                <td colSpan="6" className="p-8 text-center text-[#3A2E26]/50">
                                   No active coupons located. Click "Add Coupon" to create one.
                                 </td>
                               </tr>
                             ) : (
-                              filteredCoupons.map((c) => (
-                                <tr key={c.code} className="hover:bg-[#3A2E26]/5 transition-colors">
-                                  <td className="p-4 pl-6 align-middle font-bold text-[#3A2E26] font-mono tracking-wider">{c.code}</td>
-                                  <td className="p-4 align-middle font-bold text-green-700 font-mono">{(c.discount * 100).toFixed(0)}% Off</td>
-                                  <td className="p-4 align-middle font-medium text-gray-600">{c.description || 'No description provided'}</td>
-                                  <td className="p-4 align-middle">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleToggleCouponActive(c)}
-                                      className="relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
-                                      style={{ backgroundColor: c.active ? '#7A8B6F' : '#E5E7EB' }}
-                                      title={c.active ? "Click to Deactivate" : "Click to Activate"}
-                                    >
-                                      <span
-                                        className="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out"
-                                        style={{ transform: c.active ? 'translateX(20px)' : 'translateX(0px)' }}
-                                      />
-                                    </button>
-                                  </td>
-                                  <td className="p-4 pr-6 align-middle text-right">
-                                    <div className="flex justify-end items-center gap-2">
+                              filteredCoupons.map((c) => {
+                                const isFeatured = settingsForm.announcement?.coupon_code === c.code || (!settingsForm.announcement?.coupon_code && coupons.filter(x => x.active)[0]?.code === c.code);
+                                return (
+                                  <tr key={c.code} className="hover:bg-[#3A2E26]/5 transition-colors">
+                                    <td className="p-4 pl-6 align-middle font-bold text-[#3A2E26] font-mono tracking-wider">{c.code}</td>
+                                    <td className="p-4 align-middle font-bold text-green-700 font-mono">{(c.discount * 100).toFixed(0)}% Off</td>
+                                    <td className="p-4 align-middle font-medium text-gray-600">{c.description || 'No description provided'}</td>
+                                    <td className="p-4 align-middle text-center">
+                                      {c.active ? (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleFeatureCoupon(isFeatured ? '' : c.code)}
+                                          className="p-1.5 hover:bg-yellow-50 rounded-full transition-colors cursor-pointer"
+                                          title={isFeatured ? "Currently featured (Click to unfeature)" : "Click to feature in banner"}
+                                        >
+                                          <Star className={`w-4.5 h-4.5 ${isFeatured ? 'fill-amber-400 text-amber-500' : 'text-gray-300 hover:text-amber-500'}`} />
+                                        </button>
+                                      ) : (
+                                        <span className="text-[10px] text-gray-400 font-bold italic">Inactive</span>
+                                      )}
+                                    </td>
+                                    <td className="p-4 align-middle">
                                       <button
-                                        onClick={() => handleOpenEditCoupon(c)}
-                                        className="p-1.5 text-gray-500 hover:text-[#3A2E26] hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
-                                        title="Edit Coupon"
+                                        type="button"
+                                        onClick={() => handleToggleCouponActive(c)}
+                                        className="relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+                                        style={{ backgroundColor: c.active ? '#7A8B6F' : '#E5E7EB' }}
+                                        title={c.active ? "Click to Deactivate" : "Click to Activate"}
                                       >
-                                        <Edit className="w-4 h-4" />
+                                        <span
+                                          className="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out"
+                                          style={{ transform: c.active ? 'translateX(20px)' : 'translateX(0px)' }}
+                                        />
                                       </button>
-                                      <button
-                                        onClick={() => handleDeleteCoupon(c.code)}
-                                        className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                                        title="Delete Coupon"
-                                      >
-                                        <Trash2 className="w-4 h-4" />
-                                      </button>
-                                    </div>
-                                  </td>
-                                </tr>
-                              ))
+                                    </td>
+                                    <td className="p-4 pr-6 align-middle text-right">
+                                      <div className="flex justify-end items-center gap-2">
+                                        <button
+                                          onClick={() => handleOpenEditCoupon(c)}
+                                          className="p-1.5 text-gray-500 hover:text-[#3A2E26] hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                                          title="Edit Coupon"
+                                        >
+                                          <Edit className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                          onClick={() => handleDeleteCoupon(c.code)}
+                                          className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                                          title="Delete Coupon"
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              })
                             )}
                           </tbody>
                         </table>
                       </div>
+                    </div>
+
+                    {/* Coupon Banner Settings */}
+                    <div className="bg-white rounded-3xl p-6 border border-[#E6D5C3]/30 shadow-sm space-y-4 mt-6">
+                      <div className="flex items-center justify-between border-b border-[#E6D5C3]/20 pb-2">
+                        <h3 className="text-lg font-bold">Coupon Banner Configuration</h3>
+                        <button
+                          type="button"
+                          onClick={handleSaveBannerSettings}
+                          className="px-4 py-2 bg-[#7A8B6F] hover:bg-black text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-200 shadow-sm cursor-pointer"
+                        >
+                          Save Banner Settings
+                        </button>
+                      </div>
+                      <p className="text-xs text-[#3A2E26]/50">
+                        This banner automatically appears when active coupons exist. You can customise the text, or select a specific coupon to feature.
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Featured Coupon Selector */}
+                        <div>
+                          <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Featured Coupon Code</label>
+                          <select
+                            value={settingsForm.announcement?.coupon_code || ''}
+                            onChange={(e) => setSettingsForm({
+                              ...settingsForm,
+                              announcement: { ...settingsForm.announcement, coupon_code: e.target.value }
+                            })}
+                            className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          >
+                            <option value="">Auto (first active coupon)</option>
+                            {coupons.filter(c => c.active).map(c => (
+                              <option key={c.code} value={c.code}>
+                                {c.code} — {(c.discount * 100).toFixed(0)}% OFF {c.description ? `(${c.description})` : ''}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        {/* Badge Text */}
+                        <div>
+                          <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Badge Label</label>
+                          <input
+                            type="text"
+                            value={settingsForm.announcement?.badge_text || ''}
+                            onChange={(e) => setSettingsForm({
+                              ...settingsForm,
+                              announcement: { ...settingsForm.announcement, badge_text: e.target.value }
+                            })}
+                            placeholder="Limited Offer"
+                            className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          />
+                        </div>
+                        {/* Custom Banner Text */}
+                        <div className="md:col-span-2">
+                          <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Custom Banner Text <span className="font-normal text-[#3A2E26]/40">(leave empty for auto-generated)</span></label>
+                          <input
+                            type="text"
+                            value={settingsForm.announcement?.text || ''}
+                            onChange={(e) => setSettingsForm({
+                              ...settingsForm,
+                              announcement: { ...settingsForm.announcement, text: e.target.value }
+                            })}
+                            placeholder="e.g. Use promo code HAUS10 for extra 10% OFF at checkout!"
+                            className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          />
+                        </div>
+                      </div>
+                      {/* Active Toggle */}
+                      <label className="flex items-center gap-2 text-sm font-semibold cursor-pointer pt-1">
+                        <input
+                          type="checkbox"
+                          checked={settingsForm.announcement?.active !== false}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            announcement: { ...settingsForm.announcement, active: e.target.checked }
+                          })}
+                          className="w-4 h-4 text-[#7A8B6F] border-gray-300 rounded focus:ring-[#7A8B6F]"
+                        />
+                        <span>Show Coupon Banner</span>
+                      </label>
+                      {coupons.filter(c => c.active).length === 0 && (
+                        <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                          <AlertCircle className="w-3.5 h-3.5" />
+                          <span>No active coupons found. Create a coupon above first — the banner won't show until one exists.</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                   {renderStorefrontPreview('identity')}
@@ -2272,81 +2442,6 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                     </div>
                   </div>
 
-                  {/* Announcement / Coupon Banner Settings */}
-                  <div className="bg-white rounded-3xl p-6 border border-[#E6D5C3]/30 shadow-sm space-y-4">
-                    <h3 className="text-lg font-bold border-b border-[#E6D5C3]/20 pb-2">Coupon Banner</h3>
-                    <p className="text-xs text-[#3A2E26]/50">
-                      This banner automatically appears when active coupons exist. You can customise the text, or select a specific coupon to feature.
-                    </p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Featured Coupon Selector */}
-                      <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Featured Coupon Code</label>
-                        <select
-                          value={settingsForm.announcement?.coupon_code || ''}
-                          onChange={(e) => setSettingsForm({
-                            ...settingsForm,
-                            announcement: { ...settingsForm.announcement, coupon_code: e.target.value }
-                          })}
-                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
-                        >
-                          <option value="">Auto (first active coupon)</option>
-                          {coupons.filter(c => c.active).map(c => (
-                            <option key={c.code} value={c.code}>
-                              {c.code} — {c.discount}% OFF {c.description ? `(${c.description})` : ''}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      {/* Badge Text */}
-                      <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Badge Label</label>
-                        <input
-                          type="text"
-                          value={settingsForm.announcement?.badge_text || ''}
-                          onChange={(e) => setSettingsForm({
-                            ...settingsForm,
-                            announcement: { ...settingsForm.announcement, badge_text: e.target.value }
-                          })}
-                          placeholder="Limited Offer"
-                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
-                        />
-                      </div>
-                      {/* Custom Banner Text */}
-                      <div className="md:col-span-2">
-                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Custom Banner Text <span className="font-normal text-[#3A2E26]/40">(leave empty for auto-generated)</span></label>
-                        <input
-                          type="text"
-                          value={settingsForm.announcement?.text || ''}
-                          onChange={(e) => setSettingsForm({
-                            ...settingsForm,
-                            announcement: { ...settingsForm.announcement, text: e.target.value }
-                          })}
-                          placeholder="e.g. Use promo code HAUS10 for extra 10% OFF at checkout!"
-                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
-                        />
-                      </div>
-                    </div>
-                    {/* Active Toggle */}
-                    <label className="flex items-center gap-2 text-sm font-semibold cursor-pointer pt-1">
-                      <input
-                        type="checkbox"
-                        checked={settingsForm.announcement?.active !== false}
-                        onChange={(e) => setSettingsForm({
-                          ...settingsForm,
-                          announcement: { ...settingsForm.announcement, active: e.target.checked }
-                        })}
-                        className="w-4 h-4 text-[#7A8B6F] border-gray-300 rounded focus:ring-[#7A8B6F]"
-                      />
-                      <span>Show Coupon Banner</span>
-                    </label>
-                    {coupons.filter(c => c.active).length === 0 && (
-                      <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
-                        <AlertCircle className="w-3.5 h-3.5" />
-                        <span>No active coupons found. Create a coupon in the <strong>Coupons</strong> tab first — the banner won't show until one exists.</span>
-                      </div>
-                    )}
-                  </div>
                 </>
               )}
 
@@ -2935,8 +3030,6 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                       </div>
                     </div>
                   </div>
-
-
                 </>
               )}
 
@@ -3154,73 +3247,224 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
             )}
 
               {activeTab === 'reviews' && (
-                <div className="flex flex-col md:flex-row gap-6 animate-fadeIn items-start">
-                  <div className="flex-1 min-w-0 w-full space-y-6">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[#3A2E26]/10 pb-4">
-                      <div>
-                        <h2 className="text-xl font-bold tracking-tight uppercase text-[#3A2E26] font-sans">Reviews Moderation</h2>
-                        <p className="text-xs text-[#3A2E26]/60">Approve or reject customer-submitted reviews for the storefront</p>
-                      </div>
-                      <div className="flex items-center gap-3 w-full sm:w-auto">
-                        <div className="relative w-full sm:w-64">
-                          <Search className="w-4 h-4 text-[#3A2E26]/40 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                          <input 
-                            type="text"
-                            placeholder="Search reviews..."
-                            value={reviewSearch}
-                            onChange={(e) => setReviewSearch(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 bg-white border border-[#3A2E26]/10 rounded-2xl text-xs focus:outline-none focus:border-[#3A2E26] transition-colors font-medium"
-                          />
-                        </div>
-                        <button
-                          onClick={handleOpenCreateReview}
-                          className="px-4 py-2 bg-[#3A2E26] hover:bg-[#2A201A] text-white rounded-2xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                          <span>Add Review</span>
-                        </button>
-                      </div>
-                    </div>
+                <div className="flex flex-col md:flex-row gap-6 animate-fadeIn items-start w-full">
+                  {isReviewModalOpen ? (
+                    // Split screen: Form on Left, Live Storefront Preview on Right
+                    <>
+                      <div className="w-full md:w-[45%] shrink-0 space-y-6">
+                        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#3A2E26]/10 shadow-sm">
+                          <div className="flex justify-between items-center border-b border-[#3A2E26]/10 pb-4 mb-6">
+                            <div>
+                              <h2 className="text-xl font-bold tracking-tight uppercase text-[#3A2E26]">
+                                {editingReview ? 'Edit Review' : 'Create Review'}
+                              </h2>
+                              <p className="text-xs text-[#3A2E26]/60 mt-0.5">
+                                {editingReview ? 'Modify rating & comment' : 'Add custom customer review'}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsReviewModalOpen(false);
+                                setEditingReview(null);
+                              }}
+                              className="px-3 py-1.5 bg-[#3A2E26]/5 hover:bg-[#3A2E26]/10 text-[#3A2E26] rounded-xl text-xs font-bold uppercase transition-all cursor-pointer"
+                            >
+                              Back to List
+                            </button>
+                          </div>
 
-                    <div className="bg-white rounded-3xl border border-[#3A2E26]/10 shadow-sm overflow-hidden">
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                          <thead>
-                            <tr className="bg-[#3A2E26]/5 border-b border-[#3A2E26]/10 text-[10px] font-bold uppercase tracking-widest text-[#3A2E26]/60">
-                              <th className="p-4 pl-6">Customer</th>
-                              <th className="p-4">Product</th>
-                              <th className="p-4">Rating</th>
-                              <th className="p-4">Comment</th>
-                              <th className="p-4">Status</th>
-                              <th className="p-4 pr-6 text-right">Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-[#3A2E26]/10 text-xs">
-                            {reviews.length === 0 ? (
-                              <tr>
-                                <td colSpan="6" className="p-8 text-center text-[#3A2E26]/50">
-                                  No reviews submitted by customers yet.
-                                </td>
+                          <form onSubmit={handleSaveReview} className="space-y-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">Customer Name *</label>
+                                <input
+                                  required
+                                  type="text"
+                                  value={reviewForm.userName}
+                                  onChange={(e) => setReviewForm({ ...reviewForm, userName: e.target.value })}
+                                  placeholder="e.g. Elena Parker"
+                                  className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">Customer Email *</label>
+                                <input
+                                  required
+                                  type="email"
+                                  value={reviewForm.userEmail}
+                                  onChange={(e) => setReviewForm({ ...reviewForm, userEmail: e.target.value })}
+                                  placeholder="e.g. elena@example.com"
+                                  className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">Select Product *</label>
+                              <select
+                                required
+                                value={reviewForm.productId}
+                                onChange={(e) => {
+                                  const selectedProd = products.find(p => p.id === e.target.value || p._id === e.target.value);
+                                  setReviewForm({
+                                    ...reviewForm,
+                                    productId: e.target.value,
+                                    productTitle: selectedProd ? selectedProd.title : ''
+                                  });
+                                }}
+                                className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
+                              >
+                                <option value="">-- Choose Product Pack --</option>
+                                {products.map(p => (
+                                  <option key={p.id || p._id} value={p.id || p._id}>{p.title}</option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">Rating Stars</label>
+                              <div className="flex items-center gap-1.5 py-1 font-sans">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <button
+                                    key={star}
+                                    type="button"
+                                    onClick={() => setReviewForm({ ...reviewForm, rating: star })}
+                                    className="p-1 text-amber-500 hover:scale-110 transition-transform cursor-pointer"
+                                  >
+                                    <Star
+                                      className={`w-6 h-6 ${
+                                        star <= reviewForm.rating
+                                          ? 'fill-amber-500 text-amber-500'
+                                          : 'text-gray-300'
+                                      }`}
+                                    />
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">Comment / Content</label>
+                              <AutoResizeTextarea
+                                required
+                                rows="4"
+                                value={reviewForm.comment}
+                                onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
+                                placeholder="Review content details..."
+                                className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
+                              />
+                            </div>
+
+                            {!editingReview && (
+                              <div>
+                                <label className="flex items-center gap-2 text-sm font-semibold text-[#3A2E26] cursor-pointer py-1">
+                                  <input
+                                    type="checkbox"
+                                    checked={reviewForm.approved}
+                                    onChange={(e) => setReviewForm({ ...reviewForm, approved: e.target.checked })}
+                                    className="w-4 h-4 text-[#7A8B6F] border-gray-300 rounded focus:ring-[#7A8B6F]"
+                                  />
+                                  <span>Automatically Approve Review</span>
+                                </label>
+                              </div>
+                            )}
+
+                            <div className="flex justify-end gap-3 pt-4">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsReviewModalOpen(false);
+                                  setEditingReview(null);
+                                }}
+                                className="px-5 py-2.5 border border-[#E6D5C3] hover:bg-gray-50 text-[#3A2E26] font-bold text-sm rounded-2xl transition-colors cursor-pointer bg-white"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                type="submit"
+                                disabled={saving}
+                                className="px-5 py-2.5 bg-[#3A2E26] hover:bg-[#2A201A] text-white font-bold text-sm rounded-2xl shadow-md transition-colors cursor-pointer flex items-center justify-center min-w-[5rem]"
+                              >
+                                {saving ? 'Saving...' : editingReview ? 'Save Changes' : 'Create Review'}
+                              </button>
+                            </div>
+                          </form>
+                        </div>
+                      </div>
+                      
+                      {/* Live storefront preview shown during edits */}
+                      {renderStorefrontPreview('reviews')}
+                    </>
+                  ) : (
+                    // Regular full screen layout for viewing table
+                    <div className="flex-1 min-w-0 w-full space-y-6">
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[#3A2E26]/10 pb-4">
+                        <div>
+                          <h2 className="text-xl font-bold tracking-tight uppercase text-[#3A2E26] font-sans">Reviews Moderation</h2>
+                          <p className="text-xs text-[#3A2E26]/60">Approve or reject customer-submitted reviews for the storefront</p>
+                        </div>
+                        <div className="flex items-center gap-3 w-full sm:w-auto">
+                          <div className="relative w-full sm:w-64">
+                            <Search className="w-4 h-4 text-[#3A2E26]/40 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                            <input 
+                              type="text"
+                              placeholder="Search reviews..."
+                              value={reviewSearch}
+                              onChange={(e) => setReviewSearch(e.target.value)}
+                              className="w-full pl-10 pr-4 py-2 bg-white border border-[#3A2E26]/10 rounded-2xl text-xs focus:outline-none focus:border-[#3A2E26] transition-colors font-medium"
+                            />
+                          </div>
+                          <button
+                            onClick={handleOpenCreateReview}
+                            className="px-4 py-2 bg-[#3A2E26] hover:bg-[#2A201A] text-white rounded-2xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Add Review</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="bg-white rounded-3xl border border-[#3A2E26]/10 shadow-sm overflow-hidden">
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-left border-collapse">
+                            <thead>
+                              <tr className="bg-[#3A2E26]/5 border-b border-[#3A2E26]/10 text-[10px] font-bold uppercase tracking-widest text-[#3A2E26]/60">
+                                <th className="p-4 pl-6">Customer</th>
+                                <th className="p-4">Product</th>
+                                <th className="p-4">Rating</th>
+                                <th className="p-4">Comment</th>
+                                <th className="p-4">Status</th>
+                                <th className="p-4 pr-6 text-right">Actions</th>
                               </tr>
-                            ) : (
-                              reviews
-                                .filter(r => {
+                            </thead>
+                            <tbody className="divide-y divide-[#3A2E26]/10 text-xs">
+                              {(() => {
+                                const filtered = reviews.filter(r => {
                                   const searchLower = reviewSearch.toLowerCase();
                                   return (
                                     r.userName?.toLowerCase().includes(searchLower) ||
                                     r.productTitle?.toLowerCase().includes(searchLower) ||
                                     r.comment?.toLowerCase().includes(searchLower)
                                   );
-                                })
-                                .map((r) => (
+                                });
+                                if (filtered.length === 0) {
+                                  return (
+                                    <tr>
+                                      <td colSpan="6" className="p-8 text-center text-[#3A2E26]/50">
+                                        No reviews submitted yet.
+                                      </td>
+                                    </tr>
+                                  );
+                                }
+                                return filtered.map((r) => (
                                   <tr key={r.id || r._id} className="hover:bg-[#3A2E26]/5 transition-colors">
-                                    <td className="p-4 pl-6 align-middle font-bold text-[#3A2E26]">
-                                      <div>{r.userName}</div>
-                                      <div className="text-[10px] font-semibold text-gray-400 font-mono mt-0.5">{r.userEmail}</div>
+                                    <td className="p-4 pl-6 align-middle">
+                                      <div className="font-bold text-[#3A2E26]">{r.userName}</div>
+                                      <div className="text-[10px] text-gray-400 font-mono mt-0.5">{r.userEmail}</div>
                                     </td>
-                                    <td className="p-4 align-middle font-bold text-gray-700">{r.productTitle}</td>
-                                    <td className="p-4 align-middle text-amber-500">
-                                      <div className="flex items-center gap-0.5">
+                                    <td className="p-4 align-middle font-semibold text-gray-700">{r.productTitle}</td>
+                                    <td className="p-4 align-middle">
+                                      <div className="flex items-center gap-0.5 text-amber-500">
                                         {[...Array(5)].map((_, i) => (
                                           <Star
                                             key={i}
@@ -3274,14 +3518,14 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                       </div>
                                     </td>
                                   </tr>
-                                ))
-                            )}
-                          </tbody>
-                        </table>
+                                ));
+                              })()}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  {renderStorefrontPreview('reviews')}
+                  )}
                 </div>
               )}
 
@@ -3641,6 +3885,170 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
 
                     </div>
                   </div>
+
+                  {/* Subscription Offers / Plans Manager */}
+                  <div className="bg-white rounded-3xl p-6 border border-[#3A2E26]/10 shadow-sm space-y-4 mt-6">
+                    <div className="flex items-center justify-between border-b border-[#3A2E26]/10 pb-2 flex-wrap gap-2">
+                      <div>
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70 font-sans">Subscription Offers & Plans</h3>
+                        <p className="text-[11px] text-[#3A2E26]/50 mt-0.5">Configure specific duration and frequency packages with custom discounts</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            setSaving(true);
+                            try {
+                              await updateSiteSettings(settingsForm, token);
+                              showNotification('Subscription offers saved successfully!', 'success');
+                              if (onUpdateSettings) onUpdateSettings();
+                            } catch (err) {
+                              showNotification(err.message || 'Failed to save offers', 'error');
+                            } finally {
+                              setSaving(false);
+                            }
+                          }}
+                          disabled={saving}
+                          className="px-3.5 py-1.5 bg-[#3A2E26] hover:bg-[#2A201A] text-white text-xs font-bold rounded-xl transition-all cursor-pointer border-none disabled:opacity-50"
+                        >
+                          {saving ? 'Saving...' : 'Save Offers & Plans'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const currentOffers = settingsForm.subscription_offers || [];
+                            const newId = `offer_${Date.now()}`;
+                            setSettingsForm({
+                              ...settingsForm,
+                              subscription_offers: [
+                                ...currentOffers,
+                                {
+                                  id: newId,
+                                  name: 'New Subscription Offer',
+                                  durationMonths: 6,
+                                  deliveryFrequency: 'monthly',
+                                  discountPct: 15.0,
+                                  active: true
+                                }
+                              ]
+                            });
+                          }}
+                          className="px-3.5 py-1.5 bg-[#7A8B6F] hover:bg-[#68785c] text-white text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1 shrink-0 border-none"
+                        >
+                          <Plus className="w-3.5 h-3.5" /> Add Offer/Plan
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      {(!settingsForm.subscription_offers || settingsForm.subscription_offers.length === 0) ? (
+                        <p className="text-xs text-[#3A2E26]/60 italic py-2">No custom subscription offers configured. Default plans will be shown.</p>
+                      ) : (
+                        settingsForm.subscription_offers.map((offer, idx) => (
+                          <div key={offer.id || idx} className="p-4 bg-[#FDFBF7] rounded-2xl border border-[#E6D5C3]/40 space-y-3 relative text-[#3A2E26]">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = (settingsForm.subscription_offers || []).filter((_, i) => i !== idx);
+                                setSettingsForm({ ...settingsForm, subscription_offers: updated });
+                              }}
+                              className="absolute top-4 right-4 text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded-lg transition-colors border-none bg-transparent cursor-pointer"
+                              title="Delete Offer"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pr-8">
+                              <div className="sm:col-span-2 md:col-span-3">
+                                <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/50 mb-1">Offer Name</label>
+                                <input
+                                  type="text"
+                                  required
+                                  value={offer.name || ''}
+                                  onChange={(e) => {
+                                    const updated = [...settingsForm.subscription_offers];
+                                    updated[idx] = { ...updated[idx], name: e.target.value };
+                                    setSettingsForm({ ...settingsForm, subscription_offers: updated });
+                                  }}
+                                  placeholder="e.g. 6 Month Starter Subscription"
+                                  className="w-full px-3 py-2 bg-white border border-[#E6D5C3]/40 rounded-xl text-xs font-bold text-[#3A2E26] focus:outline-none focus:border-[#3A2E26]"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/50 mb-1">Duration (Months)</label>
+                                <input
+                                  type="number"
+                                  required
+                                  min="1"
+                                  value={offer.durationMonths || 6}
+                                  onChange={(e) => {
+                                    const updated = [...settingsForm.subscription_offers];
+                                    updated[idx] = { ...updated[idx], durationMonths: parseInt(e.target.value) || 1 };
+                                    setSettingsForm({ ...settingsForm, subscription_offers: updated });
+                                  }}
+                                  className="w-full px-3 py-2 bg-white border border-[#E6D5C3]/40 rounded-xl text-xs font-bold text-[#3A2E26]"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/50 mb-1">Delivery Frequency</label>
+                                <select
+                                  value={offer.deliveryFrequency || 'monthly'}
+                                  onChange={(e) => {
+                                    const updated = [...settingsForm.subscription_offers];
+                                    updated[idx] = { ...updated[idx], deliveryFrequency: e.target.value };
+                                    setSettingsForm({ ...settingsForm, subscription_offers: updated });
+                                  }}
+                                  className="w-full px-3 py-2 bg-white border border-[#E6D5C3]/40 rounded-xl text-xs font-bold text-[#3A2E26]"
+                                >
+                                  {(settingsForm.subscription_frequencies || ['monthly', 'every_3_months']).map(freq => (
+                                    <option key={freq} value={freq}>
+                                      {freq === 'monthly' ? 'Every Month (Monthly)' : freq === 'every_3_months' ? 'Every 3 Months' : freq.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              <div>
+                                <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/50 mb-1">Offer Discount (%)</label>
+                                <input
+                                  type="number"
+                                  required
+                                  min="0"
+                                  max="100"
+                                  step="0.5"
+                                  value={offer.discountPct !== undefined ? offer.discountPct : 15.0}
+                                  onChange={(e) => {
+                                    const updated = [...settingsForm.subscription_offers];
+                                    updated[idx] = { ...updated[idx], discountPct: parseFloat(e.target.value) || 0.0 };
+                                    setSettingsForm({ ...settingsForm, subscription_offers: updated });
+                                  }}
+                                  className="w-full px-3 py-2 bg-white border border-[#E6D5C3]/40 rounded-xl text-xs font-bold text-[#3A2E26]"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 pt-1.5 border-t border-[#E6D5C3]/20">
+                              <label className="flex items-center gap-2 text-xs text-[#3A2E26]/70 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={offer.active !== false}
+                                  onChange={(e) => {
+                                    const updated = [...settingsForm.subscription_offers];
+                                    updated[idx] = { ...updated[idx], active: e.target.checked };
+                                    setSettingsForm({ ...settingsForm, subscription_offers: updated });
+                                  }}
+                                  className="w-3.5 h-3.5 text-[#7A8B6F] border-gray-300 rounded focus:ring-[#7A8B6F]"
+                                />
+                                <span>Active Offer (Show on Storefront)</span>
+                              </label>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
             </>
@@ -3940,133 +4348,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
         </div>
       )}
       {/* Review Edit / Create Modal */}
-      {isReviewModalOpen && (
-        <div className="fixed inset-0 bg-[#3A2E26]/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 border border-[#E6D5C3]/40 shadow-2xl relative animate-scaleUp max-h-[90vh] overflow-y-auto">
-            <h3 className="text-xl font-bold mb-2 text-[#3A2E26]">
-              {editingReview ? 'Edit Customer Review' : 'Create Manual Review'}
-            </h3>
-            <p className="text-xs text-[#3A2E26]/60 mb-6">
-              {editingReview 
-                ? 'Modify customer rating and comment text directly.' 
-                : 'Write a custom customer review directly on the storefront.'}
-            </p>
 
-            <form onSubmit={handleSaveReview} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">Customer Name *</label>
-                  <input
-                    required
-                    type="text"
-                    value={reviewForm.userName}
-                    onChange={(e) => setReviewForm({ ...reviewForm, userName: e.target.value })}
-                    placeholder="e.g. Elena Parker"
-                    className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">Customer Email *</label>
-                  <input
-                    required
-                    type="email"
-                    value={reviewForm.userEmail}
-                    onChange={(e) => setReviewForm({ ...reviewForm, userEmail: e.target.value })}
-                    placeholder="e.g. elena@example.com"
-                    className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">Select Product *</label>
-                <select
-                  required
-                  value={reviewForm.productId}
-                  onChange={(e) => {
-                    const selectedProd = products.find(p => p.id === e.target.value || p._id === e.target.value);
-                    setReviewForm({
-                      ...reviewForm,
-                      productId: e.target.value,
-                      productTitle: selectedProd ? selectedProd.title : ''
-                    });
-                  }}
-                  className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
-                >
-                  <option value="">-- Choose Product Pack --</option>
-                  {products.map(p => (
-                    <option key={p.id || p._id} value={p.id || p._id}>{p.title}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">Rating Stars</label>
-                <div className="flex items-center gap-1.5 py-1 font-sans">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      type="button"
-                      onClick={() => setReviewForm({ ...reviewForm, rating: star })}
-                      className="p-1 text-amber-500 hover:scale-110 transition-transform cursor-pointer"
-                    >
-                      <Star
-                        className={`w-6 h-6 ${
-                          star <= reviewForm.rating
-                            ? 'fill-amber-500 text-amber-500'
-                            : 'text-gray-300'
-                        }`}
-                      />
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">Comment / Content</label>
-                <AutoResizeTextarea
-                  required
-                  rows="4"
-                  value={reviewForm.comment}
-                  onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
-                  placeholder="Review content details..."
-                  className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
-                />
-              </div>
-
-              {!editingReview && (
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-semibold text-[#3A2E26] cursor-pointer py-1">
-                    <input
-                      type="checkbox"
-                      checked={reviewForm.approved}
-                      onChange={(e) => setReviewForm({ ...reviewForm, approved: e.target.checked })}
-                      className="w-4 h-4 text-[#7A8B6F] border-gray-300 rounded focus:ring-[#7A8B6F]"
-                    />
-                    <span>Automatically Approve Review</span>
-                  </label>
-                </div>
-              )}
-
-              <div className="flex justify-end gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setIsReviewModalOpen(false)}
-                  className="px-5 py-2.5 border border-[#E6D5C3] hover:bg-gray-50 text-[#3A2E26] font-bold text-sm rounded-2xl transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-5 py-2.5 bg-[#3A2E26] hover:bg-[#2A201A] text-white font-bold text-sm rounded-2xl shadow-sm transition-colors cursor-pointer flex items-center justify-center min-w-[5rem]"
-                >
-                  {saving ? 'Saving...' : editingReview ? 'Save Changes' : 'Create Review'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Log Offline Sale Modal */}
       {isOfflineSaleModalOpen && (

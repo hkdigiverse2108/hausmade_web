@@ -76,8 +76,8 @@ export default function App() {
   const [notification, setNotification] = useState(null);
   const [products, setProducts] = useState(PACK_OPTIONS);
   const [showAdminView, setShowAdminView] = useState(() => {
-    const isPreview = new URLSearchParams(window.location.search).get('preview') === 'true';
-    return !isPreview;
+    const params = new URLSearchParams(window.location.search);
+    return params.get('mode') === 'admin';
   });
   const [isReviewOpen, setIsReviewOpen] = useState(false);
   const [reviewProduct, setReviewProduct] = useState(null);
@@ -219,6 +219,23 @@ export default function App() {
     // Set to false after first render run
     hasProfileParam.current = false;
   }, [isProfileOpen]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (showAdminView) {
+      if (params.get('mode') !== 'admin') {
+        params.set('mode', 'admin');
+        const newSearch = params.toString();
+        window.history.replaceState(null, '', `${window.location.pathname}?${newSearch}${window.location.hash}`);
+      }
+    } else {
+      if (params.get('mode') === 'admin') {
+        params.delete('mode');
+        const newSearch = params.toString();
+        window.history.replaceState(null, '', `${window.location.pathname}${newSearch ? '?' + newSearch : ''}${window.location.hash}`);
+      }
+    }
+  }, [showAdminView]);
 
   const showNotification = useCallback((message, type = 'success') => {
     setNotification({ message, type });

@@ -49,24 +49,38 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
   const activeQuantities = settings?.subscription_quantities || [1, 2, 3, 4, 5, 6];
   const activeFrequencies = settings?.subscription_frequencies || ["monthly", "every_3_months"];
 
-  const [durationMonths, setDurationMonths] = useState(() => activeDurations[0] || 6);
+  const defaultOffers = [
+    { id: "6_month_monthly", name: "6 Month Starter Subscription", durationMonths: 6, deliveryFrequency: "monthly", discountPct: 15.0, active: true },
+    { id: "12_month_monthly", name: "12 Month VIP Subscription", durationMonths: 12, deliveryFrequency: "monthly", discountPct: 20.0, active: true },
+    { id: "6_month_every_3_months", name: "6 Month Seasonal Plan", durationMonths: 6, deliveryFrequency: "every_3_months", discountPct: 18.0, active: true },
+    { id: "12_month_every_3_months", name: "12 Month Ultimate Value Plan", durationMonths: 12, deliveryFrequency: "every_3_months", discountPct: 25.0, active: true }
+  ];
+
+  const activeOffers = (settings?.subscription_offers && settings.subscription_offers.length > 0)
+    ? settings.subscription_offers.filter(o => o.active !== false)
+    : defaultOffers;
+
+  const [durationMonths, setDurationMonths] = useState(() => activeOffers[0]?.durationMonths || 6);
   const [soapsPerMonth, setSoapsPerMonth] = useState(() => activeQuantities[0] || 1);
-  const [deliveryFrequency, setDeliveryFrequency] = useState(() => activeFrequencies[0] || 'monthly');
+  const [deliveryFrequency, setDeliveryFrequency] = useState(() => activeOffers[0]?.deliveryFrequency || 'monthly');
 
   React.useEffect(() => {
     if (settings) {
-      const activeD = settings.subscription_durations || [6, 12];
       const activeQ = settings.subscription_quantities || [1, 2, 3, 4, 5, 6];
-      const activeF = settings.subscription_frequencies || ["monthly", "every_3_months"];
+      const activeOffersList = (settings.subscription_offers && settings.subscription_offers.length > 0)
+        ? settings.subscription_offers.filter(o => o.active !== false)
+        : defaultOffers;
       
-      if (activeD.length > 0 && !activeD.includes(durationMonths)) {
-        setDurationMonths(activeD[0]);
-      }
       if (activeQ.length > 0 && !activeQ.includes(soapsPerMonth)) {
         setSoapsPerMonth(activeQ[0]);
       }
-      if (activeF.length > 0 && !activeF.includes(deliveryFrequency)) {
-        setDeliveryFrequency(activeF[0]);
+      
+      if (activeOffersList.length > 0) {
+        const matched = activeOffersList.find(o => o.durationMonths === durationMonths && o.deliveryFrequency === deliveryFrequency);
+        if (!matched) {
+          setDurationMonths(activeOffersList[0].durationMonths);
+          setDeliveryFrequency(activeOffersList[0].deliveryFrequency);
+        }
       }
     }
   }, [settings]);
@@ -86,9 +100,11 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
     { src: '/images/founder-workshop.png', alt: 'Artisan Workshop Studio' }
   ];
 
+  const matchedOffer = activeOffers.find(o => o.durationMonths === durationMonths && o.deliveryFrequency === deliveryFrequency) || activeOffers[0] || defaultOffers[0];
+
   // Base pricing
   const singleSoap = items.find(i => i.id === 'single') || items[0] || { basePrice: 299.0 };
-  const discountPct = settings?.subscription_discount_pct !== undefined ? settings.subscription_discount_pct : 15.0;
+  const discountPct = matchedOffer?.discountPct !== undefined ? matchedOffer.discountPct : 15.0;
   const subUnitPrice = singleSoap.basePrice * (1.0 - (discountPct / 100.0));
   
   // Deliveries soaps count
@@ -349,52 +365,62 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
                         </div>
                       </div>
 
-                      {/* Duration choice */}
-                      {activeDurations.length > 0 && (
-                        <div className="space-y-2">
+                      {/* Subscription Offer choice */}
+                      {activeOffers.length > 0 && (
+                        <div className="space-y-2.5">
                           <label className="block text-[11px] font-bold uppercase tracking-wider text-[#3A2E26]/85">
-                            2. Select subscription duration (Plan Duration)
+                            2. Select a Subscription Offer / Plan
                           </label>
-                          <div className="grid grid-cols-2 gap-2">
-                            {activeDurations.map((d) => (
-                              <button
-                                key={d}
-                                type="button"
-                                onClick={() => setDurationMonths(d)}
-                                className={`py-2.5 px-3 rounded-2xl border text-xs font-bold transition-all cursor-pointer ${
-                                  durationMonths === d
-                                    ? 'border-[#C97C5D] bg-[#C97C5D]/10 text-[#C97C5D] shadow-xs'
-                                    : 'border-[#3A2E26]/15 bg-white text-[#3A2E26] hover:border-[#3A2E26]/30'
-                                }`}
-                              >
-                                {d >= 12 ? (d % 12 === 0 ? `${d / 12} Year${d / 12 > 1 ? 's' : ''}` : `${d} Months`) : `${d} Months`}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                          <div className="flex flex-col gap-2.5">
+                            {activeOffers.map((offer) => {
+                              const isSelected = durationMonths === offer.durationMonths && deliveryFrequency === offer.deliveryFrequency;
+                              const offerDiscount = offer.discountPct !== undefined ? offer.discountPct : 15.0;
+                              const offerUnitPrice = singleSoap.basePrice * (1.0 - (offerDiscount / 100.0));
+                              const offerSoapsPerDelivery = offer.deliveryFrequency === 'every_3_months' ? soapsPerMonth * 3 : soapsPerMonth;
+                              const offerDeliveryCost = offerUnitPrice * offerSoapsPerDelivery;
+                              const offerTotalCost = offerUnitPrice * soapsPerMonth * offer.durationMonths;
 
-                      {/* Delivery Frequency choice */}
-                      {activeFrequencies.length > 0 && (
-                        <div className="space-y-2">
-                          <label className="block text-[11px] font-bold uppercase tracking-wider text-[#3A2E26]/85">
-                            3. When should we deliver? (Choose Delivery Cycle)
-                          </label>
-                          <div className="grid grid-cols-2 gap-2">
-                            {activeFrequencies.map((f) => (
-                              <button
-                                key={f}
-                                type="button"
-                                onClick={() => setDeliveryFrequency(f)}
-                                className={`py-2.5 px-3 rounded-2xl border text-xs font-bold transition-all cursor-pointer ${
-                                  deliveryFrequency === f
-                                    ? 'border-[#C97C5D] bg-[#C97C5D]/10 text-[#C97C5D] shadow-xs'
-                                    : 'border-[#3A2E26]/15 bg-white text-[#3A2E26] hover:border-[#3A2E26]/30'
-                                }`}
-                              >
-                                {f === 'monthly' ? 'Every Month' : f === 'every_3_months' ? 'Every 3 Months' : f.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
-                              </button>
-                            ))}
+                              return (
+                                <button
+                                  key={offer.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setDurationMonths(offer.durationMonths);
+                                    setDeliveryFrequency(offer.deliveryFrequency);
+                                  }}
+                                  className={`p-4 rounded-2xl border text-left transition-all cursor-pointer relative ${
+                                    isSelected
+                                      ? 'border-[#C97C5D] bg-[#C97C5D]/5 shadow-sm'
+                                      : 'border-[#3A2E26]/15 bg-white hover:border-[#3A2E26]/30'
+                                  }`}
+                                >
+                                  <div className="flex justify-between items-start gap-4">
+                                    <div>
+                                      <span className="font-bold text-xs text-[#3A2E26] block">
+                                        {offer.name || `${offer.durationMonths} Month Plan`}
+                                      </span>
+                                      <span className="text-[10px] text-[#3A2E26]/60 font-semibold uppercase tracking-wider mt-1 block">
+                                        {offer.durationMonths} Months Plan • {offer.deliveryFrequency === 'every_3_months' ? 'Delivered Every 3 Months' : 'Delivered Every Month'}
+                                      </span>
+                                    </div>
+                                    <div className="bg-[#C97C5D] text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider border-none">
+                                      {offerDiscount}% OFF
+                                    </div>
+                                  </div>
+
+                                  <div className="flex justify-between items-end border-t border-[#E6D5C3]/40 mt-3 pt-2.5 text-xs">
+                                    <div>
+                                      <div className="text-[10px] text-[#3A2E26]/50 uppercase tracking-wider font-bold">Price per delivery</div>
+                                      <div className="font-extrabold text-[#3A2E26] mt-0.5">₹{offerDeliveryCost.toFixed(2)}</div>
+                                    </div>
+                                    <div className="text-right">
+                                      <div className="text-[10px] text-[#3A2E26]/50 uppercase tracking-wider font-bold">Total Plan Cost</div>
+                                      <div className="font-extrabold text-[#C97C5D] mt-0.5">₹{offerTotalCost.toFixed(2)}</div>
+                                    </div>
+                                  </div>
+                                </button>
+                              );
+                            })}
                           </div>
                         </div>
                       )}

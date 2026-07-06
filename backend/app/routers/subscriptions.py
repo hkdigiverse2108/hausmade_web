@@ -42,8 +42,10 @@ async def process_recurring_subscriptions():
     
     single_soap_price = await get_soap_base_price()
     discount_pct = await get_discount_pct()
-    discount_factor = 1.0 - (discount_pct / 100.0)
-    
+    settings = await settings_collection.find_one({"key": "site_settings"})
+    offers = settings.get("subscription_offers", []) if settings else []
+    global_discount = float(settings.get("subscription_discount_pct", 15.0)) if settings else 15.0
+
     for sub in active_subs:
         next_del = sub.get("next_delivery_date")
         if isinstance(next_del, str):
@@ -65,6 +67,15 @@ async def process_recurring_subscriptions():
             if freq == "every_3_months":
                 soaps_qty = soaps_qty * 3
                 
+            # Find matching offer discount
+            sub_discount = global_discount
+            sub_duration = sub.get("durationMonths", 6)
+            for offer in offers:
+                if offer.get("durationMonths") == sub_duration and offer.get("deliveryFrequency") == freq and offer.get("active", True):
+                    sub_discount = float(offer.get("discountPct", sub_discount))
+                    break
+
+            discount_factor = 1.0 - (sub_discount / 100.0)
             unit_price = single_soap_price * discount_factor
             pack_price = unit_price * soaps_qty
             
@@ -186,8 +197,17 @@ async def create_subscription(sub_data: SubscriptionCreate, current_user_email: 
     
     # Generate the first order immediately
     single_soap_price = await get_soap_base_price()
-    discount_pct = await get_discount_pct()
-    discount_factor = 1.0 - (discount_pct / 100.0)
+    settings = await settings_collection.find_one({"key": "site_settings"})
+    offers = settings.get("subscription_offers", []) if settings else []
+    global_discount = float(settings.get("subscription_discount_pct", 15.0)) if settings else 15.0
+    
+    sub_discount = global_discount
+    for offer in offers:
+        if offer.get("durationMonths") == duration and offer.get("deliveryFrequency") == freq and offer.get("active", True):
+            sub_discount = float(offer.get("discountPct", sub_discount))
+            break
+            
+    discount_factor = 1.0 - (sub_discount / 100.0)
     
     soaps_qty = sub_data.soapsPerMonth
     if freq == "every_3_months":

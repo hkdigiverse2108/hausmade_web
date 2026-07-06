@@ -411,42 +411,28 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
                       <label className="block text-[10px] font-bold text-[#3A2E26]/70 uppercase tracking-widest">
                         Choose Delivery Target:
                       </label>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <select
+                        value={selectedAddressId}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === 'custom') {
+                            handleSelectCustomAddress();
+                          } else {
+                            const matched = availableAddresses.find(a => a.id === val);
+                            if (matched) {
+                              handleSelectAddress(matched);
+                            }
+                          }
+                        }}
+                        className="w-full px-4 py-3 rounded-xl bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all font-medium"
+                      >
+                        <option value="custom">✍️ Fill Custom / New Address</option>
                         {availableAddresses.map((addr) => (
-                          <div
-                            key={addr.id}
-                            onClick={() => handleSelectAddress(addr)}
-                            className={`p-3 rounded-xl border-2 text-left cursor-pointer transition-all ${
-                              selectedAddressId === addr.id
-                                ? 'border-[#7A8B6F] bg-[#7A8B6F]/5'
-                                : 'border-[#3A2E26]/10 hover:border-[#3A2E26]/20 bg-white'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 bg-[#3A2E26]/5 text-[#3A2E26] rounded">
-                                {addr.label}
-                              </span>
-                              {addr.is_default && (
-                                <span className="text-[9px] font-bold uppercase text-[#7A8B6F]">Default</span>
-                              )}
-                            </div>
-                            <p className="text-xs text-[#3A2E26] leading-relaxed line-clamp-2">
-                              {addr.address_line1}, {addr.city}
-                            </p>
-                          </div>
+                          <option key={addr.id} value={addr.id}>
+                            {addr.label} ({addr.address_line1}, {addr.city}{addr.is_default ? ' - DEFAULT' : ''})
+                          </option>
                         ))}
-                        
-                        <div
-                          onClick={handleSelectCustomAddress}
-                          className={`p-3 rounded-xl border-2 border-dashed text-left cursor-pointer transition-all flex items-center justify-center min-h-[74px] ${
-                            selectedAddressId === 'custom'
-                              ? 'border-[#7A8B6F] bg-[#7A8B6F]/5'
-                              : 'border-[#3A2E26]/10 hover:border-[#3A2E26]/20 bg-white'
-                          }`}
-                        >
-                          <span className="text-xs font-bold text-[#3A2E26]/70">+ Custom Address</span>
-                        </div>
-                      </div>
+                      </select>
                     </div>
                   )}
 
@@ -653,39 +639,48 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
                     </div>
                   ))}
                 </div>
+                       {/* Coupon code */}
+                  <div className="space-y-2 pt-2 border-t border-[#3A2E26]/10">
+                    {activeCoupons && activeCoupons.length > 0 ? (
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/60 mb-1">Select Promo Offer</label>
+                        <select
+                          value={coupon}
+                          onChange={(e) => setCoupon(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl bg-white border border-[#3A2E26]/20 text-xs font-semibold focus:outline-none"
+                        >
+                          <option value="">-- Choose Promo Offer --</option>
+                          {activeCoupons.map((c) => (
+                            <option key={c.code} value={c.code}>
+                              {c.code} ({(c.discount * 100).toFixed(0)}% OFF) {c.description ? `- ${c.description}` : ''}
+                            </option>
+                          ))}
+                          <option value="custom_code">Or enter custom code...</option>
+                        </select>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="PROMO CODE"
+                          value={coupon}
+                          onChange={(e) => setCoupon(e.target.value.toUpperCase())}
+                          className="w-full px-3 py-2 rounded-xl bg-white border border-[#3A2E26]/20 text-xs font-semibold uppercase tracking-wider focus:outline-none"
+                        />
+                      </div>
+                    )}
 
-                 {/* Coupon code */}
-                 <div className="space-y-2 pt-2 border-t border-[#3A2E26]/10">
-                   {activeCoupons.length > 0 && (
-                     <div>
-                       <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/60 mb-1">Select Active Offer</label>
-                       <select
-                         value={coupon}
-                         onChange={(e) => setCoupon(e.target.value)}
-                         className="w-full px-3 py-2 rounded-xl bg-white border border-[#3A2E26]/20 text-xs font-semibold focus:outline-none"
-                       >
-                         <option value="">-- Choose Coupon --</option>
-                         {activeCoupons.map((c) => (
-                           <option key={c.code} value={c.code}>
-                             {c.code} ({(c.discount * 100).toFixed(0)}% OFF) {c.description ? `- ${c.description}` : ''}
-                           </option>
-                         ))}
-                         <option value="custom_code">Or enter custom promo code...</option>
-                       </select>
-                     </div>
-                   )}
-
-                   {(activeCoupons.length === 0 || coupon === 'custom_code' || !activeCoupons.some(c => c.code === coupon)) && (
-                     <div className="flex gap-2">
-                       <input
-                         type="text"
-                         placeholder="PROMO CODE"
-                         value={coupon === 'custom_code' ? '' : coupon}
-                         onChange={(e) => setCoupon(e.target.value.toUpperCase())}
-                         className="flex-1 px-3 py-2 rounded-xl bg-white border border-[#3A2E26]/20 text-xs font-semibold uppercase tracking-wider focus:outline-none"
-                       />
-                     </div>
-                   )}
+                    {activeCoupons && activeCoupons.length > 0 && coupon === 'custom_code' && (
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="ENTER CUSTOM PROMO CODE"
+                          value={coupon === 'custom_code' ? '' : coupon}
+                          onChange={(e) => setCoupon(e.target.value.toUpperCase())}
+                          className="w-full px-3 py-2 rounded-xl bg-white border border-[#3A2E26]/20 text-xs font-semibold uppercase tracking-wider focus:outline-none"
+                        />
+                      </div>
+                    )}
 
                    <div className="flex justify-end">
                      <button

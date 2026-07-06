@@ -49,7 +49,7 @@ export default function AnnouncementBanner({ settings }) {
   if (!bannerText || bannerText === 'Use promo code HAUS10 for extra 10% OFF at checkout!') {
     if (featuredCoupon) {
       const discountText = featuredCoupon.discount > 0
-        ? `${featuredCoupon.discount}% OFF`
+        ? `${(featuredCoupon.discount * 100).toFixed(0)}% OFF`
         : 'FREE SHIPPING';
       bannerText = featuredCoupon.description
         ? featuredCoupon.description

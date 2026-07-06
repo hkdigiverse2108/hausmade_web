@@ -169,6 +169,15 @@ async def get_site_settings():
                 }
                 settings["social_links"] = default_social_links
                 await settings_collection.update_one({"key": "site_settings"}, {"$set": {"social_links": default_social_links}})
+            if "subscription_offers" not in settings:
+                default_offers = [
+                    {"id": "6_month_monthly", "name": "6 Month Starter Subscription", "durationMonths": 6, "deliveryFrequency": "monthly", "discountPct": 15.0, "active": True},
+                    {"id": "12_month_monthly", "name": "12 Month VIP Subscription", "durationMonths": 12, "deliveryFrequency": "monthly", "discountPct": 20.0, "active": True},
+                    {"id": "6_month_every_3_months", "name": "6 Month Seasonal Plan", "durationMonths": 6, "deliveryFrequency": "every_3_months", "discountPct": 18.0, "active": True},
+                    {"id": "12_month_every_3_months", "name": "12 Month Ultimate Value Plan", "durationMonths": 12, "deliveryFrequency": "every_3_months", "discountPct": 25.0, "active": True}
+                ]
+                settings["subscription_offers"] = default_offers
+                await settings_collection.update_one({"key": "site_settings"}, {"$set": {"subscription_offers": default_offers}})
             
         if "_id" in settings:
             settings["_id"] = str(settings["_id"])
