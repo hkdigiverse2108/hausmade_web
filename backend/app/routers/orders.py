@@ -1,9 +1,10 @@
 from typing import Optional
 from datetime import datetime
+import uuid
 from fastapi import APIRouter, HTTPException, Depends, status
-from app.schemas.models import OrderCreate
+from app.schemas.models import OrderCreate, OfflineSaleCreate
 from app.database.connection import orders_collection, products_collection, users_collection
-from app.dependencies.auth_deps import get_current_user_email
+from app.dependencies.auth_deps import get_current_user_email, get_admin_user
 
 router = APIRouter(tags=["Orders"])
 
@@ -55,6 +56,67 @@ async def place_order(order_data: OrderCreate, current_user_email: Optional[str]
     await orders_collection.insert_one(order_dict)
     order_dict["_id"] = str(order_dict["_id"])
     return order_dict
+
+@router.post("/api/admin/orders/offline", status_code=201)
+async def log_offline_order(order_data: OfflineSaleCreate, admin: dict = Depends(get_admin_user)):
+    prod = await products_collection.find_one({"id": order_data.packId})
+    if not prod:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Product with pack ID '{order_data.packId}' not found"
+        )
+    
+    short_uuid = str(uuid.uuid4()).split("-")[0].upper()
+    order_id = f"OFFLINE-{short_uuid}"
+    
+    shipping_address = {
+        "fullName": order_data.customerName,
+        "email": order_data.customerEmail or "",
+        "phone": order_data.customerPhone,
+        "address": "Offline Sale",
+        "city": "Offline",
+        "pincode": "000000",
+        "state": "Offline Store"
+    }
+    
+    cart_item = {
+        "packId": order_data.packId,
+        "title": prod.get("title", "Botanical Soap"),
+        "count": prod.get("count", 1),
+        "isSubscription": False,
+        "frequency": None,
+        "unitPrice": str(prod.get("basePrice", 0)),
+        "packPrice": str(prod.get("basePrice", 0)),
+        "quantity": order_data.quantity,
+        "totalPrice": str(order_data.totalPrice),
+        "image": prod.get("image", "")
+    }
+    
+    dt_now = datetime.utcnow()
+    if order_data.created_at:
+        try:
+            dt_now = datetime.fromisoformat(order_data.created_at.replace("Z", "+00:00"))
+        except Exception:
+            pass
+            
+    order_doc = {
+        "orderId": order_id,
+        "shippingAddress": shipping_address,
+        "cartItems": [cart_item],
+        "subtotal": order_data.totalPrice,
+        "discountAmount": 0.0,
+        "shippingFee": 0.0,
+        "grandTotal": order_data.totalPrice,
+        "paymentMethod": order_data.paymentMethod,
+        "created_at": dt_now,
+        "user_email": order_data.customerEmail or "",
+        "isOffline": True,
+        "notes": order_data.notes or ""
+    }
+    
+    await orders_collection.insert_one(order_doc)
+    order_doc["_id"] = str(order_doc["_id"])
+    return order_doc
 
 @router.get("/api/orders")
 async def get_orders(current_user_email: str = Depends(get_current_user_email)):

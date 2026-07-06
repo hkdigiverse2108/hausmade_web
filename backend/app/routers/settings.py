@@ -136,6 +136,21 @@ async def get_site_settings():
             if "ingredients_active" not in settings:
                 settings["ingredients_active"] = True
                 await settings_collection.update_one({"key": "site_settings"}, {"$set": {"ingredients_active": True}})
+            if "subscription_discount_pct" not in settings:
+                settings["subscription_discount_pct"] = 15.0
+                await settings_collection.update_one({"key": "site_settings"}, {"$set": {"subscription_discount_pct": 15.0}})
+            if "subscription_active" not in settings:
+                settings["subscription_active"] = True
+                await settings_collection.update_one({"key": "site_settings"}, {"$set": {"subscription_active": True}})
+            if "subscription_durations" not in settings:
+                settings["subscription_durations"] = [6, 12]
+                await settings_collection.update_one({"key": "site_settings"}, {"$set": {"subscription_durations": [6, 12]}})
+            if "subscription_quantities" not in settings:
+                settings["subscription_quantities"] = [2, 4, 6]
+                await settings_collection.update_one({"key": "site_settings"}, {"$set": {"subscription_quantities": [2, 4, 6]}})
+            if "subscription_frequencies" not in settings:
+                settings["subscription_frequencies"] = ["monthly", "every_3_months"]
+                await settings_collection.update_one({"key": "site_settings"}, {"$set": {"subscription_frequencies": ["monthly", "every_3_months"]}})
             
         if "_id" in settings:
             settings["_id"] = str(settings["_id"])

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, User, Mail, Phone, ShieldCheck, Sparkles, Loader2, MapPin, Compass, Building, Globe, Navigation, ChevronRight, UserCheck, Check, Heart, ShoppingBag, Lock, LogOut, Trash2, Calendar, Hash, Package } from 'lucide-react';
-import { updateUserProfile, getUserOrders } from '../utils/api';
+import { X, User, Mail, Phone, ShieldCheck, Sparkles, Loader2, MapPin, Compass, Building, Globe, Navigation, ChevronRight, UserCheck, Check, Heart, ShoppingBag, Lock, LogOut, Trash2, Calendar, Hash, Package, RefreshCw } from 'lucide-react';
+import { updateUserProfile, getUserOrders, getUserSubscriptions, requestUrgentSoap } from '../utils/api';
 
 export default function ProfileModal({ 
   isOpen, 
@@ -43,6 +43,11 @@ export default function ProfileModal({
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [ordersError, setOrdersError] = useState('');
 
+  // Subscriptions State
+  const [subscriptions, setSubscriptions] = useState([]);
+  const [loadingSubs, setLoadingSubs] = useState(false);
+  const [subsError, setSubsError] = useState('');
+
   // Security State
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -83,6 +88,39 @@ export default function ProfileModal({
       loadUserOrders();
     }
   }, [activeTab, token, isOpen]);
+
+  useEffect(() => {
+    if (activeTab === 'subscriptions' && token && isOpen) {
+      loadUserSubscriptions();
+    }
+  }, [activeTab, token, isOpen]);
+
+  const loadUserSubscriptions = async () => {
+    setLoadingSubs(true);
+    setSubsError('');
+    try {
+      const data = await getUserSubscriptions(token);
+      setSubscriptions(data);
+    } catch (err) {
+      setSubsError(err.message || 'Failed to fetch subscriptions');
+    } finally {
+      setLoadingSubs(false);
+    }
+  };
+
+  const handleRequestUrgentSoap = async (subId) => {
+    if (!window.confirm('તાત્કાલિક સાબુ મંગાવવા માટે સહમત છો? આ ઓર્ડર માટે અલગથી ચૂકવણી કરવાની રહેશે અને આનાથી તમારા સબ્સ્ક્રિપ્શન ક્વોટા પર કોઈ અસર નહીં થાય.')) return;
+    setLoading(true);
+    try {
+      await requestUrgentSoap(subId, token);
+      showNotification('તાત્કાલિક ઓર્ડર સફળતાપૂર્વક જનરેટ થઈ ગયો છે! (Urgent order placed successfully)');
+      loadUserSubscriptions();
+    } catch (err) {
+      showNotification(err.message || 'Urgent request failed', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadUserOrders = async () => {
     setLoadingOrders(true);
@@ -386,6 +424,20 @@ export default function ProfileModal({
               <div className="flex items-center gap-2.5">
                 <ShoppingBag className="w-4 h-4 text-[#C97C5D]" />
                 <span>Order History</span>
+              </div>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setActiveTab('subscriptions')}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                activeTab === 'subscriptions'
+                  ? 'bg-white border border-[#3A2E26]/15 text-[#3A2E26] shadow-sm'
+                  : 'text-[#3A2E26]/60 hover:text-[#3A2E26] hover:bg-white/45'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <RefreshCw className="w-4 h-4 text-[#C97C5D]" />
+                <span>My Subscriptions</span>
               </div>
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -941,6 +993,112 @@ export default function ProfileModal({
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Tab: Subscriptions */}
+            {activeTab === 'subscriptions' && (
+              <div className="space-y-6 animate-fadeIn">
+                <div className="border-b border-[#3A2E26]/10 pb-4">
+                  <h3 className="font-serif-brand text-xl font-bold tracking-tight text-[#3A2E26]">My Subscriptions</h3>
+                  <p className="text-xs text-[#3A2E26]/60 mt-0.5">Manage your active soap recurring subscriptions and request urgent soap bars.</p>
+                </div>
+
+                {loadingSubs ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-[#3A2E26]/50">
+                    <Loader2 className="w-8 h-8 animate-spin mb-2" />
+                    <p className="text-xs font-semibold">Loading subscriptions...</p>
+                  </div>
+                ) : subsError ? (
+                  <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-2xl text-xs font-medium">
+                    {subsError}
+                  </div>
+                ) : subscriptions.length === 0 ? (
+                  <div className="text-center py-12 bg-[#FDFBF7]/50 rounded-2xl border border-[#3A2E26]/10">
+                    <RefreshCw className="w-10 h-10 text-[#C97C5D]/30 mx-auto mb-3 animate-spin-slow" />
+                    <h4 className="font-bold text-[#3A2E26] text-sm">No Active Subscriptions</h4>
+                    <p className="text-xs text-[#3A2E26]/60 mt-1 max-w-sm mx-auto">
+                      You haven't subscribed to any soap packs yet. Pick Subscribe & Save at checkout to auto-delivery fresh batches!
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {subscriptions.map((sub, idx) => {
+                      const isSubActive = sub.status === 'active';
+                      return (
+                        <div key={idx} className="bg-white border border-[#3A2E26]/10 rounded-3xl p-5 shadow-sm space-y-4 hover:shadow-md transition-shadow">
+                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-3 border-b border-[#3A2E26]/5">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-sm text-[#3A2E26]">{sub.subscriptionId}</span>
+                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
+                                  sub.status === 'active'
+                                    ? 'bg-green-50 text-green-700 border border-green-200'
+                                    : sub.status === 'paused'
+                                    ? 'bg-yellow-50 text-yellow-700 border border-yellow-200'
+                                    : sub.status === 'completed'
+                                    ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                    : 'bg-red-50 text-red-700 border border-red-200'
+                                }`}>
+                                  {sub.status}
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-gray-400 mt-0.5">Created: {new Date(sub.created_at).toLocaleDateString()}</p>
+                            </div>
+                            <div className="text-right sm:text-left">
+                              <span className="text-xs font-bold text-[#C97C5D] block">
+                                {sub.soapsPerMonth} Soaps / {sub.deliveryFrequency === 'every_3_months' ? '3 Months' : 'Month'}
+                              </span>
+                              <span className="text-[10px] text-gray-500">Duration: {sub.durationMonths} Months</span>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                            <div className="space-y-1">
+                              <p className="text-gray-400 font-medium">Delivery Schedule</p>
+                              <p className="text-[#3A2E26] font-bold uppercase tracking-wide">
+                                {sub.deliveryFrequency === 'every_3_months' ? 'Every 3 Months' : 'Every Month'}
+                              </p>
+                              <p className="text-gray-500 text-[11px]">
+                                Next Date: {sub.next_delivery_date ? new Date(sub.next_delivery_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}
+                              </p>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-gray-400 font-medium">Deliveries Left</p>
+                              <p className="text-[#3A2E26] font-bold">
+                                {sub.remaining_deliveries} of {sub.total_deliveries} remaining
+                              </p>
+                              <p className="text-gray-500 text-[11px]">Payment: {sub.paymentMethod}</p>
+                            </div>
+                          </div>
+
+                          {/* Shipping address details */}
+                          <div className="p-3 bg-[#FDFBF7] rounded-2xl border border-[#3A2E26]/5 text-xs">
+                            <p className="font-bold text-[#3A2E26] mb-1">Shipping Details</p>
+                            <p className="text-gray-600">{sub.shippingAddress?.fullName} &bull; {sub.shippingAddress?.phone}</p>
+                            <p className="text-gray-500 mt-0.5">{sub.shippingAddress?.address}, {sub.shippingAddress?.city} - {sub.shippingAddress?.pincode}</p>
+                          </div>
+
+                          {/* Action button for urgent delivery */}
+                          {isSubActive && (
+                            <div className="pt-2 border-t border-[#3A2E26]/5 flex flex-wrap justify-between items-center gap-3">
+                              <div className="text-[11px] text-[#C97C5D] font-medium max-w-sm">
+                                💡 *વચ્ચે કટોકટીમાં સાબુ જોઈતા હોય તો?* "Request Urgent Soap" કરો. આનું પેમેન્ટ અલગથી કરાશે અને નિયમિત સબ્સ્ક્રિપ્શન ચાલુ રહેશે.
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleRequestUrgentSoap(sub.subscriptionId)}
+                                className="px-4 py-2 bg-gradient-to-r from-[#C97C5D] to-[#D88A6E] hover:from-[#d68564] hover:to-[#c47a5e] text-white font-bold rounded-xl text-xs shadow-md transition-all duration-200 cursor-pointer transform hover:-translate-y-0.5"
+                              >
+                                Request Urgent Soap
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>

@@ -165,6 +165,7 @@ products_collection = AsyncCollectionProxy("products", "products.json")
 coupons_collection = AsyncCollectionProxy("coupons", "coupons.json")
 settings_collection = AsyncCollectionProxy("settings", "settings.json")
 reviews_collection = AsyncCollectionProxy("reviews", "reviews.json")
+subscriptions_collection = AsyncCollectionProxy("subscriptions", "subscriptions.json")
 
 async def initialize_db():
     global motor_client, motor_db, use_local_json
@@ -192,6 +193,7 @@ async def initialize_db():
             await motor_db["products"].create_index("id", unique=True)
             await motor_db["coupons"].create_index("code", unique=True)
             await motor_db["reviews"].create_index([("productId", 1), ("created_at", -1)])
+            await motor_db["subscriptions"].create_index("subscriptionId", unique=True)
             await motor_db["otps"].create_index("mobile", unique=True)
             await motor_db["otps"].create_index("created_at", expireAfterSeconds=300)
             print("MongoDB Indexes initialized successfully.")

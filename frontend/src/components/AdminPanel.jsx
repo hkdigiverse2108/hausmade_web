@@ -54,8 +54,131 @@ import {
   adminGetReviews,
   adminApproveReview,
   adminDeleteReview,
-  adminUpdateReview
+  adminUpdateReview,
+  adminLogOfflineSale
 } from '../utils/api';
+
+function ImageUploader({ label, value, onChange, showNotification, isSaving, setIsSaving }) {
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true);
+    if (setIsSaving) setIsSaving(true);
+    try {
+      const res = await uploadImage(file);
+      onChange(res.url);
+      if (showNotification) {
+        showNotification('Image uploaded successfully!', 'success');
+      }
+    } catch (err) {
+      console.error(err);
+      if (showNotification) {
+        showNotification(err.message || 'Failed to upload image', 'error');
+      }
+    } finally {
+      setUploading(false);
+      if (setIsSaving) setIsSaving(false);
+    }
+  };
+
+  const handleClear = () => {
+    onChange('');
+  };
+
+  return (
+    <div className="space-y-2">
+      {label && (
+        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 font-sans">
+          {label}
+        </label>
+      )}
+      
+      {value ? (
+        <div className="relative group rounded-2xl overflow-hidden border border-[#E6D5C3]/40 bg-[#FDFBF7] shadow-sm max-w-sm">
+          {/* Image Preview */}
+          <div className="w-full h-44 flex items-center justify-center p-4">
+            <img 
+              src={value} 
+              alt="Uploaded Preview" 
+              className="max-h-full max-w-full object-contain rounded-lg transition-transform duration-300 group-hover:scale-[1.02]"
+              onError={(e) => { e.target.src = '/images/pack-single.png'; }}
+            />
+          </div>
+
+          {/* Hover Overlay with controls */}
+          <div className="absolute inset-0 bg-[#3A2E26]/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 backdrop-blur-[2px]">
+            <label className="bg-white hover:bg-gray-100 text-[#3A2E26] font-bold text-xs px-4 py-2 rounded-xl flex items-center justify-center cursor-pointer shadow-md transition-all">
+              Replace Image
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="hidden"
+                disabled={uploading || isSaving}
+              />
+            </label>
+            <button
+              type="button"
+              onClick={handleClear}
+              className="bg-red-500 hover:bg-red-600 text-white font-bold text-xs p-2 rounded-xl shadow-md transition-all cursor-pointer"
+              title="Remove Image"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      ) : (
+        /* Empty / Upload Placeholder Box */
+        <label className="flex flex-col items-center justify-center border-2 border-dashed border-[#E6D5C3] hover:border-[#3A2E26]/50 bg-[#FDFBF7]/50 hover:bg-[#FDFBF7] transition-all p-6 rounded-2xl cursor-pointer max-w-sm text-center">
+          <div className="w-10 h-10 rounded-xl bg-[#3A2E26]/5 text-[#3A2E26]/70 flex items-center justify-center mb-2">
+            {uploading ? (
+              <RefreshCw className="w-5 h-5 animate-spin" />
+            ) : (
+              <Plus className="w-5 h-5 text-[#C97C5D]" />
+            )}
+          </div>
+          <span className="text-xs font-bold text-[#3A2E26] block">
+            {uploading ? 'Uploading image...' : 'Click to Upload Image'}
+          </span>
+          <span className="text-[10px] text-[#3A2E26]/50 mt-1 block">
+            Supports PNG, JPG, JPEG, WEBP up to 5MB
+          </span>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            className="hidden"
+            disabled={uploading || isSaving}
+          />
+        </label>
+      )}
+
+      {/* Manual URL Edit Toggle */}
+      <div>
+        <button
+          type="button"
+          onClick={() => setShowUrlInput(!showUrlInput)}
+          className="text-[10px] font-bold text-[#7A8B6F] hover:underline uppercase tracking-wider block mt-1 cursor-pointer"
+        >
+          {showUrlInput ? 'Hide URL field' : 'Edit Image URL manually'}
+        </button>
+        
+        {showUrlInput && (
+          <input
+            type="text"
+            placeholder="Paste direct image URL here..."
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className="w-full mt-2 px-4 py-2 bg-[#FDFBF7] border border-[#E6D5C3]/40 rounded-xl text-xs focus:outline-none focus:border-[#3A2E26] font-sans"
+          />
+        )}
+      </div>
+    </div>
+  );
+}
 
 function AdminPanel({ token, onLogout, showNotification, onViewStorefront, settings, onUpdateSettings }) {
   const [activeTab, setActiveTab] = useState(() => {
@@ -83,6 +206,11 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       card_description: '',
       button_text: ''
     },
+    subscription_discount_pct: 15.0,
+    subscription_active: true,
+    subscription_durations: [6, 12],
+    subscription_quantities: [2, 4, 6],
+    subscription_frequencies: ["monthly", "every_3_months"],
     faqs: [],
     ingredients: [],
     ingredients_active: true
@@ -90,6 +218,8 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   const [settingsSubTab, setSettingsSubTab] = useState('identity'); // 'identity', 'hero', 'story', 'subscription', 'faqs', 'ingredients', 'contact'
   const [previewDevice, setPreviewDevice] = useState('pc'); // 'pc', 'tablet', 'mobile'
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [customDuration, setCustomDuration] = useState('');
+  const [customFreq, setCustomFreq] = useState('');
   const [previewFullscreen, setPreviewFullscreen] = useState(false);
 
   useEffect(() => {
@@ -113,6 +243,11 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
         JSON.stringify(currentStory) !== JSON.stringify(newStory) ||
         JSON.stringify(currentContact) !== JSON.stringify(newContact) ||
         JSON.stringify(currentSub) !== JSON.stringify(newSub) ||
+        settingsForm.subscription_discount_pct !== (settings.subscription_discount_pct !== undefined ? settings.subscription_discount_pct : 15.0) ||
+        settingsForm.subscription_active !== (settings.subscription_active !== undefined ? settings.subscription_active : true) ||
+        JSON.stringify(settingsForm.subscription_durations || []) !== JSON.stringify(settings.subscription_durations || []) ||
+        JSON.stringify(settingsForm.subscription_quantities || []) !== JSON.stringify(settings.subscription_quantities || []) ||
+        JSON.stringify(settingsForm.subscription_frequencies || []) !== JSON.stringify(settings.subscription_frequencies || []) ||
         JSON.stringify(settingsForm.faqs || []) !== JSON.stringify(settings.faqs || []) ||
         JSON.stringify(settingsForm.ingredients || []) !== JSON.stringify(settings.ingredients || []) ||
         settingsForm.ingredients_active !== (settings.ingredients_active !== undefined ? settings.ingredients_active : true);
@@ -121,6 +256,11 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
         setSettingsForm({
           ...settings,
           logo_url: settings.logo_url || '',
+          subscription_discount_pct: settings.subscription_discount_pct !== undefined ? settings.subscription_discount_pct : 15.0,
+          subscription_active: settings.subscription_active !== undefined ? settings.subscription_active : true,
+          subscription_durations: settings.subscription_durations || [6, 12],
+          subscription_quantities: settings.subscription_quantities || [2, 4, 6],
+          subscription_frequencies: settings.subscription_frequencies || ["monthly", "every_3_months"],
           faqs: settings.faqs || [],
           ingredients: settings.ingredients || [],
           ingredients_active: settings.ingredients_active !== undefined ? settings.ingredients_active : true
@@ -130,8 +270,11 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   }, [settings]);
 
   useEffect(() => {
-    localStorage.setItem('hausmade_preview_settings', JSON.stringify(settingsForm));
-    window.dispatchEvent(new Event('storage'));
+    const isInsideIframe = window.self !== window.top;
+    if (!isInsideIframe) {
+      localStorage.setItem('hausmade_preview_settings', JSON.stringify(settingsForm));
+      window.dispatchEvent(new Event('storage'));
+    }
   }, [settingsForm]);
 
   useEffect(() => {
@@ -212,6 +355,90 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     rating: 5,
     comment: ''
   });
+
+  const [isOfflineSaleModalOpen, setIsOfflineSaleModalOpen] = useState(false);
+  const [offlineSaleForm, setOfflineSaleForm] = useState({
+    customerName: '',
+    customerPhone: '',
+    customerEmail: '',
+    packId: '',
+    quantity: 1,
+    totalPrice: 0,
+    paymentMethod: 'Cash',
+    created_at: new Date().toISOString().split('T')[0],
+    notes: ''
+  });
+  const [orderSourceFilter, setOrderSourceFilter] = useState('all');
+  const [statsFilter, setStatsFilter] = useState('all');
+
+  const handleOpenOfflineSaleModal = () => {
+    const singlePack = products.find(p => p.count === 1) || products[0];
+    const firstProduct = singlePack?.id || 'pack-1';
+    const firstPrice = singlePack?.basePrice || 299;
+    setOfflineSaleForm({
+      customerName: '',
+      customerPhone: '',
+      customerEmail: '',
+      packId: firstProduct,
+      pricePerSoap: firstPrice,
+      quantity: 1,
+      totalPrice: firstPrice,
+      paymentMethod: 'Cash',
+      created_at: new Date().toISOString().split('T')[0],
+      notes: ''
+    });
+    setIsOfflineSaleModalOpen(true);
+  };
+
+  const handleOfflineSaleProductChange = (packId) => {
+    const prod = products.find(p => p.id === packId);
+    const price = prod ? prod.basePrice : 0;
+    setOfflineSaleForm(prev => ({
+      ...prev,
+      packId,
+      totalPrice: price * prev.quantity
+    }));
+  };
+
+  const handleOfflineSaleQuantityChange = (qty) => {
+    const prod = products.find(p => p.id === offlineSaleForm.packId);
+    const price = prod ? prod.basePrice : 0;
+    setOfflineSaleForm(prev => ({
+      ...prev,
+      quantity: qty,
+      totalPrice: price * qty
+    }));
+  };
+
+  const handleSaveOfflineSale = async (e) => {
+    e.preventDefault();
+    if (!offlineSaleForm.customerName || !offlineSaleForm.customerPhone || !offlineSaleForm.packId) {
+      showNotification('Please fill in customer name, phone, and select a product.', 'error');
+      return;
+    }
+    setSaving(true);
+    try {
+      const payload = {
+        customerName: offlineSaleForm.customerName,
+        customerPhone: offlineSaleForm.customerPhone,
+        customerEmail: offlineSaleForm.customerEmail || null,
+        packId: offlineSaleForm.packId,
+        quantity: parseInt(offlineSaleForm.quantity) || 1,
+        totalPrice: parseFloat(offlineSaleForm.totalPrice) || 0,
+        paymentMethod: offlineSaleForm.paymentMethod,
+        created_at: offlineSaleForm.created_at ? new Date(offlineSaleForm.created_at).toISOString() : null,
+        notes: offlineSaleForm.notes || null
+      };
+      await adminLogOfflineSale(payload, token);
+      showNotification('Offline sale logged successfully!', 'success');
+      setIsOfflineSaleModalOpen(false);
+      fetchAdminData(true);
+    } catch (err) {
+      showNotification(err.message || 'Failed to log offline sale', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const fetchAdminData = async (silent = false) => {
     if (!silent) setLoading(true);
@@ -304,8 +531,15 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     fetchAdminData(true);
   };
 
-  // Filter orders based on search
+  // Filter orders based on search and source
   const filteredOrders = orders.filter(order => {
+    const matchesSource = 
+      orderSourceFilter === 'all' || 
+      (orderSourceFilter === 'online' && !order.isOffline) ||
+      (orderSourceFilter === 'offline' && order.isOffline);
+      
+    if (!matchesSource) return false;
+
     const searchLower = orderSearch.toLowerCase();
     const orderIdMatch = order.orderId?.toLowerCase().includes(searchLower);
     const nameMatch = order.shippingAddress?.fullName?.toLowerCase().includes(searchLower);
@@ -572,7 +806,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     try {
       await updateSubscriptionStatus(orderId, newStatus, token);
       showNotification(`Subscription status updated to ${newStatus}!`);
-      setSubscriptions(prev => prev.map(sub => sub.dbId === orderId || sub.orderId === orderId ? { ...sub, status: newStatus } : sub));
+      setSubscriptions(prev => prev.map(sub => sub.subscriptionId === orderId || sub.dbId === orderId || sub.orderId === orderId ? { ...sub, status: newStatus } : sub));
     } catch (err) {
       showNotification(err.message || 'Failed to update subscription status', 'error');
     } finally {
@@ -621,6 +855,27 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     }
   };
   
+  const getFilteredStats = () => {
+    const filteredOrdersList = orders.filter(order => {
+      if (statsFilter === 'online') return !order.isOffline;
+      if (statsFilter === 'offline') return !!order.isOffline;
+      return true;
+    });
+
+    const total_revenue = filteredOrdersList.reduce((sum, o) => sum + (parseFloat(o.grandTotal) || 0), 0);
+    const order_count = filteredOrdersList.length;
+    const uniqueCustomers = new Set(filteredOrdersList.map(o => o.shippingAddress?.phone || o.shippingAddress?.email));
+    const customer_count = statsFilter === 'all' ? stats.customer_count : uniqueCustomers.size;
+    const average_order_value = order_count > 0 ? total_revenue / order_count : 0;
+
+    return {
+      total_revenue,
+      order_count,
+      customer_count,
+      average_order_value
+    };
+  };
+
   const getRevenueChartData = () => {
     const data = [];
     const now = new Date();
@@ -633,7 +888,13 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       const dayTotal = orders.reduce((sum, order) => {
         if (!order.created_at) return sum;
         const orderDate = order.created_at.split(' ')[0].split('T')[0];
-        if (orderDate === dateStr) {
+        
+        const matchesFilter = 
+          statsFilter === 'all' || 
+          (statsFilter === 'online' && !order.isOffline) ||
+          (statsFilter === 'offline' && order.isOffline);
+
+        if (orderDate === dateStr && matchesFilter) {
           return sum + (parseFloat(order.grandTotal) || 0);
         }
         return sum;
@@ -646,6 +907,12 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   const getProductDistributionData = () => {
     const counts = {};
     orders.forEach(o => {
+      const matchesFilter = 
+        statsFilter === 'all' || 
+        (statsFilter === 'online' && !o.isOffline) ||
+        (statsFilter === 'offline' && o.isOffline);
+      if (!matchesFilter) return;
+
       o.cartItems?.forEach(item => {
         const title = item.title || 'Other';
         counts[title] = (counts[title] || 0) + (parseInt(item.quantity) || 0);
@@ -890,58 +1157,90 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
               {activeTab === 'overview' && (
                 <div className="flex flex-col gap-8">
                   {/* Title Bar */}
-                  <div className="flex flex-col gap-1 border-b border-[#3A2E26]/10 pb-4">
-                    <h2 className="text-xl font-bold tracking-tight uppercase text-[#3A2E26] font-sans">Dashboard Overview</h2>
-                    <p className="text-xs text-[#3A2E26]/60">Real-time performance indicators and operational metrics</p>
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[#3A2E26]/10 pb-4">
+                    <div>
+                      <h2 className="text-xl font-bold tracking-tight uppercase text-[#3A2E26] font-sans">Dashboard Overview</h2>
+                      <p className="text-xs text-[#3A2E26]/60">Real-time performance indicators and operational metrics</p>
+                    </div>
+                    {/* Log Offline Sale button and Filter Toggles */}
+                    <div className="flex items-center gap-3 w-full sm:w-auto flex-wrap">
+                      <div className="flex bg-[#3A2E26]/5 p-1 rounded-xl border border-[#3A2E26]/10">
+                        {['all', 'online', 'offline'].map((source) => (
+                          <button
+                            key={source}
+                            onClick={() => setStatsFilter(source)}
+                            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                              statsFilter === source
+                                ? 'bg-[#3A2E26] text-white shadow-sm'
+                                : 'text-[#3A2E26]/60 hover:text-[#3A2E26]'
+                            }`}
+                          >
+                            {source}
+                          </button>
+                        ))}
+                      </div>
+                      <button
+                        onClick={handleOpenOfflineSaleModal}
+                        className="flex items-center gap-1.5 px-4 py-2 bg-[#7A8B6F] hover:bg-[#68785c] text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-200 shadow-sm cursor-pointer"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>Log Offline Sale</span>
+                      </button>
+                    </div>
                   </div>
 
                   {/* Summary Cards Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div className="bg-white p-6 rounded-3xl border border-[#3A2E26]/10 shadow-sm flex items-center gap-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
-                      <div className="w-12 h-12 rounded-2xl bg-[#7A8B6F]/10 text-[#7A8B6F] flex items-center justify-center shrink-0">
-                        <TrendingUp className="w-6 h-6" />
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-bold text-[#3A2E26]/50 uppercase tracking-widest">Total Revenue</p>
-                        <h3 className="text-xl font-bold tracking-tight text-[#3A2E26] mt-1">{formatCurrency(stats.total_revenue)}</h3>
-                      </div>
-                    </div>
+                  {(() => {
+                    const filteredStats = getFilteredStats();
+                    return (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div className="bg-white p-6 rounded-3xl border border-[#3A2E26]/10 shadow-sm flex items-center gap-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+                          <div className="w-12 h-12 rounded-2xl bg-[#7A8B6F]/10 text-[#7A8B6F] flex items-center justify-center shrink-0">
+                            <TrendingUp className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold text-[#3A2E26]/50 uppercase tracking-widest">Total Revenue</p>
+                            <h3 className="text-xl font-bold tracking-tight text-[#3A2E26] mt-1">{formatCurrency(filteredStats.total_revenue)}</h3>
+                          </div>
+                        </div>
 
-                    <div className="bg-white p-6 rounded-3xl border border-[#3A2E26]/10 shadow-sm flex items-center gap-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
-                      <div className="w-12 h-12 rounded-2xl bg-[#C97C5D]/10 text-[#C97C5D] flex items-center justify-center shrink-0">
-                        <ShoppingBag className="w-6 h-6" />
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-bold text-[#3A2E26]/50 uppercase tracking-widest">Orders Received</p>
-                        <h3 className="text-xl font-bold tracking-tight text-[#3A2E26] mt-1">{stats.order_count}</h3>
-                      </div>
-                    </div>
+                        <div className="bg-white p-6 rounded-3xl border border-[#3A2E26]/10 shadow-sm flex items-center gap-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+                          <div className="w-12 h-12 rounded-2xl bg-[#C97C5D]/10 text-[#C97C5D] flex items-center justify-center shrink-0">
+                            <ShoppingBag className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold text-[#3A2E26]/50 uppercase tracking-widest">Orders Received</p>
+                            <h3 className="text-xl font-bold tracking-tight text-[#3A2E26] mt-1">{filteredStats.order_count}</h3>
+                          </div>
+                        </div>
 
-                    <div className="bg-white p-6 rounded-3xl border border-[#3A2E26]/10 shadow-sm flex items-center gap-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
-                      <div className="w-12 h-12 rounded-2xl bg-[#3A2E26]/5 text-[#3A2E26] flex items-center justify-center shrink-0">
-                        <Users className="w-6 h-6" />
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-bold text-[#3A2E26]/50 uppercase tracking-widest">Total Customers</p>
-                        <h3 className="text-xl font-bold tracking-tight text-[#3A2E26] mt-1">{stats.customer_count}</h3>
-                      </div>
-                    </div>
+                        <div className="bg-white p-6 rounded-3xl border border-[#3A2E26]/10 shadow-sm flex items-center gap-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+                          <div className="w-12 h-12 rounded-2xl bg-[#3A2E26]/5 text-[#3A2E26] flex items-center justify-center shrink-0">
+                            <Users className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold text-[#3A2E26]/50 uppercase tracking-widest">Total Customers</p>
+                            <h3 className="text-xl font-bold tracking-tight text-[#3A2E26] mt-1">{filteredStats.customer_count}</h3>
+                          </div>
+                        </div>
 
-                    <div className="bg-white p-6 rounded-3xl border border-[#3A2E26]/10 shadow-sm flex items-center gap-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
-                      <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
-                        <DollarSign className="w-6 h-6" />
+                        <div className="bg-white p-6 rounded-3xl border border-[#3A2E26]/10 shadow-sm flex items-center gap-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+                          <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                            <DollarSign className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold text-[#3A2E26]/50 uppercase tracking-widest">Average Order Value</p>
+                            <h3 className="text-xl font-bold tracking-tight text-[#3A2E26] mt-1">
+                              {formatCurrency(filteredStats.average_order_value)}
+                            </h3>
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-[10px] font-bold text-[#3A2E26]/50 uppercase tracking-widest">Average Order Value</p>
-                        <h3 className="text-xl font-bold tracking-tight text-[#3A2E26] mt-1">
-                          {formatCurrency(stats.average_order_value || (stats.order_count ? (stats.total_revenue / stats.order_count) : 0))}
-                        </h3>
-                      </div>
-                    </div>
-                  </div>
+                    );
+                  })()}
 
                   {/* SVG Charts Section */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Revenue Growth Line Chart */}
                     <div className="bg-white p-6 rounded-3xl border border-[#3A2E26]/10 shadow-sm">
                       <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70 border-b border-[#3A2E26]/10 pb-3 mb-4">
@@ -1029,6 +1328,69 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                             </svg>
                           );
                         })()}
+                      </div>
+                    </div>
+
+                    {/* Sales Channels Analysis (Online vs Offline) */}
+                    <div className="bg-white p-6 rounded-3xl border border-[#3A2E26]/10 shadow-sm flex flex-col justify-between">
+                      <div>
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70 border-b border-[#3A2E26]/10 pb-3 mb-4">
+                          Sales Channels (Online vs Offline)
+                        </h3>
+                        <div className="flex flex-col gap-4 py-2">
+                          {(() => {
+                            const onlineOrders = orders.filter(o => !o.isOffline);
+                            const offlineOrders = orders.filter(o => !!o.isOffline);
+
+                            const onlineRev = onlineOrders.reduce((sum, o) => sum + (parseFloat(o.grandTotal) || 0), 0);
+                            const offlineRev = offlineOrders.reduce((sum, o) => sum + (parseFloat(o.grandTotal) || 0), 0);
+                            const totalRev = onlineRev + offlineRev || 1;
+
+                            const onlinePct = Math.round((onlineRev / totalRev) * 100);
+                            const offlinePct = Math.round((offlineRev / totalRev) * 100);
+
+                            return (
+                              <>
+                                <div className="space-y-1 px-1">
+                                  <div className="flex justify-between items-center text-xs font-bold">
+                                    <span className="text-[#3A2E26]/80 flex items-center gap-1.5">
+                                      <span className="w-2 h-2 rounded-full bg-[#7A8B6F] inline-block"></span>
+                                      Online Store
+                                    </span>
+                                    <span className="text-[#3A2E26]">{formatCurrency(onlineRev)} ({onlinePct}%)</span>
+                                  </div>
+                                  <div className="w-full bg-[#3A2E26]/5 h-2 rounded-full overflow-hidden">
+                                    <div className="h-full bg-[#7A8B6F] rounded-full transition-all duration-500" style={{ width: `${onlinePct}%` }}></div>
+                                  </div>
+                                </div>
+
+                                <div className="space-y-1 px-1">
+                                  <div className="flex justify-between items-center text-xs font-bold">
+                                    <span className="text-[#3A2E26]/80 flex items-center gap-1.5">
+                                      <span className="w-2 h-2 rounded-full bg-[#C97C5D] inline-block"></span>
+                                      Offline Orders
+                                    </span>
+                                    <span className="text-[#3A2E26]">{formatCurrency(offlineRev)} ({offlinePct}%)</span>
+                                  </div>
+                                  <div className="w-full bg-[#3A2E26]/5 h-2 rounded-full overflow-hidden">
+                                    <div className="h-full bg-[#C97C5D] rounded-full transition-all duration-500" style={{ width: `${offlinePct}%` }}></div>
+                                  </div>
+                                </div>
+
+                                <div className="pt-2 mt-2 border-t border-[#3A2E26]/10 flex justify-between items-center text-[9px] font-bold uppercase tracking-wider text-[#3A2E26]/50">
+                                  <div>
+                                    <span>Online: </span>
+                                    <span className="text-[#3A2E26]">{onlineOrders.length} orders</span>
+                                  </div>
+                                  <div>
+                                    <span>Offline: </span>
+                                    <span className="text-[#3A2E26]">{offlineOrders.length} orders</span>
+                                  </div>
+                                </div>
+                              </>
+                            );
+                          })()}
+                        </div>
                       </div>
                     </div>
 
@@ -1142,16 +1504,40 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                       <h2 className="text-xl font-bold tracking-tight uppercase text-[#3A2E26] font-sans">Order Management</h2>
                       <p className="text-xs text-[#3A2E26]/60">Track customer purchases and verify fulfillment details</p>
                     </div>
-                    {/* Search Bar */}
-                    <div className="relative w-full sm:w-80">
-                      <Search className="w-4 h-4 text-[#3A2E26]/40 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                      <input 
-                        type="text"
-                        placeholder="Search ID, name or email..."
-                        value={orderSearch}
-                        onChange={(e) => setOrderSearch(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 bg-white border border-[#3A2E26]/10 rounded-2xl text-xs focus:outline-none focus:border-[#3A2E26] focus:ring-1 focus:ring-[#3A2E26]/20 transition-all font-medium"
-                      />
+                    {/* Source Filters and Search Bar */}
+                    <div className="flex items-center gap-3 w-full sm:w-auto flex-wrap">
+                      <div className="flex bg-[#3A2E26]/5 p-1 rounded-xl border border-[#3A2E26]/10">
+                        {['all', 'online', 'offline'].map((source) => (
+                          <button
+                            key={source}
+                            onClick={() => setOrderSourceFilter(source)}
+                            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                              orderSourceFilter === source
+                                ? 'bg-[#3A2E26] text-white shadow-sm'
+                                : 'text-[#3A2E26]/60 hover:text-[#3A2E26]'
+                            }`}
+                          >
+                            {source}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="relative w-full sm:w-64">
+                        <Search className="w-4 h-4 text-[#3A2E26]/40 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                        <input 
+                          type="text"
+                          placeholder="Search ID, name or email..."
+                          value={orderSearch}
+                          onChange={(e) => setOrderSearch(e.target.value)}
+                          className="w-full pl-10 pr-4 py-2 bg-white border border-[#3A2E26]/10 rounded-2xl text-xs focus:outline-none focus:border-[#3A2E26] transition-all font-medium"
+                        />
+                      </div>
+                      <button
+                        onClick={handleOpenOfflineSaleModal}
+                        className="flex items-center gap-1.5 px-4 py-2 bg-[#7A8B6F] hover:bg-[#68785c] text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-200 shadow-sm cursor-pointer shrink-0"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>Log Offline Sale</span>
+                      </button>
                     </div>
                   </div>
 
@@ -1179,7 +1565,16 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                           ) : (
                             filteredOrders.map((order) => (
                               <tr key={order._id} className="hover:bg-[#3A2E26]/5 transition-colors">
-                                <td className="p-4 pl-6 font-bold text-[#3A2E26] align-top">{order.orderId}</td>
+                                <td className="p-4 pl-6 align-top">
+                                  <div className="flex flex-col gap-1">
+                                    <span className="font-bold text-[#3A2E26]">{order.orderId}</span>
+                                    {order.isOffline ? (
+                                      <span className="text-[8px] font-bold uppercase tracking-wider text-amber-850 bg-amber-50 border border-amber-200/50 px-1.5 py-0.5 rounded-md inline-block w-fit">Offline</span>
+                                    ) : (
+                                      <span className="text-[8px] font-bold uppercase tracking-wider text-green-800 bg-green-50 border border-green-200 px-1.5 py-0.5 rounded-md inline-block w-fit">Online</span>
+                                    )}
+                                  </div>
+                                </td>
                                 <td className="p-4 align-top">
                                   <div className="font-bold text-[#3A2E26]">{order.shippingAddress?.fullName}</div>
                                   <div className="text-[10px] text-[#3A2E26]/60 flex flex-col gap-1 mt-1 font-semibold">
@@ -1187,6 +1582,11 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                     <span className="flex items-center gap-1.5"><Phone className="w-3 h-3 text-[#C97C5D]" /> {order.shippingAddress?.phone}</span>
                                     <span className="flex items-start gap-1.5 mt-0.5"><MapPin className="w-3.5 h-3.5 text-[#C97C5D] shrink-0" /> {order.shippingAddress?.address}, {order.shippingAddress?.city} - {order.shippingAddress?.pincode}</span>
                                   </div>
+                                  {order.notes && (
+                                    <div className="text-[10px] text-amber-850 bg-amber-50/50 border border-amber-250/20 rounded-xl p-2.5 mt-2 font-medium">
+                                      Note: {order.notes}
+                                    </div>
+                                  )}
                                 </td>
                                 <td className="p-4 align-top">
                                   <div className="flex flex-col gap-1.5">
@@ -1573,36 +1973,14 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                     <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70 border-b border-[#3A2E26]/10 pb-2">Brand Identity & Logo</h3>
                     <div className="grid grid-cols-1 gap-4">
                       <div>
-                        <label className="block text-[10px] font-bold uppercase tracking-widest text-[#3A2E26]/50 mb-1.5">Brand Logo Image</label>
-                        <div className="flex gap-3">
-                          <input
-                            type="text"
-                            placeholder="Enter image URL or upload custom logo"
-                            value={settingsForm.logo_url}
-                            onChange={(e) => setSettingsForm({
-                              ...settingsForm,
-                              logo_url: e.target.value
-                            })}
-                            className="flex-1 px-4 py-2.5 bg-[#FDFBF7] border border-[#3A2E26]/10 rounded-2xl text-xs focus:outline-none focus:border-[#3A2E26] focus:ring-1 focus:ring-[#3A2E26]/20 transition-all font-medium"
-                          />
-                          <label className="bg-[#3A2E26]/5 hover:bg-[#3A2E26]/10 text-[#3A2E26] font-bold text-xs uppercase tracking-wider px-4 rounded-2xl flex items-center justify-center cursor-pointer border border-[#3A2E26]/10 transition-colors shrink-0">
-                            <Plus className="w-4 h-4 mr-1 text-[#C97C5D]" /> Upload Logo
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={handleLogoImageUpload}
-                              className="hidden"
-                            />
-                          </label>
-                        </div>
-                        {settingsForm.logo_url && (
-                          <div className="mt-3 flex items-center gap-4 p-3 bg-[#FDFBF7] border border-[#3A2E26]/10 rounded-2xl w-fit">
-                            <div className="w-12 h-12 rounded-full bg-[#C97C5D] flex items-center justify-center overflow-hidden">
-                              <img src={settingsForm.logo_url} alt="Logo Preview" className="w-full h-full object-cover" />
-                            </div>
-                            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Header preview format</span>
-                          </div>
-                        )}
+                        <ImageUploader
+                          label="Brand Logo Image"
+                          value={settingsForm.logo_url}
+                          onChange={(url) => setSettingsForm({ ...settingsForm, logo_url: url })}
+                          showNotification={showNotification}
+                          isSaving={saving}
+                          setIsSaving={setSaving}
+                        />
                       </div>
                     </div>
                   </div>
@@ -1713,45 +2091,17 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                         />
                       </div>
                       <div className="md:col-span-2">
-                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Hero Image</label>
-                        <div className="flex gap-3">
-                          <input
-                            type="text"
-                            placeholder="Image URL or upload below"
-                            value={settingsForm.hero.image_url || ''}
-                            onChange={(e) => setSettingsForm({
-                              ...settingsForm,
-                              hero: { ...settingsForm.hero, image_url: e.target.value }
-                            })}
-                            className="flex-1 px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
-                          />
-                          <label className="bg-[#E6D5C3]/30 hover:bg-[#E6D5C3]/50 text-[#3A2E26] font-bold text-xs px-4 rounded-2xl flex items-center justify-center cursor-pointer border border-[#E6D5C3]/50 transition-colors shrink-0">
-                            <Plus className="w-4 h-4 mr-1" /> Upload Image
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={async (e) => {
-                                const file = e.target.files[0];
-                                if (!file) return;
-                                setSaving(true);
-                                try {
-                                  const res = await uploadImage(file);
-                                  setSettingsForm(prev => ({
-                                    ...prev,
-                                    hero: { ...prev.hero, image_url: res.url }
-                                  }));
-                                  showNotification('Hero image uploaded successfully!');
-                                } catch (err) {
-                                  showNotification('Failed to upload hero image', 'error');
-                                } finally {
-                                  showNotification(null); // Clear loading state or notify
-                                  setSaving(false);
-                                }
-                              }}
-                              className="hidden"
-                            />
-                          </label>
-                        </div>
+                        <ImageUploader
+                          label="Hero Image"
+                          value={settingsForm.hero.image_url || ''}
+                          onChange={(url) => setSettingsForm({
+                            ...settingsForm,
+                            hero: { ...settingsForm.hero, image_url: url }
+                          })}
+                          showNotification={showNotification}
+                          isSaving={saving}
+                          setIsSaving={setSaving}
+                        />
                       </div>
                     </div>
                   </div>
@@ -1817,44 +2167,17 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Story Image</label>
-                        <div className="flex gap-3">
-                          <input
-                            type="text"
-                            placeholder="Image URL or upload below"
-                            value={settingsForm.story.image_url || ''}
-                            onChange={(e) => setSettingsForm({
-                              ...settingsForm,
-                              story: { ...settingsForm.story, image_url: e.target.value }
-                            })}
-                            className="flex-1 px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
-                          />
-                          <label className="bg-[#E6D5C3]/30 hover:bg-[#E6D5C3]/50 text-[#3A2E26] font-bold text-xs px-4 rounded-2xl flex items-center justify-center cursor-pointer border border-[#E6D5C3]/50 transition-colors shrink-0">
-                            <Plus className="w-4 h-4 mr-1" /> Upload Image
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={async (e) => {
-                                const file = e.target.files[0];
-                                if (!file) return;
-                                setSaving(true);
-                                try {
-                                  const res = await uploadImage(file);
-                                  setSettingsForm(prev => ({
-                                    ...prev,
-                                    story: { ...prev.story, image_url: res.url }
-                                  }));
-                                  showNotification('Story image uploaded successfully!');
-                                } catch (err) {
-                                  showNotification('Failed to upload story image', 'error');
-                                } finally {
-                                  setSaving(false);
-                                }
-                              }}
-                              className="hidden"
-                            />
-                          </label>
-                        </div>
+                        <ImageUploader
+                          label="Story Image"
+                          value={settingsForm.story.image_url || ''}
+                          onChange={(url) => setSettingsForm({
+                            ...settingsForm,
+                            story: { ...settingsForm.story, image_url: url }
+                          })}
+                          showNotification={showNotification}
+                          isSaving={saving}
+                          setIsSaving={setSaving}
+                        />
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
@@ -2086,6 +2409,183 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                           className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
                         />
                       </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Global Subscription Discount Percentage (%)</label>
+                        <input
+                          type="number"
+                          required
+                          min="0"
+                          max="100"
+                          step="0.5"
+                          value={settingsForm.subscription_discount_pct !== undefined ? settingsForm.subscription_discount_pct : 15}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            subscription_discount_pct: parseFloat(e.target.value) || 0
+                          })}
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Dynamic Subscription Settings Configurations */}
+                  <div className="bg-white rounded-3xl p-6 border border-[#3A2E26]/10 shadow-sm space-y-4">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70 border-b border-[#3A2E26]/10 pb-2">Subscription System Configuration</h3>
+                    
+                    <div className="space-y-4">
+                      {/* Subscription Active Toggle */}
+                      <label className="flex items-center gap-3 text-sm font-semibold cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={settingsForm.subscription_active !== false}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            subscription_active: e.target.checked
+                          })}
+                          className="w-4 h-4 text-[#7A8B6F] border-gray-300 rounded focus:ring-[#7A8B6F]"
+                        />
+                        <span>Enable Subscription System storefront-wide</span>
+                      </label>
+
+                      {/* Durations (Months) */}
+                      <div className="space-y-2">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70">
+                          Subscription Plan Durations (Select Months)
+                        </label>
+                        <div className="flex flex-wrap gap-2 items-center">
+                          {(() => {
+                            const allD = Array.from(new Set([3, 6, 12, ...(settingsForm.subscription_durations || [])])).sort((a, b) => a - b);
+                            return allD.map(m => {
+                              const active = (settingsForm.subscription_durations || []).includes(m);
+                              return (
+                                <button
+                                  type="button"
+                                  key={m}
+                                  onClick={() => {
+                                    const current = settingsForm.subscription_durations || [];
+                                    const next = active ? current.filter(x => x !== m) : [...current, m];
+                                    setSettingsForm({ ...settingsForm, subscription_durations: next.sort((a, b) => a - b) });
+                                  }}
+                                  className={`px-4 py-2 rounded-2xl text-xs font-bold transition-all border cursor-pointer ${
+                                    active 
+                                      ? 'bg-[#3A2E26] text-white border-[#3A2E26] shadow-sm' 
+                                      : 'bg-[#FDFBF7] text-[#3A2E26] border-[#E6D5C3]/50 hover:bg-[#3A2E26]/5'
+                                  }`}
+                                >
+                                  {m} Months
+                                </button>
+                              );
+                            });
+                          })()}
+
+                          {/* Inline manual addition input */}
+                          <div className="flex items-center gap-1.5 ml-1 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl px-3 py-1.5">
+                            <input
+                              type="number"
+                              min="1"
+                              placeholder="Add custom months..."
+                              value={customDuration}
+                              onChange={(e) => setCustomDuration(e.target.value)}
+                              className="w-20 text-xs font-bold bg-transparent border-none focus:outline-none text-[#3A2E26]"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const val = parseInt(customDuration);
+                                if (!val || val <= 0) return;
+                                const current = settingsForm.subscription_durations || [];
+                                if (!current.includes(val)) {
+                                  setSettingsForm({
+                                    ...settingsForm,
+                                    subscription_durations: [...current, val].sort((a, b) => a - b)
+                                  });
+                                }
+                                setCustomDuration('');
+                              }}
+                              className="text-[10px] font-bold text-[#7A8B6F] hover:underline uppercase tracking-wider cursor-pointer border-none bg-transparent"
+                            >
+                              + Add
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+
+                      {/* Frequencies (delivery cycle) */}
+                      <div className="space-y-2">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70">
+                          Active Delivery Frequencies Options (Select Cycles)
+                        </label>
+                        <div className="flex flex-wrap gap-2 items-center">
+                          {(() => {
+                            const allF = Array.from(new Set(['monthly', 'every_3_months', ...(settingsForm.subscription_frequencies || [])]));
+                            return allF.map(f => {
+                              const active = (settingsForm.subscription_frequencies || []).includes(f);
+                              
+                              let label = f === 'monthly' ? 'Every Month' : 'Every 3 Months';
+                              if (f !== 'monthly' && f !== 'every_3_months') {
+                                label = f.split('_')
+                                  .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+                                  .join(' ');
+                              }
+
+                              return (
+                                <button
+                                  type="button"
+                                  key={f}
+                                  onClick={() => {
+                                    const current = settingsForm.subscription_frequencies || [];
+                                    const next = active ? current.filter(x => x !== f) : [...current, f];
+                                    setSettingsForm({ ...settingsForm, subscription_frequencies: next });
+                                  }}
+                                  className={`px-4 py-2 rounded-2xl text-xs font-bold transition-all border cursor-pointer ${
+                                    active 
+                                      ? 'bg-[#3A2E26] text-white border-[#3A2E26] shadow-sm' 
+                                      : 'bg-[#FDFBF7] text-[#3A2E26] border-[#E6D5C3]/50 hover:bg-[#3A2E26]/5'
+                                  }`}
+                                >
+                                  {label}
+                                </button>
+                              );
+                            });
+                          })()}
+
+                          {/* Inline manual frequency addition */}
+                          <div className="flex items-center gap-1.5 ml-1 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl px-3 py-1.5">
+                            <span className="text-xs text-[#3A2E26]/60">Every</span>
+                            <input
+                              type="number"
+                              min="1"
+                              max="12"
+                              placeholder="Months"
+                              value={customFreq}
+                              onChange={(e) => setCustomFreq(e.target.value)}
+                              className="w-12 text-xs font-bold bg-transparent border-none focus:outline-none text-[#3A2E26] text-center"
+                            />
+                            <span className="text-xs text-[#3A2E26]/60">Months</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const val = parseInt(customFreq);
+                                if (!val || val <= 0) return;
+                                const freqKey = val === 1 ? 'monthly' : `every_${val}_months`;
+                                const current = settingsForm.subscription_frequencies || [];
+                                if (!current.includes(freqKey)) {
+                                  setSettingsForm({
+                                    ...settingsForm,
+                                    subscription_frequencies: [...current, freqKey]
+                                  });
+                                }
+                                setCustomFreq('');
+                              }}
+                              className="text-[10px] font-bold text-[#7A8B6F] hover:underline uppercase tracking-wider cursor-pointer border-none bg-transparent"
+                            >
+                              + Add
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
                     </div>
                   </div>
                 </>
@@ -2566,10 +3066,11 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                             const filtered = subscriptions.filter(sub => {
                               const sLower = subSearch.toLowerCase();
                               return (
-                                sub.orderId?.toLowerCase().includes(sLower) ||
+                                sub.subscriptionId?.toLowerCase().includes(sLower) ||
                                 sub.customerName?.toLowerCase().includes(sLower) ||
-                                sub.email?.toLowerCase().includes(sLower) ||
-                                sub.productTitle?.toLowerCase().includes(sLower)
+                                sub.customerEmail?.toLowerCase().includes(sLower) ||
+                                sub.user_email?.toLowerCase().includes(sLower) ||
+                                sub.customerPhone?.toLowerCase().includes(sLower)
                               );
                             });
 
@@ -2584,35 +3085,34 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                             }
 
                             return filtered.map((sub, idx) => {
-                              // Calculate next delivery date: created_at + frequency (1 month, 2 months)
                               let nextDelivery = 'N/A';
-                              if (sub.created_at && sub.status === 'active') {
+                              if (sub.next_delivery_date && sub.status === 'active') {
                                 try {
-                                  const date = new Date(sub.created_at);
-                                  const monthOffset = sub.frequency?.includes('2') || sub.frequency?.includes('two') ? 2 : 1;
-                                  date.setMonth(date.getMonth() + monthOffset);
+                                  const date = new Date(sub.next_delivery_date);
                                   nextDelivery = date.toLocaleDateString('en-IN', {
                                     day: '2-digit',
                                     month: 'short',
                                     year: 'numeric'
                                   });
                                 } catch {
-                                  nextDelivery = 'Next Month';
+                                  nextDelivery = 'Next Cycle';
                                 }
                               } else if (sub.status === 'paused') {
                                 nextDelivery = 'Paused';
+                              } else if (sub.status === 'completed') {
+                                nextDelivery = 'Completed';
                               }
 
                               return (
                                 <tr key={idx} className="hover:bg-[#3A2E26]/5 transition-colors">
-                                  <td className="p-4 pl-6 align-middle font-bold text-[#3A2E26]">SUB-{sub.orderId}</td>
+                                  <td className="p-4 pl-6 align-middle font-bold text-[#3A2E26]">{sub.subscriptionId}</td>
                                   <td className="p-4 align-middle">
                                     <div className="font-bold text-[#3A2E26]">{sub.customerName}</div>
-                                    <div className="text-[10px] text-gray-400 mt-0.5">{sub.email} &bull; {sub.phone}</div>
+                                    <div className="text-[10px] text-gray-400 mt-0.5">{sub.customerEmail || sub.user_email} &bull; {sub.customerPhone}</div>
                                   </td>
-                                  <td className="p-4 align-middle font-bold text-gray-700">{sub.productTitle} (x{sub.quantity})</td>
+                                  <td className="p-4 align-middle font-bold text-gray-700">{sub.soapsPerMonth} Soaps/Month ({sub.durationMonths} Mo.)</td>
                                   <td className="p-4 align-middle uppercase font-bold text-[10px] text-amber-700 tracking-wider">
-                                    {sub.frequency || 'Monthly'}
+                                    {sub.deliveryFrequency === 'every_3_months' ? 'Every 3 Months' : 'Every Month'}
                                   </td>
                                   <td className="p-4 align-middle">
                                     {sub.status === 'active' ? (
@@ -2623,18 +3123,25 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                       <span className="px-2.5 py-0.5 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-full text-[10px] font-bold uppercase tracking-wider">
                                         Paused
                                       </span>
+                                    ) : sub.status === 'completed' ? (
+                                      <span className="px-2.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                                        Completed
+                                      </span>
                                     ) : (
                                       <span className="px-2.5 py-0.5 bg-red-50 text-red-700 border border-red-200 rounded-full text-[10px] font-bold uppercase tracking-wider">
                                         Cancelled
                                       </span>
                                     )}
                                   </td>
-                                  <td className="p-4 align-middle font-semibold text-gray-500">{nextDelivery}</td>
+                                  <td className="p-4 align-middle font-semibold text-gray-500">
+                                    {nextDelivery}
+                                    <div className="text-[10px] text-gray-400 mt-0.5">Remaining: {sub.remaining_deliveries}/{sub.total_deliveries}</div>
+                                  </td>
                                   <td className="p-4 pr-6 align-middle text-right">
                                     <div className="flex justify-end items-center gap-2">
                                       {sub.status === 'active' && (
                                         <button
-                                          onClick={() => handleUpdateSubscriptionStatus(sub.dbId || sub.orderId, 'paused')}
+                                          onClick={() => handleUpdateSubscriptionStatus(sub.subscriptionId, 'paused')}
                                           className="px-2.5 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
                                         >
                                           Pause
@@ -2642,15 +3149,15 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                       )}
                                       {sub.status === 'paused' && (
                                         <button
-                                          onClick={() => handleUpdateSubscriptionStatus(sub.dbId || sub.orderId, 'active')}
+                                          onClick={() => handleUpdateSubscriptionStatus(sub.subscriptionId, 'active')}
                                           className="px-2.5 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
                                         >
                                           Resume
                                         </button>
                                       )}
-                                      {sub.status !== 'cancelled' && (
+                                      {sub.status !== 'cancelled' && sub.status !== 'completed' && (
                                         <button
-                                          onClick={() => handleUpdateSubscriptionStatus(sub.dbId || sub.orderId, 'cancelled')}
+                                          onClick={() => handleUpdateSubscriptionStatus(sub.subscriptionId, 'cancelled')}
                                           className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
                                         >
                                           Cancel
@@ -2760,36 +3267,14 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
 
               {/* Product Image Input & File Upload */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Product Image Source</label>
-                <div className="flex gap-3">
-                  <input
-                    type="text"
-                    required
-                    placeholder="Image URL or upload below"
-                    value={productForm.image}
-                    onChange={(e) => setProductForm({ ...productForm, image: e.target.value })}
-                    className="flex-1 px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
-                  />
-                  <label className="bg-[#E6D5C3]/30 hover:bg-[#E6D5C3]/50 text-[#3A2E26] font-bold text-xs px-4 rounded-2xl flex items-center justify-center cursor-pointer border border-[#E6D5C3]/50 transition-colors">
-                    <Plus className="w-4 h-4 mr-1" /> Upload Image
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleProductImageUpload}
-                      className="hidden"
-                    />
-                  </label>
-                </div>
-                {productForm.image && (
-                  <div className="mt-3 flex justify-center p-2 bg-[#FDFBF7] border border-[#E6D5C3]/20 rounded-2xl">
-                    <img 
-                      src={productForm.image} 
-                      alt="Preview" 
-                      className="h-28 object-contain rounded-lg"
-                      onError={(e) => { e.target.src = '/images/pack-single.png'; }}
-                    />
-                  </div>
-                )}
+                <ImageUploader
+                  label="Product Image"
+                  value={productForm.image}
+                  onChange={(url) => setProductForm({ ...productForm, image: url })}
+                  showNotification={showNotification}
+                  isSaving={saving}
+                  setIsSaving={setSaving}
+                />
               </div>
 
               {/* Badge Checkboxes */}
@@ -3042,6 +3527,160 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                   className="px-5 py-2.5 bg-[#3A2E26] hover:bg-[#2A201A] text-white font-bold text-sm rounded-2xl shadow-sm transition-colors cursor-pointer flex items-center justify-center min-w-[5rem]"
                 >
                   {saving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Log Offline Sale Modal */}
+      {isOfflineSaleModalOpen && (
+        <div className="fixed inset-0 bg-[#3A2E26]/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 border border-[#E6D5C3]/40 shadow-2xl relative animate-scaleUp max-h-[90vh] overflow-y-auto">
+            <h3 className="text-xl font-bold mb-2 text-[#3A2E26]">Log Offline Sale</h3>
+            <p className="text-xs text-[#3A2E26]/60 mb-6">Enter details of the offline transaction. This will update the revenue and sales metrics but will NOT deduct from online inventory stock.</p>
+
+            <form onSubmit={handleSaveOfflineSale} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">Customer Name *</label>
+                  <input
+                    required
+                    type="text"
+                    value={offlineSaleForm.customerName}
+                    onChange={(e) => setOfflineSaleForm({ ...offlineSaleForm, customerName: e.target.value })}
+                    placeholder="Customer Name"
+                    className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">Customer Phone *</label>
+                  <input
+                    required
+                    type="text"
+                    value={offlineSaleForm.customerPhone}
+                    onChange={(e) => setOfflineSaleForm({ ...offlineSaleForm, customerPhone: e.target.value })}
+                    placeholder="Phone number"
+                    className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">Customer Email (Optional)</label>
+                <input
+                  type="email"
+                  value={offlineSaleForm.customerEmail}
+                  onChange={(e) => setOfflineSaleForm({ ...offlineSaleForm, customerEmail: e.target.value })}
+                  placeholder="email@example.com"
+                  className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">Number of Soaps *</label>
+                  <input
+                    required
+                    type="number"
+                    min="1"
+                    value={offlineSaleForm.quantity}
+                    onChange={(e) => {
+                      const qty = parseInt(e.target.value) || 1;
+                      const price = offlineSaleForm.pricePerSoap || 299;
+                      setOfflineSaleForm({
+                        ...offlineSaleForm,
+                        quantity: qty,
+                        totalPrice: price * qty
+                      });
+                    }}
+                    className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">Price Per Soap (₹) *</label>
+                  <input
+                    required
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={offlineSaleForm.pricePerSoap || ''}
+                    onChange={(e) => {
+                      const price = parseFloat(e.target.value) || 0;
+                      setOfflineSaleForm({
+                        ...offlineSaleForm,
+                        pricePerSoap: price,
+                        totalPrice: price * offlineSaleForm.quantity
+                      });
+                    }}
+                    className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">Total Price (₹) *</label>
+                  <input
+                    required
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={offlineSaleForm.totalPrice}
+                    onChange={(e) => setOfflineSaleForm({ ...offlineSaleForm, totalPrice: parseFloat(e.target.value) || 0 })}
+                    className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">Payment Method *</label>
+                  <select
+                    value={offlineSaleForm.paymentMethod}
+                    onChange={(e) => setOfflineSaleForm({ ...offlineSaleForm, paymentMethod: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
+                  >
+                    <option value="Cash">Cash</option>
+                    <option value="UPI">UPI</option>
+                    <option value="Card">Card</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">Sale Date (Optional)</label>
+                  <input
+                    type="date"
+                    value={offlineSaleForm.created_at}
+                    onChange={(e) => setOfflineSaleForm({ ...offlineSaleForm, created_at: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">Notes / Details</label>
+                <textarea
+                  rows="2"
+                  value={offlineSaleForm.notes}
+                  onChange={(e) => setOfflineSaleForm({ ...offlineSaleForm, notes: e.target.value })}
+                  placeholder="E.g. Sold at local market event"
+                  className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsOfflineSaleModalOpen(false)}
+                  className="px-5 py-2.5 border border-[#E6D5C3] hover:bg-gray-50 text-[#3A2E26] font-bold text-sm rounded-2xl transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-5 py-2.5 bg-[#7A8B6F] hover:bg-[#68785c] text-white font-bold text-sm rounded-2xl shadow-sm transition-colors cursor-pointer flex items-center justify-center min-w-[5rem]"
+                >
+                  {saving ? 'Logging...' : 'Log Sale'}
                 </button>
               </div>
             </form>

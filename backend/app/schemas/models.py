@@ -73,6 +73,18 @@ class OrderCreate(BaseModel):
     grandTotal: float
     paymentMethod: str
 
+class OfflineSaleCreate(BaseModel):
+    customerName: str
+    customerPhone: str
+    customerEmail: Optional[str] = None
+    packId: str
+    quantity: int
+    totalPrice: float
+    paymentMethod: str
+    created_at: Optional[str] = None
+    notes: Optional[str] = None
+
+
 class AnnouncementSettings(BaseModel):
     text: str
     active: bool = True
@@ -131,6 +143,11 @@ class SiteSettingsModel(BaseModel):
     faqs: List[FAQItem] = []
     ingredients: List[IngredientItem] = []
     ingredients_active: bool = True
+    subscription_active: bool = True
+    subscription_durations: List[int] = [6, 12]
+    subscription_quantities: List[int] = [2, 4, 6]
+    subscription_frequencies: List[str] = ["monthly", "every_3_months"]
+    subscription_discount_pct: float = 15.0
 
 class ReviewSubmitModel(BaseModel):
     productId: str
@@ -171,3 +188,14 @@ class SocialLoginRequest(BaseModel):
     email: EmailStr
     name: Optional[str] = None
     provider: str = "google"
+
+class SubscriptionCreate(BaseModel):
+    durationMonths: int  # 6 or 12
+    soapsPerMonth: int
+    deliveryFrequency: str  # "monthly" or "every_3_months"
+    customerName: str
+    customerPhone: str
+    customerEmail: Optional[str] = None
+    shippingAddress: ShippingAddress
+    paymentMethod: str
+

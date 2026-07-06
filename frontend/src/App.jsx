@@ -128,7 +128,8 @@ export default function App() {
     fetchSiteSettings();
 
     const handleStorageChange = () => {
-      const isPreview = new URLSearchParams(window.location.search).get('preview') === 'true';
+      const isInsideIframe = window.self !== window.top;
+      const isPreview = isInsideIframe && new URLSearchParams(window.location.search).get('preview') === 'true';
       if (isPreview) {
         const previewSettings = localStorage.getItem('hausmade_preview_settings');
         if (previewSettings) {
@@ -327,7 +328,8 @@ export default function App() {
 
   const activeProducts = products.filter(p => p.active !== false);
   const currentPack = activeProducts.find(p => p.id === selectedPack) || activeProducts[2] || activeProducts[0] || PACK_OPTIONS[0];
-  const discountMultiplier = isSubscription ? 0.85 : 1.0;
+  const discountPct = siteSettings?.subscription_discount_pct !== undefined ? siteSettings.subscription_discount_pct : 15.0;
+  const discountMultiplier = isSubscription ? (1.0 - (discountPct / 100.0)) : 1.0;
   const currentPrice = (currentPack.basePrice * discountMultiplier).toFixed(2);
 
   const scrollToSelector = () => {
@@ -444,6 +446,7 @@ export default function App() {
                 setQuantity={setQuantity}
                 activeImageIndex={activeImageIndex}
                 setActiveImageIndex={setActiveImageIndex}
+                settings={siteSettings}
               />
               {siteSettings.ingredients_active !== false && (
                 <div id="ingredients" className={getSectionClass('ingredients')} onClick={() => handleSectionClick('ingredients')}>
@@ -560,18 +563,22 @@ export default function App() {
         packTitle={currentPack.title}
         price={currentPrice}
         onAddToCart={() => {
-          handleAddToCart({
-            packId: currentPack.id,
-            title: currentPack.title,
-            count: currentPack.count,
-            isSubscription,
-            frequency: isSubscription ? 'Every 2 Months' : null,
-            unitPrice: ((currentPack.basePrice * discountMultiplier) / currentPack.count).toFixed(2),
-            packPrice: currentPrice,
-            quantity: 1,
-            totalPrice: currentPrice,
-            image: currentPack.image
-          });
+          if (isSubscription) {
+            scrollToSelector();
+          } else {
+            handleAddToCart({
+              packId: currentPack.id,
+              title: currentPack.title,
+              count: currentPack.count,
+              isSubscription,
+              frequency: null,
+              unitPrice: ((currentPack.basePrice * discountMultiplier) / currentPack.count).toFixed(2),
+              packPrice: currentPrice,
+              quantity: 1,
+              totalPrice: currentPrice,
+              image: currentPack.image
+            });
+          }
         }}
         onScrollToSelector={scrollToSelector}
       />

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, CheckCircle2, ShieldCheck, CreditCard, Truck, Smartphone, Banknote, ArrowRight, Sparkles, Loader2, Compass, Navigation } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { placeOrder, updateUserProfile, validateCoupon, getActiveCoupons } from '../utils/api';
+import { placeOrder, updateUserProfile, validateCoupon, getActiveCoupons, createSubscription } from '../utils/api';
 
 export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderComplete, token, user }) {
   const [step, setStep] = useState('shipping'); // 'shipping', 'payment', 'success'
@@ -229,8 +229,32 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
         }
       }
 
-      await placeOrder(orderData, token);
-      setOrderId(generatedId);
+      const subItem = cartItems.find(item => item.isSubscription);
+      if (subItem) {
+        const subPayload = {
+          durationMonths: subItem.subscriptionDetails.durationMonths,
+          soapsPerMonth: subItem.subscriptionDetails.soapsPerMonth,
+          deliveryFrequency: subItem.subscriptionDetails.deliveryFrequency,
+          customerName: formData.fullName,
+          customerPhone: formData.phone,
+          customerEmail: formData.email,
+          shippingAddress: {
+            fullName: formData.fullName,
+            email: formData.email,
+            phone: formData.phone,
+            address: formData.address,
+            city: formData.city,
+            pincode: formData.pincode,
+            state: formData.state
+          },
+          paymentMethod: paymentMethod === 'cod' ? 'Cash on Delivery' : paymentMethod.toUpperCase()
+        };
+        const res = await createSubscription(subPayload, token);
+        setOrderId(res.subscription.subscriptionId);
+      } else {
+        await placeOrder(orderData, token);
+        setOrderId(generatedId);
+      }
       setStep('success');
       if (onOrderComplete) onOrderComplete();
     } catch (err) {

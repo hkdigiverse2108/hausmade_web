@@ -529,3 +529,66 @@ export async function updateSubscriptionStatus(orderId, status, token) {
   }
   return response.json();
 }
+
+export async function adminLogOfflineSale(offlineSaleData, token) {
+  const response = await fetch(`${API_URL}/api/admin/orders/offline`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(offlineSaleData)
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || 'Failed to log offline sale');
+  }
+  return response.json();
+}
+
+export async function createSubscription(subData, token = null) {
+  const headers = {
+    'Content-Type': 'application/json',
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  const response = await fetch(`${API_URL}/api/subscriptions/create`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(subData)
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || 'Failed to create subscription');
+  }
+  return response.json();
+}
+
+export async function getUserSubscriptions(token) {
+  const response = await fetch(`${API_URL}/api/user/subscriptions`, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || 'Failed to fetch user subscriptions');
+  }
+  return response.json();
+}
+
+export async function requestUrgentSoap(subscriptionId, token) {
+  const response = await fetch(`${API_URL}/api/subscriptions/${encodeURIComponent(subscriptionId)}/urgent`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || 'Failed to request urgent soap');
+  }
+  return response.json();
+}
+
