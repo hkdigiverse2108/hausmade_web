@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import AnnouncementBanner from './components/AnnouncementBanner';
 import Header from './components/Header';
 import Hero from './components/Hero';
@@ -55,6 +55,7 @@ export default function App() {
     const params = new URLSearchParams(window.location.search);
     return params.get('view') === 'profile';
   });
+  const hasProfileParam = useRef(false);
   const [wishlistItems, setWishlistItems] = useState(() => {
     const saved = localStorage.getItem('hausmade_wishlist');
     return saved ? JSON.parse(saved) : [
@@ -209,12 +210,14 @@ export default function App() {
         window.history.replaceState(null, '', `${window.location.pathname}?${newSearch}${window.location.hash}`);
       }
     } else {
-      if (currentView === 'profile') {
+      if (currentView === 'profile' && !hasProfileParam.current) {
         params.delete('view');
         const newSearch = params.toString();
         window.history.replaceState(null, '', `${window.location.pathname}${newSearch ? '?' + newSearch : ''}${window.location.hash}`);
       }
     }
+    // Set to false after first render run
+    hasProfileParam.current = false;
   }, [isProfileOpen]);
 
   const showNotification = useCallback((message, type = 'success') => {
@@ -628,7 +631,10 @@ export default function App() {
 
       <ProfileModal
         isOpen={isProfileOpen}
-        onClose={() => setIsProfileOpen(false)}
+        onClose={() => {
+          setIsProfileOpen(false);
+          window.history.pushState({}, '', window.location.pathname + window.location.hash);
+        }}
         user={user}
         token={activeToken}
         onProfileUpdate={(updatedUser) => {

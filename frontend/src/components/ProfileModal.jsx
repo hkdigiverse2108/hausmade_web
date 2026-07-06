@@ -597,14 +597,14 @@ export default function ProfileModal({
                   <button
                     type="button"
                     onClick={handleClose}
-                    className="px-6 py-3 rounded-2xl border border-[#3A2E26]/20 hover:bg-[#3A2E26]/5 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer bg-white"
+                    className="px-6 py-3 rounded-2xl border border-[#3A2E26]/10 hover:border-[#3A2E26]/30 hover:bg-[#3A2E26]/5 text-xs font-bold uppercase tracking-wider hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 cursor-pointer bg-white"
                   >
                     Discard
                   </button>
                   <button
                     type="submit"
                     disabled={loading}
-                    className="px-8 py-3.5 bg-[#3A2E26] hover:bg-[#3A2E26]/90 text-white font-bold rounded-2xl shadow-md hover:shadow-lg transition-all text-xs uppercase tracking-widest flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                    className="px-8 py-3.5 bg-[#3A2E26] hover:bg-black text-white font-extrabold rounded-2xl shadow-md shadow-[#3A2E26]/10 hover:shadow-lg hover:shadow-[#3A2E26]/20 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 text-xs uppercase tracking-widest flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:translate-y-0"
                   >
                     {loading ? (
                       <>
@@ -900,7 +900,7 @@ export default function ProfileModal({
                           setIsAddingNew(false);
                           setEditingAddressId(null);
                         }}
-                        className="px-6 py-2.5 rounded-2xl border border-[#3A2E26]/20 hover:bg-[#3A2E26]/5 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer bg-white"
+                        className="px-6 py-2.5 rounded-2xl border border-[#3A2E26]/10 hover:border-[#3A2E26]/30 hover:bg-[#3A2E26]/5 text-xs font-bold uppercase tracking-wider hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 cursor-pointer bg-white"
                       >
                         Cancel
                       </button>
@@ -908,7 +908,7 @@ export default function ProfileModal({
                         type="button"
                         onClick={handleSaveAddressForm}
                         disabled={loading}
-                        className="px-6 py-2.5 bg-[#3A2E26] hover:bg-[#3A2E26]/90 text-white font-bold rounded-2xl text-xs uppercase tracking-wider flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                        className="px-6 py-2.5 bg-[#3A2E26] hover:bg-black text-white font-extrabold rounded-2xl shadow-md shadow-[#3A2E26]/10 hover:shadow-lg hover:shadow-[#3A2E26]/20 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 text-xs uppercase tracking-wider flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:translate-y-0"
                       >
                         {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
                         <span>Save Address</span>
