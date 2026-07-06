@@ -35,7 +35,8 @@ async def get_site_settings():
                     "title_normal_1": "Reveal your",
                     "title_italic": "artisanal beauty",
                     "title_normal_2": "with Kesar.",
-                    "description": "Purely handmade cleansing bar infused with real saffron extract, camphor, and 100% coconut oil. Naturally removes sun tan, fades dark spots, and brightens your daily complexing glow."
+                    "description": "Purely handmade cleansing bar infused with real saffron extract, camphor, and 100% coconut oil. Naturally removes sun tan, fades dark spots, and brightens your daily complexing glow.",
+                    "image_url": "/images/soap-hero.png"
                 },
                 "story": {
                     "title": "From our kitchen counter to your daily sanctuary.",

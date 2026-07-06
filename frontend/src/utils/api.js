@@ -487,3 +487,45 @@ export async function getActiveCoupons() {
   }
   return response.json();
 }
+
+export async function getAdminRecentUsers(token) {
+  const response = await fetch(`${API_URL}/api/admin/recent-users`, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || 'Failed to fetch recent users');
+  }
+  return response.json();
+}
+
+export async function getAdminSubscriptions(token) {
+  const response = await fetch(`${API_URL}/api/admin/subscriptions`, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || 'Failed to fetch subscriptions');
+  }
+  return response.json();
+}
+
+export async function updateSubscriptionStatus(orderId, status, token) {
+  const response = await fetch(`${API_URL}/api/admin/subscriptions/${encodeURIComponent(orderId)}/status`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ status })
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || 'Failed to update subscription status');
+  }
+  return response.json();
+}

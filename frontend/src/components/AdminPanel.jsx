@@ -48,6 +48,9 @@ import {
   adminDeleteCoupon,
   uploadImage,
   updateSiteSettings,
+  getAdminRecentUsers,
+  getAdminSubscriptions,
+  updateSubscriptionStatus,
   adminGetReviews,
   adminApproveReview,
   adminDeleteReview,
@@ -58,11 +61,13 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   const [activeTab, setActiveTab] = useState(() => {
     return localStorage.getItem('hausmade_admin_active_tab') || 'overview';
   });
-  const [stats, setStats] = useState({ total_revenue: 0, order_count: 0, customer_count: 0 });
+  const [stats, setStats] = useState({ total_revenue: 0, order_count: 0, customer_count: 0, average_order_value: 0 });
+  const [recentUsers, setRecentUsers] = useState([]);
+  const [subscriptions, setSubscriptions] = useState([]);
   const [settingsForm, setSettingsForm] = useState({
     logo_url: '',
     announcement: { text: '', active: true },
-    hero: { badge: '', title_normal_1: '', title_italic: '', title_normal_2: '', description: '' },
+    hero: { badge: '', title_normal_1: '', title_italic: '', title_normal_2: '', description: '', image_url: '' },
     story: { title: '', subtitle: '', paragraph1: '', paragraph2: '' },
     contact: { email: '', phone: '', address: '' },
     subscription: {
@@ -89,13 +94,38 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
 
   useEffect(() => {
     if (settings) {
-      setSettingsForm({
-        ...settings,
-        logo_url: settings.logo_url || '',
-        faqs: settings.faqs || [],
-        ingredients: settings.ingredients || [],
-        ingredients_active: settings.ingredients_active !== undefined ? settings.ingredients_active : true
-      });
+      const currentAnn = settingsForm.announcement || { text: '', active: true };
+      const newAnn = settings.announcement || { text: '', active: true };
+      const currentHero = settingsForm.hero || {};
+      const newHero = settings.hero || {};
+      const currentStory = settingsForm.story || {};
+      const newStory = settings.story || {};
+      const currentContact = settingsForm.contact || {};
+      const newContact = settings.contact || {};
+      const currentSub = settingsForm.subscription || {};
+      const newSub = settings.subscription || {};
+
+      const hasChanged = 
+        settingsForm.logo_url !== (settings.logo_url || '') ||
+        currentAnn.text !== newAnn.text ||
+        currentAnn.active !== newAnn.active ||
+        JSON.stringify(currentHero) !== JSON.stringify(newHero) ||
+        JSON.stringify(currentStory) !== JSON.stringify(newStory) ||
+        JSON.stringify(currentContact) !== JSON.stringify(newContact) ||
+        JSON.stringify(currentSub) !== JSON.stringify(newSub) ||
+        JSON.stringify(settingsForm.faqs || []) !== JSON.stringify(settings.faqs || []) ||
+        JSON.stringify(settingsForm.ingredients || []) !== JSON.stringify(settings.ingredients || []) ||
+        settingsForm.ingredients_active !== (settings.ingredients_active !== undefined ? settings.ingredients_active : true);
+        
+      if (hasChanged) {
+        setSettingsForm({
+          ...settings,
+          logo_url: settings.logo_url || '',
+          faqs: settings.faqs || [],
+          ingredients: settings.ingredients || [],
+          ingredients_active: settings.ingredients_active !== undefined ? settings.ingredients_active : true
+        });
+      }
     }
   }, [settings]);
 
@@ -146,6 +176,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   const [customerSearch, setCustomerSearch] = useState('');
   const [productSearch, setProductSearch] = useState('');
   const [couponSearch, setCouponSearch] = useState('');
+  const [subSearch, setSubSearch] = useState('');
 
   // Modal / Form state
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
@@ -187,13 +218,15 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     else setRefreshing(true);
     
     try {
-      const [statsData, ordersData, usersData, productsData, couponsData, reviewsData] = await Promise.all([
+      const [statsData, ordersData, usersData, productsData, couponsData, reviewsData, recentUsersData, subscriptionsData] = await Promise.all([
         getAdminStats(token),
         getAdminOrders(token),
         getAdminUsers(token),
         getProducts(),
         adminGetCoupons(token),
-        adminGetReviews(token)
+        adminGetReviews(token),
+        getAdminRecentUsers(token),
+        getAdminSubscriptions(token)
       ]);
       
       setStats(statsData);
@@ -202,6 +235,8 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       setProducts(productsData);
       setCoupons(couponsData);
       setReviews(reviewsData);
+      setRecentUsers(recentUsersData);
+      setSubscriptions(subscriptionsData);
     } catch (err) {
       console.error("Admin data fetch error:", err);
       if (showNotification) {
@@ -451,7 +486,8 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       active: true,
       lifetime: true,
       start_date: '',
-      end_date: ''
+      end_date: '',
+      type: 'percentage'
     });
     setIsCouponModalOpen(true);
   };
@@ -465,23 +501,25 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       active: c.active !== undefined ? c.active : true,
       lifetime: c.lifetime !== undefined ? c.lifetime : true,
       start_date: c.start_date || '',
-      end_date: c.end_date || ''
+      end_date: c.end_date || '',
+      type: c.type || (c.discount === 0 ? 'free_shipping' : 'percentage')
     });
     setIsCouponModalOpen(true);
   };
 
   const handleSaveCoupon = async (e) => {
     e.preventDefault();
-    const discountVal = parseFloat(couponForm.discount);
-    if (!couponForm.code || isNaN(discountVal) || discountVal < 0 || discountVal > 100) {
-      showNotification('Please enter a valid code and discount percentage between 0 and 100 (e.g. 0 for Free Shipping, 15 for 15%)', 'error');
+    const discountVal = couponForm.type === 'free_shipping' ? 0 : parseFloat(couponForm.discount);
+    if (!couponForm.code || (couponForm.type !== 'free_shipping' && (isNaN(discountVal) || discountVal < 0 || discountVal > 100))) {
+      showNotification('Please enter a valid code and discount percentage between 0 and 100 (e.g. 15 for 15%)', 'error');
       return;
     }
     setSaving(true);
     try {
       const payload = {
         ...couponForm,
-        discount: discountVal / 100
+        discount: discountVal / 100,
+        type: couponForm.type
       };
       
       if (editingCoupon) {
@@ -528,6 +566,20 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     }
   };
 
+  const handleUpdateSubscriptionStatus = async (orderId, newStatus) => {
+    if (!window.confirm(`Are you sure you want to change this subscription status to ${newStatus}?`)) return;
+    setSaving(true);
+    try {
+      await updateSubscriptionStatus(orderId, newStatus, token);
+      showNotification(`Subscription status updated to ${newStatus}!`);
+      setSubscriptions(prev => prev.map(sub => sub.dbId === orderId || sub.orderId === orderId ? { ...sub, status: newStatus } : sub));
+    } catch (err) {
+      showNotification(err.message || 'Failed to update subscription status', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSaveSettings = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -567,6 +619,39 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     } catch {
       return dateStr;
     }
+  };
+  
+  const getRevenueChartData = () => {
+    const data = [];
+    const now = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(now.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      const label = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+      
+      const dayTotal = orders.reduce((sum, order) => {
+        if (!order.created_at) return sum;
+        const orderDate = order.created_at.split(' ')[0].split('T')[0];
+        if (orderDate === dateStr) {
+          return sum + (parseFloat(order.grandTotal) || 0);
+        }
+        return sum;
+      }, 0);
+      data.push({ label, value: dayTotal });
+    }
+    return data;
+  };
+
+  const getProductDistributionData = () => {
+    const counts = {};
+    orders.forEach(o => {
+      o.cartItems?.forEach(item => {
+        const title = item.title || 'Other';
+        counts[title] = (counts[title] || 0) + (parseInt(item.quantity) || 0);
+      });
+    });
+    return Object.entries(counts).map(([label, value]) => ({ label, value }));
   };
 
   return (
@@ -715,6 +800,21 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
             {!sidebarCollapsed && <span>Coupons</span>}
           </button>
 
+          <button
+            onClick={() => setActiveTab('subscriptions')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+              sidebarCollapsed ? 'justify-center px-0' : ''
+            } ${
+              activeTab === 'subscriptions' 
+                ? 'bg-[#3A2E26] text-white shadow-lg shadow-[#3A2E26]/10 translate-x-1' 
+                : 'hover:bg-[#3A2E26]/5 text-[#3A2E26]/75 hover:text-[#3A2E26]'
+            }`}
+            title="Subscriptions"
+          >
+            <Clock className="w-4 h-4" />
+            {!sidebarCollapsed && <span>Subscriptions</span>}
+          </button>
+
           <div className="flex flex-col w-full">
             <button
               onClick={() => {
@@ -796,7 +896,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                   </div>
 
                   {/* Summary Cards Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     <div className="bg-white p-6 rounded-3xl border border-[#3A2E26]/10 shadow-sm flex items-center gap-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
                       <div className="w-12 h-12 rounded-2xl bg-[#7A8B6F]/10 text-[#7A8B6F] flex items-center justify-center shrink-0">
                         <TrendingUp className="w-6 h-6" />
@@ -826,38 +926,209 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                         <h3 className="text-xl font-bold tracking-tight text-[#3A2E26] mt-1">{stats.customer_count}</h3>
                       </div>
                     </div>
+
+                    <div className="bg-white p-6 rounded-3xl border border-[#3A2E26]/10 shadow-sm flex items-center gap-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+                      <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                        <DollarSign className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-[#3A2E26]/50 uppercase tracking-widest">Average Order Value</p>
+                        <h3 className="text-xl font-bold tracking-tight text-[#3A2E26] mt-1">
+                          {formatCurrency(stats.average_order_value || (stats.order_count ? (stats.total_revenue / stats.order_count) : 0))}
+                        </h3>
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Recent Operations */}
-                  <div className="bg-white rounded-3xl border border-[#3A2E26]/10 shadow-sm p-6">
-                    <div className="border-b border-[#3A2E26]/10 pb-3 mb-4">
-                      <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70">Recent Activity</h3>
-                    </div>
-                    {orders.length === 0 ? (
-                      <p className="text-xs text-[#3A2E26]/60">No transaction data logged yet.</p>
-                    ) : (
-                      <div className="divide-y divide-[#3A2E26]/10">
-                        {orders.slice(0, 5).map((order) => (
-                          <div key={order._id} className="py-3.5 flex justify-between items-center flex-wrap gap-2 text-xs">
-                            <div className="flex items-center gap-3">
-                              <div className="bg-[#3A2E26]/5 p-2 rounded-xl text-[#3A2E26]/80">
-                                <Package className="w-4 h-4" />
-                              </div>
-                              <div>
-                                <p className="font-bold text-[#3A2E26]">{order.orderId}</p>
-                                <p className="text-[10px] text-[#3A2E26]/60 font-semibold">{order.shippingAddress?.fullName} &bull; {formatDate(order.created_at)}</p>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <p className="font-bold text-[#3A2E26]">{formatCurrency(order.grandTotal)}</p>
-                              <p className="text-[9px] uppercase tracking-widest text-[#7A8B6F] font-bold bg-[#7A8B6F]/10 px-2.5 py-0.5 rounded-full inline-block mt-1">
-                                {order.paymentMethod}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
+                  {/* SVG Charts Section */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Revenue Growth Line Chart */}
+                    <div className="bg-white p-6 rounded-3xl border border-[#3A2E26]/10 shadow-sm">
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70 border-b border-[#3A2E26]/10 pb-3 mb-4">
+                        7-Day Revenue Trend
+                      </h3>
+                      <div className="flex justify-center items-center py-4 bg-[#FDFBF7] rounded-2xl border border-[#3A2E26]/5">
+                        {(() => {
+                          const revData = getRevenueChartData();
+                          const maxVal = Math.max(...revData.map(d => d.value), 500);
+                          const width = 480;
+                          const height = 180;
+                          const padding = 30;
+                          const points = revData.map((d, i) => {
+                            const x = padding + (i * (width - padding * 2) / 6);
+                            const y = height - padding - (d.value / maxVal) * (height - padding * 2);
+                            return `${x},${y}`;
+                          }).join(' ');
+
+                          return (
+                            <svg className="w-full max-w-[480px]" viewBox={`0 0 ${width} ${height}`}>
+                              <defs>
+                                <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="0%" stopColor="#7A8B6F" stopOpacity="0.4" />
+                                  <stop offset="100%" stopColor="#7A8B6F" stopOpacity="0.0" />
+                                </linearGradient>
+                              </defs>
+                              {/* Grid lines */}
+                              <line x1={padding} y1={padding} x2={width - padding} y2={padding} stroke="#3A2E26" strokeOpacity="0.05" strokeDasharray="3,3" />
+                              <line x1={padding} y1={height / 2} x2={width - padding} y2={height / 2} stroke="#3A2E26" strokeOpacity="0.05" strokeDasharray="3,3" />
+                              <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="#3A2E26" strokeOpacity="0.1" />
+
+                              {/* Fill area */}
+                              {points && (
+                                <polygon
+                                  points={`${padding},${height - padding} ${points} ${width - padding},${height - padding}`}
+                                  fill="url(#chartGrad)"
+                                />
+                              )}
+                              {/* Spline path line */}
+                              {points && (
+                                <polyline
+                                  fill="none"
+                                  stroke="#7A8B6F"
+                                  strokeWidth="3.5"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  points={points}
+                                />
+                              )}
+                              {/* Data Nodes */}
+                              {revData.map((d, i) => {
+                                const x = padding + (i * (width - padding * 2) / 6);
+                                const y = height - padding - (d.value / maxVal) * (height - padding * 2);
+                                return (
+                                  <g key={i} className="group/node">
+                                    <circle
+                                      cx={x}
+                                      cy={y}
+                                      r="4.5"
+                                      fill="#FDFBF7"
+                                      stroke="#7A8B6F"
+                                      strokeWidth="2.5"
+                                    />
+                                    {/* Tooltip on Hover */}
+                                    <text
+                                      x={x}
+                                      y={y - 10}
+                                      textAnchor="middle"
+                                      className="text-[9px] font-bold fill-[#3A2E26] opacity-0 group-hover/node:opacity-100 transition-opacity bg-white"
+                                    >
+                                      ₹{Math.round(d.value)}
+                                    </text>
+                                    {/* Axis Labels */}
+                                    <text
+                                      x={x}
+                                      y={height - 10}
+                                      textAnchor="middle"
+                                      className="text-[8px] font-bold fill-[#3A2E26]/50 uppercase tracking-wider"
+                                    >
+                                      {d.label}
+                                    </text>
+                                  </g>
+                                );
+                              })}
+                            </svg>
+                          );
+                        })()}
                       </div>
-                    )}
+                    </div>
+
+                    {/* Product Distribution Chart */}
+                    <div className="bg-white p-6 rounded-3xl border border-[#3A2E26]/10 shadow-sm">
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70 border-b border-[#3A2E26]/10 pb-3 mb-4">
+                        Sales Distribution By Product Pack
+                      </h3>
+                      <div className="flex flex-col gap-4 py-3 justify-center h-full max-h-[180px] overflow-y-auto">
+                        {(() => {
+                          const distData = getProductDistributionData();
+                          const totalItems = distData.reduce((sum, d) => sum + d.value, 0) || 1;
+                          if (distData.length === 0) {
+                            return <p className="text-xs text-[#3A2E26]/50 italic text-center">No items ordered yet.</p>;
+                          }
+                          return distData.map((d, i) => {
+                            const pct = Math.round((d.value / totalItems) * 100);
+                            const barColors = ["bg-[#7A8B6F]", "bg-[#C97C5D]", "bg-amber-500", "bg-[#3A2E26]"];
+                            const color = barColors[i % barColors.length];
+                            return (
+                              <div key={i} className="space-y-1 px-1">
+                                <div className="flex justify-between items-center text-xs font-bold">
+                                  <span className="text-[#3A2E26]/80">{d.label}</span>
+                                  <span className="text-[#3A2E26]">{d.value} Qty ({pct}%)</span>
+                                </div>
+                                <div className="w-full bg-[#3A2E26]/5 h-2.5 rounded-full overflow-hidden">
+                                  <div className={`h-full ${color} rounded-full transition-all duration-500`} style={{ width: `${pct}%` }}></div>
+                                </div>
+                              </div>
+                            );
+                          });
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Dual Column: Recent Orders & Recent Users */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Recent Orders List */}
+                    <div className="bg-white rounded-3xl border border-[#3A2E26]/10 shadow-sm p-6">
+                      <div className="border-b border-[#3A2E26]/10 pb-3 mb-4 flex justify-between items-center">
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70">Recent Orders</h3>
+                        <button onClick={() => setActiveTab('orders')} className="text-[10px] font-bold uppercase text-[#7A8B6F] hover:underline">View All</button>
+                      </div>
+                      {orders.length === 0 ? (
+                        <p className="text-xs text-[#3A2E26]/60">No transaction data logged yet.</p>
+                      ) : (
+                        <div className="divide-y divide-[#3A2E26]/10">
+                          {orders.slice(0, 5).map((order) => (
+                            <div key={order._id} className="py-3 flex justify-between items-center flex-wrap gap-2 text-xs">
+                              <div className="flex items-center gap-3">
+                                <div className="bg-[#3A2E26]/5 p-2 rounded-xl text-[#3A2E26]/80">
+                                  <Package className="w-4 h-4" />
+                                </div>
+                                <div>
+                                  <p className="font-bold text-[#3A2E26]">{order.orderId}</p>
+                                  <p className="text-[10px] text-[#3A2E26]/60 font-semibold">{order.shippingAddress?.fullName} &bull; {formatDate(order.created_at)}</p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-bold text-[#3A2E26]">{formatCurrency(order.grandTotal)}</p>
+                                <p className="text-[9px] uppercase tracking-widest text-[#7A8B6F] font-bold bg-[#7A8B6F]/10 px-2 py-0.5 rounded-full inline-block mt-0.5">
+                                  {order.paymentMethod}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Recent Users List */}
+                    <div className="bg-white rounded-3xl border border-[#3A2E26]/10 shadow-sm p-6">
+                      <div className="border-b border-[#3A2E26]/10 pb-3 mb-4 flex justify-between items-center">
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70">Recently Joined Customers</h3>
+                        <button onClick={() => setActiveTab('customers')} className="text-[10px] font-bold uppercase text-[#7A8B6F] hover:underline">View All</button>
+                      </div>
+                      {recentUsers.length === 0 ? (
+                        <p className="text-xs text-[#3A2E26]/60">No customer records logged yet.</p>
+                      ) : (
+                        <div className="divide-y divide-[#3A2E26]/10">
+                          {recentUsers.map((user) => (
+                            <div key={user.id} className="py-3 flex justify-between items-center flex-wrap gap-2 text-xs">
+                              <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-xl bg-[#C97C5D]/10 text-[#C97C5D] flex items-center justify-center font-bold">
+                                  {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                                </div>
+                                <div>
+                                  <p className="font-bold text-[#3A2E26]">{user.name}</p>
+                                  <p className="text-[10px] text-[#3A2E26]/60 font-semibold">{user.email || user.mobile}</p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-[10px] text-[#3A2E26]/50 font-bold">{formatDate(user.created_at).split(',')[0]}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -1058,6 +1329,21 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                     </div>
                   </div>
 
+                  {(() => {
+                    const lowStockList = products.filter(p => p.stock !== undefined && p.stock <= 10);
+                    if (lowStockList.length > 0) {
+                      return (
+                        <div className="bg-red-50 border border-red-200 rounded-3xl p-4 flex items-center gap-3 text-xs text-red-800 font-semibold animate-pulse">
+                          <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
+                          <div>
+                            Inventory Warning: There are {lowStockList.length} product(s) with low or out of stock levels (10 or fewer bars left). Please restock soon.
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+
                   <div className="bg-white rounded-3xl border border-[#3A2E26]/10 shadow-sm overflow-hidden">
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse">
@@ -1081,7 +1367,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                             </tr>
                           ) : (
                             filteredProducts.map((p) => {
-                              const isLowStock = p.stock !== undefined && p.stock > 0 && p.stock <= 5;
+                              const isLowStock = p.stock !== undefined && p.stock > 0 && p.stock <= 10;
                               const isOut = p.stock !== undefined && p.stock <= 0;
                               return (
                                 <tr key={p.id} className="hover:bg-[#3A2E26]/5 transition-colors">
@@ -1425,6 +1711,47 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                           })}
                           className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
                         />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Hero Image</label>
+                        <div className="flex gap-3">
+                          <input
+                            type="text"
+                            placeholder="Image URL or upload below"
+                            value={settingsForm.hero.image_url || ''}
+                            onChange={(e) => setSettingsForm({
+                              ...settingsForm,
+                              hero: { ...settingsForm.hero, image_url: e.target.value }
+                            })}
+                            className="flex-1 px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          />
+                          <label className="bg-[#E6D5C3]/30 hover:bg-[#E6D5C3]/50 text-[#3A2E26] font-bold text-xs px-4 rounded-2xl flex items-center justify-center cursor-pointer border border-[#E6D5C3]/50 transition-colors shrink-0">
+                            <Plus className="w-4 h-4 mr-1" /> Upload Image
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={async (e) => {
+                                const file = e.target.files[0];
+                                if (!file) return;
+                                setSaving(true);
+                                try {
+                                  const res = await uploadImage(file);
+                                  setSettingsForm(prev => ({
+                                    ...prev,
+                                    hero: { ...prev.hero, image_url: res.url }
+                                  }));
+                                  showNotification('Hero image uploaded successfully!');
+                                } catch (err) {
+                                  showNotification('Failed to upload hero image', 'error');
+                                } finally {
+                                  showNotification(null); // Clear loading state or notify
+                                  setSaving(false);
+                                }
+                              }}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -2171,6 +2498,176 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                   </div>
                 </div>
               )}
+
+              {/* Tab: Subscriptions */}
+              {activeTab === 'subscriptions' && (
+                <div className="flex flex-col gap-6 animate-fadeIn">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[#3A2E26]/10 pb-4">
+                    <div>
+                      <h2 className="text-xl font-bold tracking-tight uppercase text-[#3A2E26] font-sans">Subscriptions Manager</h2>
+                      <p className="text-xs text-[#3A2E26]/60">Manage customer soap recurring orders and check schedules</p>
+                    </div>
+                    <div className="relative w-full sm:w-64">
+                      <Search className="w-4 h-4 text-[#3A2E26]/40 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input 
+                        type="text"
+                        placeholder="Search subscriptions..."
+                        value={subSearch}
+                        onChange={(e) => setSubSearch(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 bg-white border border-[#3A2E26]/10 rounded-2xl text-xs focus:outline-none focus:border-[#3A2E26] transition-colors font-medium"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Stats Summary Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div className="bg-white p-6 rounded-3xl border border-[#3A2E26]/10 shadow-sm flex items-center gap-5 hover:shadow-md transition-all duration-300">
+                      <div className="w-12 h-12 rounded-2xl bg-green-50 text-green-700 flex items-center justify-center shrink-0">
+                        <CheckCircle className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-[#3A2E26]/50 uppercase tracking-widest">Active Subscriptions</p>
+                        <h3 className="text-xl font-bold tracking-tight text-[#3A2E26] mt-1">
+                          {subscriptions.filter(s => s.status === 'active').length}
+                        </h3>
+                      </div>
+                    </div>
+
+                    <div className="bg-white p-6 rounded-3xl border border-[#3A2E26]/10 shadow-sm flex items-center gap-5 hover:shadow-md transition-all duration-300">
+                      <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                        <Clock className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-[#3A2E26]/50 uppercase tracking-widest">Paused Subscriptions</p>
+                        <h3 className="text-xl font-bold tracking-tight text-[#3A2E26] mt-1">
+                          {subscriptions.filter(s => s.status === 'paused').length}
+                        </h3>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Subscriptions Data Table */}
+                  <div className="bg-white rounded-3xl border border-[#3A2E26]/10 shadow-sm overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-[#3A2E26]/5 border-b border-[#3A2E26]/10 text-[10px] font-bold uppercase tracking-widest text-[#3A2E26]/60">
+                            <th className="p-4 pl-6">Order / Sub ID</th>
+                            <th className="p-4">Customer Details</th>
+                            <th className="p-4">Soap Pack Size</th>
+                            <th className="p-4">Cycle Frequency</th>
+                            <th className="p-4">Status</th>
+                            <th className="p-4">Next Delivery</th>
+                            <th className="p-4 pr-6 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#3A2E26]/10 text-xs">
+                          {(() => {
+                            const filtered = subscriptions.filter(sub => {
+                              const sLower = subSearch.toLowerCase();
+                              return (
+                                sub.orderId?.toLowerCase().includes(sLower) ||
+                                sub.customerName?.toLowerCase().includes(sLower) ||
+                                sub.email?.toLowerCase().includes(sLower) ||
+                                sub.productTitle?.toLowerCase().includes(sLower)
+                              );
+                            });
+
+                            if (filtered.length === 0) {
+                              return (
+                                <tr>
+                                  <td colSpan="7" className="p-8 text-center text-[#3A2E26]/50 font-medium">
+                                    No matching subscription records found.
+                                  </td>
+                                </tr>
+                              );
+                            }
+
+                            return filtered.map((sub, idx) => {
+                              // Calculate next delivery date: created_at + frequency (1 month, 2 months)
+                              let nextDelivery = 'N/A';
+                              if (sub.created_at && sub.status === 'active') {
+                                try {
+                                  const date = new Date(sub.created_at);
+                                  const monthOffset = sub.frequency?.includes('2') || sub.frequency?.includes('two') ? 2 : 1;
+                                  date.setMonth(date.getMonth() + monthOffset);
+                                  nextDelivery = date.toLocaleDateString('en-IN', {
+                                    day: '2-digit',
+                                    month: 'short',
+                                    year: 'numeric'
+                                  });
+                                } catch {
+                                  nextDelivery = 'Next Month';
+                                }
+                              } else if (sub.status === 'paused') {
+                                nextDelivery = 'Paused';
+                              }
+
+                              return (
+                                <tr key={idx} className="hover:bg-[#3A2E26]/5 transition-colors">
+                                  <td className="p-4 pl-6 align-middle font-bold text-[#3A2E26]">SUB-{sub.orderId}</td>
+                                  <td className="p-4 align-middle">
+                                    <div className="font-bold text-[#3A2E26]">{sub.customerName}</div>
+                                    <div className="text-[10px] text-gray-400 mt-0.5">{sub.email} &bull; {sub.phone}</div>
+                                  </td>
+                                  <td className="p-4 align-middle font-bold text-gray-700">{sub.productTitle} (x{sub.quantity})</td>
+                                  <td className="p-4 align-middle uppercase font-bold text-[10px] text-amber-700 tracking-wider">
+                                    {sub.frequency || 'Monthly'}
+                                  </td>
+                                  <td className="p-4 align-middle">
+                                    {sub.status === 'active' ? (
+                                      <span className="px-2.5 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                                        Active
+                                      </span>
+                                    ) : sub.status === 'paused' ? (
+                                      <span className="px-2.5 py-0.5 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                                        Paused
+                                      </span>
+                                    ) : (
+                                      <span className="px-2.5 py-0.5 bg-red-50 text-red-700 border border-red-200 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                                        Cancelled
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="p-4 align-middle font-semibold text-gray-500">{nextDelivery}</td>
+                                  <td className="p-4 pr-6 align-middle text-right">
+                                    <div className="flex justify-end items-center gap-2">
+                                      {sub.status === 'active' && (
+                                        <button
+                                          onClick={() => handleUpdateSubscriptionStatus(sub.dbId || sub.orderId, 'paused')}
+                                          className="px-2.5 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                                        >
+                                          Pause
+                                        </button>
+                                      )}
+                                      {sub.status === 'paused' && (
+                                        <button
+                                          onClick={() => handleUpdateSubscriptionStatus(sub.dbId || sub.orderId, 'active')}
+                                          className="px-2.5 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                                        >
+                                          Resume
+                                        </button>
+                                      )}
+                                      {sub.status !== 'cancelled' && (
+                                        <button
+                                          onClick={() => handleUpdateSubscriptionStatus(sub.dbId || sub.orderId, 'cancelled')}
+                                          className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                                        >
+                                          Cancel
+                                        </button>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            });
+                          })()}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </main>
@@ -2373,20 +2870,41 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Discount Rate (0% to 100%)</label>
-                <input
-                  type="number"
-                  required
-                  min="0"
-                  max="100"
-                  step="1"
-                  placeholder="e.g. 15 for 15% off (or 0 for Free Shipping)"
-                  value={couponForm.discount}
-                  onChange={(e) => setCouponForm({ ...couponForm, discount: e.target.value })}
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Coupon Type</label>
+                <select
+                  value={couponForm.type || 'percentage'}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setCouponForm({
+                      ...couponForm,
+                      type: val,
+                      discount: val === 'free_shipping' ? 0 : 15
+                    });
+                  }}
                   className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
-                />
-                <span className="text-[10px] text-green-700 font-bold block mt-1">Calculated value: {parseFloat(couponForm.discount || 0)}% off total price</span>
+                >
+                  <option value="percentage">Percentage Discount</option>
+                  <option value="free_shipping">Free Shipping</option>
+                </select>
               </div>
+
+              {couponForm.type !== 'free_shipping' && (
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Discount Rate (1% to 100%)</label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    max="100"
+                    step="1"
+                    placeholder="e.g. 15 for 15% off"
+                    value={couponForm.discount}
+                    onChange={(e) => setCouponForm({ ...couponForm, discount: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                  />
+                  <span className="text-[10px] text-green-700 font-bold block mt-1">Calculated value: {parseFloat(couponForm.discount || 0)}% off total price</span>
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Offer Description</label>

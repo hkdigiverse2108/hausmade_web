@@ -21,6 +21,7 @@ class CouponModel(BaseModel):
     lifetime: bool = True
     start_date: Optional[str] = None
     end_date: Optional[str] = None
+    type: Optional[str] = "percentage"
 
 class UserRegister(BaseModel):
     name: str
@@ -82,6 +83,7 @@ class HeroSettings(BaseModel):
     title_italic: str
     title_normal_2: str
     description: str
+    image_url: Optional[str] = "/images/soap-hero.png"
 
 class StorySettings(BaseModel):
     title: str

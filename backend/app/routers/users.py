@@ -137,11 +137,13 @@ async def get_admin_stats(admin: dict = Depends(get_admin_user)):
             
     order_count = len(orders)
     customer_count = sum(1 for u in users if not u.get("is_admin"))
+    average_order_value = total_revenue / order_count if order_count > 0 else 0.0
     
     return {
         "total_revenue": total_revenue,
         "order_count": order_count,
-        "customer_count": customer_count
+        "customer_count": customer_count,
+        "average_order_value": average_order_value
     }
 
 @router.get("/api/admin/users")
@@ -159,6 +161,26 @@ async def get_admin_users(admin: dict = Depends(get_admin_user)):
         })
     return cleaned_users
 
+@router.get("/api/admin/recent-users")
+async def get_admin_recent_users(admin: dict = Depends(get_admin_user)):
+    users = await users_collection.find({}).to_list(length=None)
+    customers = [u for u in users if not u.get("is_admin")]
+    try:
+        customers.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    except Exception:
+        pass
+    
+    recent = []
+    for u in customers[:5]:
+        recent.append({
+            "id": str(u.get("_id")),
+            "name": u.get("name", ""),
+            "email": u.get("email", ""),
+            "mobile": u.get("mobile", ""),
+            "created_at": str(u.get("created_at", ""))
+        })
+    return recent
+
 @router.get("/api/admin/orders")
 async def get_admin_orders(admin: dict = Depends(get_admin_user)):
     orders = await orders_collection.find({}).to_list(length=None)
@@ -169,3 +191,55 @@ async def get_admin_orders(admin: dict = Depends(get_admin_user)):
     except Exception:
         pass
     return orders
+
+@router.get("/api/admin/subscriptions")
+async def get_admin_subscriptions(admin: dict = Depends(get_admin_user)):
+    orders = await orders_collection.find({}).to_list(length=None)
+    subscriptions = []
+    for o in orders:
+        cart_items = o.get("cartItems", [])
+        sub_items = [item for item in cart_items if item.get("isSubscription")]
+        if sub_items:
+            for item in sub_items:
+                subscriptions.append({
+                    "orderId": o.get("orderId"),
+                    "dbId": str(o.get("_id")),
+                    "customerName": o.get("shippingAddress", {}).get("fullName", "Customer"),
+                    "email": o.get("shippingAddress", {}).get("email", o.get("user_email", "")),
+                    "phone": o.get("shippingAddress", {}).get("phone", ""),
+                    "productTitle": item.get("title", "Botanical Soap"),
+                    "packId": item.get("packId"),
+                    "quantity": item.get("quantity", 1),
+                    "frequency": item.get("frequency", "monthly"),
+                    "status": o.get("subscription_status", "active"),
+                    "created_at": str(o.get("created_at", ""))
+                })
+    return subscriptions
+
+@router.put("/api/admin/subscriptions/{order_id}/status")
+async def update_subscription_status(order_id: str, payload: dict, admin: dict = Depends(get_admin_user)):
+    new_status = payload.get("status")
+    if new_status not in ["active", "paused", "cancelled"]:
+        raise HTTPException(status_code=400, detail="Invalid subscription status")
+        
+    # Search by orderId first
+    order = await orders_collection.find_one({"orderId": order_id})
+    if not order:
+        # Try finding by MongoDB ID
+        from bson import ObjectId
+        try:
+            order = await orders_collection.find_one({"_id": ObjectId(order_id)})
+        except Exception:
+            try:
+                order = await orders_collection.find_one({"_id": order_id})
+            except Exception:
+                pass
+                
+    if not order:
+        raise HTTPException(status_code=404, detail="Order matching subscription not found")
+        
+    await orders_collection.update_one(
+        {"_id": order["_id"]},
+        {"$set": {"subscription_status": new_status}}
+    )
+    return {"status": "success", "message": f"Subscription status updated to {new_status}"}

@@ -71,7 +71,7 @@ export default function Hero({ settings }) {
               <div className="absolute -inset-2 rounded-[2.5rem] bg-gradient-to-tr from-[#7A8B6F]/30 to-[#C97C5D]/20 blur-xl opacity-70" />
               <div className="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white/60 bg-[#F5F1E8]">
                 <img
-                  src="/images/soap-hero.png"
+                  src={settings?.image_url || "/images/soap-hero.png"}
                   alt="Handcrafted Botanical Soap Bar"
                   className="w-full h-[280px] sm:h-[420px] md:h-[480px] object-cover hover:scale-105 transition-transform duration-700"
                 />
