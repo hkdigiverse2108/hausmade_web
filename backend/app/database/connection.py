@@ -83,7 +83,15 @@ class AsyncJSONCollection:
         if not matched and upsert:
             new_doc = {}
             if isinstance(query, dict):
-                new_doc.update(query)
+                # Only copy simple key-value pairs from query (not operators)
+                for k, v in query.items():
+                    if not k.startswith("$"):
+                        new_doc[k] = v
+            # Apply $setOnInsert fields first (only on new documents)
+            set_on_insert = update.get("$setOnInsert", {}) if isinstance(update, dict) else {}
+            if set_on_insert:
+                new_doc.update(set_on_insert)
+            # Then apply $set fields (overrides $setOnInsert if overlapping)
             new_doc.update(set_data)
             await self.insert_one(new_doc)
         else:

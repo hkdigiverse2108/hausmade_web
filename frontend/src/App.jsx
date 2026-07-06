@@ -17,7 +17,7 @@ import ProfileModal from './components/ProfileModal';
 import WishlistModal from './components/WishlistModal';
 import AdminPanel from './components/AdminPanel';
 import ReviewModal from './components/ReviewModal';
-import { getUserProfile, getProducts, getSiteSettings } from './utils/api';
+import { getUserProfile, getProducts, getSiteSettings, socialLogin } from './utils/api';
 
 
 import SocialProofToast from './components/SocialProofToast';
@@ -179,20 +179,38 @@ export default function App() {
 
 
   useEffect(() => {
-    if (isAuth0Authenticated) {
-      getIdTokenClaims().then(claims => {
-        if (claims) {
-          setAuth0Token(claims.__raw);
+    if (isAuth0Authenticated && auth0User) {
+      // When Auth0 authenticates, call socialLogin to merge accounts by email
+      const syncAuth0User = async () => {
+        try {
+          const claims = await getIdTokenClaims();
+          if (claims) {
+            setAuth0Token(claims.__raw);
+          }
+          // Call social-login endpoint to merge account by email
+          const userEmail = auth0User.email;
+          const userName = auth0User.name || auth0User.nickname;
+          if (userEmail) {
+            const data = await socialLogin(userEmail, userName, 'google');
+            // Store the unified JWT (not the Auth0 token)
+            localStorage.setItem('hausmade_token', data.token);
+            localStorage.setItem('hausmade_user', JSON.stringify(data.user));
+            setLocalUser(data.user);
+            setLocalToken(data.token);
+          }
+        } catch (err) {
+          console.error('Error syncing Auth0 user:', err);
         }
-      }).catch(err => console.error("Error fetching Auth0 token:", err));
-    } else {
+      };
+      syncAuth0User();
+    } else if (!isAuth0Authenticated) {
       setAuth0Token(null);
     }
-  }, [isAuth0Authenticated, getIdTokenClaims]);
+  }, [isAuth0Authenticated, auth0User]);
 
-  const user = auth0User || localUser;
-  const isAuthenticated = isAuth0Authenticated || !!localUser;
-  const activeToken = auth0Token || localToken;
+  const user = localUser || auth0User;
+  const isAuthenticated = !!localUser || isAuth0Authenticated;
+  const activeToken = localToken || auth0Token;
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -205,23 +223,27 @@ export default function App() {
   }, [isAuthenticated]);
 
   useEffect(() => {
-    if (activeToken) {
+    if (activeToken && !isAuth0Authenticated) {
+      // Only sync profile for local tokens, not during Auth0 flow
+      // (Auth0 flow already syncs via socialLogin above)
       getUserProfile(activeToken).then(data => {
         setLocalUser(data.user);
         localStorage.setItem('hausmade_user', JSON.stringify(data.user));
-      }).catch(err => console.error("Error syncing profile:", err));
+      }).catch(err => console.error('Error syncing profile:', err));
     }
-  }, [activeToken]);
+  }, [activeToken, isAuth0Authenticated]);
 
 
   const handleLogout = useCallback(() => {
+    // Always clear local storage since we store unified tokens there
+    localStorage.removeItem('hausmade_user');
+    localStorage.removeItem('hausmade_token');
+    setLocalUser(null);
+    setLocalToken(null);
+    setAuth0Token(null);
+
     if (isAuth0Authenticated) {
       auth0Logout({ logoutParams: { returnTo: window.location.origin } });
-    } else {
-      localStorage.removeItem('hausmade_user');
-      localStorage.removeItem('hausmade_token');
-      setLocalUser(null);
-      setLocalToken(null);
     }
   }, [isAuth0Authenticated, auth0Logout]);
 

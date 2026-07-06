@@ -75,6 +75,23 @@ export async function verifyOtp(arg1, arg2) {
   return response.json();
 }
 
+export async function socialLogin(email, name, provider = 'google') {
+  const response = await fetch(`${API_URL}/api/auth/social-login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email, name, provider }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || 'Social login failed');
+  }
+
+  return response.json();
+}
+
 export async function placeOrder(orderData, token = null) {
   const headers = {
     'Content-Type': 'application/json',

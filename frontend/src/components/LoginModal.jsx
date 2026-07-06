@@ -1,32 +1,38 @@
 import React, { useState } from 'react';
 import { X, Mail, Lock, User, Sparkles, ArrowRight, ShieldCheck, Check, Phone, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useAuth0 } from '@auth0/auth0-react';
-import { registerUser, loginUser, sendOtp, verifyOtp } from '../utils/api';
+import { registerUser, loginUser, sendOtp, verifyOtp, socialLogin } from '../utils/api';
 
 export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotification, isAdminOnly = false }) {
   const { loginWithRedirect } = useAuth0();
 
-  const handleGoogleLogin = () => {
+  const handleGoogleLogin = async () => {
     const auth0Domain = import.meta.env.VITE_AUTH0_DOMAIN || '';
     if (auth0Domain.includes('dev-your-domain') || !auth0Domain) {
-      // Simulate Google login for local offline testing
-      const mockUser = {
-        name: 'Google User (Mock)',
-        email: 'google.mock@example.com',
-        mobile: '1234567890'
-      };
-      localStorage.setItem('hausmade_token', 'mock_google_jwt_token');
-      localStorage.setItem('hausmade_user', JSON.stringify(mockUser));
-      
-      if (showNotification) {
-        showNotification('Mock Google Login Successful (Offline Development Mode)', 'success');
+      // Dev mode: simulate Google login via social-login endpoint
+      // Use the email already typed in the form, or prompt for one
+      const googleEmail = email.trim() || window.prompt('Enter your Google email for mock login:');
+      if (!googleEmail) return;
+
+      try {
+        const data = await socialLogin(googleEmail, `Google User`, 'google');
+        localStorage.setItem('hausmade_token', data.token);
+        localStorage.setItem('hausmade_user', JSON.stringify(data.user));
+
+        if (showNotification) {
+          showNotification('Google Login Successful', 'success');
+        }
+        if (onLoginSuccess) {
+          onLoginSuccess(data.user);
+        }
+        onClose();
+      } catch (err) {
+        if (showNotification) {
+          showNotification(err.message || 'Google login failed', 'error');
+        }
       }
-      if (onLoginSuccess) {
-        onLoginSuccess(mockUser);
-      }
-      onClose();
     } else {
-      // Trigger actual redirect
+      // Production: trigger actual Auth0 redirect
       loginWithRedirect({ authorizationParams: { connection: 'google-oauth2' } });
     }
   };

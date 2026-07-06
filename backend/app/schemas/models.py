@@ -164,3 +164,8 @@ class UserUpdate(BaseModel):
 class ReviewUpdateModel(BaseModel):
     rating: int
     comment: str
+
+class SocialLoginRequest(BaseModel):
+    email: EmailStr
+    name: Optional[str] = None
+    provider: str = "google"

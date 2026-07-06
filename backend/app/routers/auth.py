@@ -1,7 +1,7 @@
 import random
 from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, status
-from app.schemas.models import UserRegister, UserLogin, SendOtpRequest, VerifyOtpRequest
+from app.schemas.models import UserRegister, UserLogin, SendOtpRequest, VerifyOtpRequest, SocialLoginRequest
 from app.database.connection import users_collection, otps_collection
 from app.security.auth import hash_password, verify_password, create_jwt_token
 from app.security.email_sender import send_otp_email
@@ -188,5 +188,63 @@ async def verify_otp(request: VerifyOtpRequest):
             "country": user.get("country", ""),
             "addresses": user.get("addresses", []),
             "is_admin": user.get("is_admin", False)
+        }
+    }
+
+@router.post("/social-login")
+async def social_login(request: SocialLoginRequest):
+    """Unified social login: finds existing user by email or creates one.
+    This ensures that email+password accounts and Google accounts merge into one."""
+    email = request.email.strip().lower()
+    name = request.name or f"Member {email.split('@')[0]}"
+    provider = request.provider
+
+    # Atomically find-or-create user by email using upsert
+    # $setOnInsert only applies when creating a new doc (not when updating existing)
+    await users_collection.update_one(
+        {"email": email},
+        {
+            "$set": {
+                "social_provider": provider,
+                "updated_at": datetime.utcnow()
+            },
+            "$setOnInsert": {
+                "name": name,
+                "email": email,
+                "password": "",
+                "created_at": datetime.utcnow()
+            }
+        },
+        upsert=True
+    )
+
+    # Fetch the (possibly updated) user
+    user = await users_collection.find_one({"email": email})
+
+    # Update name only if it's a generic placeholder
+    if user:
+        existing_name = user.get("name", "")
+        if (not existing_name or existing_name.startswith("Member ")) and name:
+            await users_collection.update_one(
+                {"_id": user["_id"]},
+                {"$set": {"name": name}}
+            )
+            user["name"] = name
+
+    token = create_jwt_token(email)
+    return {
+        "token": token,
+        "user": {
+            "name": user["name"] if user else name,
+            "email": user.get("email", "") if user else email,
+            "mobile": user.get("mobile", "") if user else "",
+            "address_line1": user.get("address_line1", "") if user else "",
+            "address_line2": user.get("address_line2", "") if user else "",
+            "city": user.get("city", "") if user else "",
+            "state": user.get("state", "") if user else "",
+            "zip_code": user.get("zip_code", "") if user else "",
+            "country": user.get("country", "") if user else "",
+            "addresses": user.get("addresses", []) if user else [],
+            "is_admin": user.get("is_admin", False) if user else False
         }
     }
