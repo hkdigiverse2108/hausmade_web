@@ -99,7 +99,9 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
   
   const finalPricePerPack = isSubscription ? subPackPrice.toFixed(2) : (pack.basePrice * discountMultiplier).toFixed(2);
   const unitPrice = isSubscription ? subUnitPrice.toFixed(2) : ((pack.basePrice * discountMultiplier) / pack.count).toFixed(2);
-  const totalPrice = isSubscription ? subPackPrice.toFixed(2) : (parseFloat(finalPricePerPack) * quantity).toFixed(2);
+  
+  const totalSubPrice = subUnitPrice * soapsPerMonth * durationMonths;
+  const totalPrice = isSubscription ? totalSubPrice.toFixed(2) : (parseFloat(finalPricePerPack) * quantity).toFixed(2);
   
   const isPackOutOfStock = pack.stock !== undefined && pack.stock <= 0;
   const isPackLowStock = pack.stock !== undefined && pack.stock > 0 && pack.stock <= 5;
@@ -411,14 +413,24 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
                           <span>Net Price per soap:</span>
                           <span>₹{subUnitPrice.toFixed(2)}</span>
                         </div>
-                        <div className="flex justify-between text-[11px] text-[#7A8B6F] font-bold bg-[#7A8B6F]/10 p-3 rounded-xl mt-2">
-                          <span>
-                            {deliveryFrequency === 'every_3_months'
-                              ? `Delivery once every 3 months (${soapsPerMonth * 3} soaps)`
-                              : `Delivery once every month (${soapsPerMonth} soaps)`
-                            }
-                          </span>
-                          <span>Pay: ₹{subPackPrice.toFixed(2)}</span>
+                        <div className="flex flex-col gap-2 text-xs text-[#3A2E26] bg-[#C97C5D]/10 p-3.5 rounded-xl mt-2 border border-[#C97C5D]/30 shadow-xs">
+                          <div className="flex justify-between items-center text-[10px] text-[#3A2E26]/75 uppercase tracking-wider font-bold">
+                            <span>Delivery Cycle:</span>
+                            <span>
+                              {deliveryFrequency === 'every_3_months'
+                                ? `Every 3 months (${soapsPerMonth * 3} soaps)`
+                                : `Every month (${soapsPerMonth} soaps)`
+                              }
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center border-t border-[#C97C5D]/25 pt-2">
+                            <span className="font-bold text-[11px] text-[#C97C5D] uppercase tracking-wider">
+                              Total Subscription Cost ({durationMonths} Months):
+                            </span>
+                            <span className="text-sm font-extrabold text-[#C97C5D] bg-white px-2.5 py-1 rounded-lg border border-[#C97C5D]/20 shadow-xs">
+                              ₹{(subUnitPrice * soapsPerMonth * durationMonths).toFixed(2)}
+                            </span>
+                          </div>
                         </div>
                       </div>
 

@@ -56,7 +56,7 @@ export default function ProfileModal({
 
   useEffect(() => {
     if (user) {
-      setName(user.name || '');
+      setName((user.name && !user.name.startsWith('Member ')) ? user.name : '');
       setEmail(user.email || '');
       setMobile(user.mobile || '');
       

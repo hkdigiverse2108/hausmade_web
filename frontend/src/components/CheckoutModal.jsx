@@ -46,7 +46,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
 
       if (user) {
         setFormData({
-          fullName: user.name || '',
+          fullName: (user.name && !user.name.startsWith('Member ')) ? user.name : '',
           email: user.email || '',
           phone: user.mobile || '',
           address: '',
@@ -139,7 +139,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
         const defaultAddr = addrs.find(a => a.is_default) || addrs[0];
         setSelectedAddressId(defaultAddr.id);
         setFormData({
-          fullName: user.name || '',
+          fullName: (user.name && !user.name.startsWith('Member ')) ? user.name : '',
           email: user.email || '',
           phone: user.mobile || '',
           address: `${defaultAddr.address_line1}${defaultAddr.address_line2 ? `, ${defaultAddr.address_line2}` : ''}`,
@@ -150,7 +150,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
       } else {
         setSelectedAddressId('custom');
         setFormData({
-          fullName: user.name || '',
+          fullName: (user.name && !user.name.startsWith('Member ')) ? user.name : '',
           email: user.email || '',
           phone: user.mobile || '',
           address: '',
@@ -267,7 +267,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
   const handleSelectAddress = (addr) => {
     setSelectedAddressId(addr.id);
     setFormData({
-      fullName: user?.name || '',
+      fullName: (user?.name && !user?.name.startsWith('Member ')) ? user.name : '',
       email: user?.email || '',
       phone: user?.mobile || '',
       address: `${addr.address_line1}${addr.address_line2 ? `, ${addr.address_line2}` : ''}`,
@@ -280,7 +280,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
   const handleSelectCustomAddress = () => {
     setSelectedAddressId('custom');
     setFormData({
-      fullName: user?.name || '',
+      fullName: (user?.name && !user?.name.startsWith('Member ')) ? user.name : '',
       email: user?.email || '',
       phone: user?.mobile || '',
       address: '',
@@ -298,7 +298,11 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
 
       {/* Top Nav Bar */}
       <div className="sticky top-0 bg-white/70 backdrop-blur-xl border-b border-[#3A2E26]/10 px-6 py-4 flex items-center justify-between z-10 shrink-0">
-        <div className="flex items-center gap-3">
+        <div 
+          className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity" 
+          onClick={() => window.location.href = '/'}
+          title="Go to Homepage"
+        >
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#C97C5D] to-[#E09F80] flex items-center justify-center text-white shadow-md">
             <Sparkles className="w-5 h-5 animate-pulse" />
           </div>
@@ -308,13 +312,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
           </div>
         </div>
 
-        <button
-          onClick={onClose}
-          className="px-4 py-2 rounded-xl bg-[#3A2E26] hover:bg-[#3A2E26]/90 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
-        >
-          <span>Exit Checkout</span>
-          <X className="w-4 h-4" />
-        </button>
+        {/* Exit Checkout Button Hidden */}
       </div>
 
       {/* Main Grid Container */}

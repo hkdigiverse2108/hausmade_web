@@ -217,7 +217,7 @@ export default function App() {
     if (isAuthenticated) {
       const pending = localStorage.getItem('hausmade_pending_checkout');
       if (pending === 'true') {
-        setIsCheckoutOpen(true);
+        setIsProfileOpen(true);
         localStorage.removeItem('hausmade_pending_checkout');
       }
     }
@@ -494,11 +494,9 @@ export default function App() {
         onLoginSuccess={(userData) => {
           setLocalUser(userData);
           setLocalToken(localStorage.getItem('hausmade_token'));
-          if (openCheckoutAfterLogin) {
-            setIsCheckoutOpen(true);
-            setOpenCheckoutAfterLogin(false);
-            localStorage.removeItem('hausmade_pending_checkout');
-          }
+          setIsProfileOpen(true);
+          setOpenCheckoutAfterLogin(false);
+          localStorage.removeItem('hausmade_pending_checkout');
         }}
       />
 
