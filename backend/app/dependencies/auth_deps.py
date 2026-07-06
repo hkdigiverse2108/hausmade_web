@@ -20,7 +20,7 @@ async def get_current_user_email(authorization: Optional[str] = Header(None)) ->
             
             email = payload.get("email")
             sub = payload.get("sub")
-            name = payload.get("name", f"Member {sub[-4:] if sub else ''}")
+            name = ""
             
             if sub:
                 existing_user = None
@@ -34,7 +34,7 @@ async def get_current_user_email(authorization: Optional[str] = Header(None)) ->
                         {
                             "$set": {
                                 "auth0_sub": sub,
-                                "name": existing_user.get("name") or name,
+                                "name": existing_user.get("name") or "",
                                 "updated_at": datetime.utcnow()
                             }
                         }
@@ -44,7 +44,7 @@ async def get_current_user_email(authorization: Optional[str] = Header(None)) ->
                         {"auth0_sub": sub},
                         {
                             "$set": {
-                                "name": name,
+                                "name": "",
                                 "email": email or "",
                                 "auth0_sub": sub,
                                 "updated_at": datetime.utcnow()

@@ -46,17 +46,17 @@ export const PACK_OPTIONS = [
 
 export default function ProductSelector({ products = [], onAddToCart, onBuyNow, onAddToWishlist, wishlistItems = [], selectedPack, setSelectedPack, isSubscription, setIsSubscription, quantity, setQuantity, activeImageIndex, setActiveImageIndex, settings }) {
   const activeDurations = settings?.subscription_durations || [6, 12];
-  const activeQuantities = settings?.subscription_quantities || [2, 4, 6];
+  const activeQuantities = settings?.subscription_quantities || [1, 2, 3, 4, 5, 6];
   const activeFrequencies = settings?.subscription_frequencies || ["monthly", "every_3_months"];
 
   const [durationMonths, setDurationMonths] = useState(() => activeDurations[0] || 6);
-  const [soapsPerMonth, setSoapsPerMonth] = useState(() => activeQuantities[0] || 2);
+  const [soapsPerMonth, setSoapsPerMonth] = useState(() => activeQuantities[0] || 1);
   const [deliveryFrequency, setDeliveryFrequency] = useState(() => activeFrequencies[0] || 'monthly');
 
   React.useEffect(() => {
     if (settings) {
       const activeD = settings.subscription_durations || [6, 12];
-      const activeQ = settings.subscription_quantities || [2, 4, 6];
+      const activeQ = settings.subscription_quantities || [1, 2, 3, 4, 5, 6];
       const activeF = settings.subscription_frequencies || ["monthly", "every_3_months"];
       
       if (activeD.length > 0 && !activeD.includes(durationMonths)) {

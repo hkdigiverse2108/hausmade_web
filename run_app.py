@@ -34,7 +34,7 @@ def main():
                         ports[key] = value.strip()
 
     # Service commands using dynamic ports
-    backend_cmd = f"{sys.executable} -m uvicorn app.main:app --reload --port {ports['PORT_BACKEND']}"
+    backend_cmd = f'"{sys.executable}" -m uvicorn app.main:app --reload --port {ports["PORT_BACKEND"]}'
     frontend_cmd = f"npm run dev -- --port {ports['PORT_FRONTEND']}"
 
     processes = []

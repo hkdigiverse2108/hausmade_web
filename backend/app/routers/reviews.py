@@ -130,8 +130,18 @@ async def delete_review(id: str, admin: dict = Depends(get_admin_user)):
             raise e
         raise HTTPException(status_code=500, detail=str(e))
 
+from pydantic import BaseModel, Field
+
+class AdminReviewUpdateModel(BaseModel):
+    productId: str
+    productTitle: str
+    userName: str
+    userEmail: str
+    rating: int = Field(..., ge=1, le=5)
+    comment: str
+
 @router.put("/api/admin/reviews/{id}")
-async def update_review(id: str, review: ReviewUpdateModel, admin: dict = Depends(get_admin_user)):
+async def update_review(id: str, review: AdminReviewUpdateModel, admin: dict = Depends(get_admin_user)):
     try:
         query = {"id": id}
         existing = await reviews_collection.find_one(query)
@@ -147,6 +157,10 @@ async def update_review(id: str, review: ReviewUpdateModel, admin: dict = Depend
             raise HTTPException(status_code=404, detail="Review not found")
             
         await reviews_collection.update_one(query, {"$set": {
+            "productId": review.productId,
+            "productTitle": review.productTitle,
+            "userName": review.userName,
+            "userEmail": review.userEmail,
             "rating": review.rating,
             "comment": review.comment
         }})
@@ -155,3 +169,36 @@ async def update_review(id: str, review: ReviewUpdateModel, admin: dict = Depend
         if isinstance(e, HTTPException):
             raise e
         raise HTTPException(status_code=500, detail=str(e))
+
+from pydantic import BaseModel, Field
+
+class AdminReviewCreateModel(BaseModel):
+    productId: str
+    productTitle: str
+    userName: str
+    userEmail: str
+    rating: int = Field(..., ge=1, le=5)
+    comment: str
+    approved: bool = True
+
+@router.post("/api/admin/reviews")
+async def admin_create_review(review: AdminReviewCreateModel, admin: dict = Depends(get_admin_user)):
+    try:
+        review_doc = {
+            "id": str(uuid.uuid4()),
+            "productId": review.productId,
+            "productTitle": review.productTitle,
+            "userName": review.userName,
+            "userEmail": review.userEmail,
+            "rating": review.rating,
+            "comment": review.comment,
+            "approved": review.approved,
+            "created_at": datetime.utcnow()
+        }
+        await reviews_collection.insert_one(review_doc)
+        if "_id" in review_doc:
+            review_doc["_id"] = str(review_doc["_id"])
+        return {"status": "success", "review": review_doc}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+

@@ -1,7 +1,7 @@
 import React from 'react';
 import { X, ShoppingBag, Trash2, ArrowRight, ShieldCheck } from 'lucide-react';
 
-export default function CartDrawer({ isOpen, onClose, cartItems, onUpdateQuantity, onRemoveItem, onOpenCheckout }) {
+export default function CartDrawer({ isOpen, onClose, cartItems, onUpdateQuantity, onRemoveItem, onOpenCheckout, onStartShopping }) {
 
   if (!isOpen) return null;
 
@@ -44,7 +44,7 @@ export default function CartDrawer({ isOpen, onClose, cartItems, onUpdateQuantit
                 <p className="font-serif-brand font-bold text-xl text-[#3A2E26]">Your cart is empty</p>
                 <p className="text-sm text-[#3A2E26]/70">Explore our handcrafted soaps and pick your batch.</p>
                 <button
-                  onClick={onClose}
+                  onClick={onStartShopping}
                   className="mt-4 px-6 py-3 bg-[#7A8B6F] text-white text-sm font-semibold rounded-full hover:bg-[#68775E] transition-colors"
                 >
                   Start Shopping

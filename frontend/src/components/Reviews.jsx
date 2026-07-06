@@ -31,6 +31,11 @@ export default function Reviews() {
   ];
 
   const [reviewsList, setReviewsList] = useState(staticReviews);
+  const [editingReviewId, setEditingReviewId] = useState(() => localStorage.getItem('hausmade_editing_review_id'));
+  const [editingReviewData, setEditingReviewData] = useState(() => {
+    const data = localStorage.getItem('hausmade_editing_review_data');
+    return data ? JSON.parse(data) : null;
+  });
 
   useEffect(() => {
     async function loadReviews() {
@@ -45,13 +50,44 @@ export default function Reviews() {
             verified: 'Verified Buyer',
             comment: `"${r.comment}"`
           }));
-          setReviewsList([...staticReviews, ...formatted]);
+          setReviewsList(formatted);
+        } else {
+          setReviewsList(staticReviews);
         }
       } catch (err) {
         console.error('Failed to load dynamic reviews:', err);
+        setReviewsList(staticReviews);
       }
     }
     loadReviews();
+
+    const handleStorageChange = () => {
+      setEditingReviewId(localStorage.getItem('hausmade_editing_review_id'));
+      const data = localStorage.getItem('hausmade_editing_review_data');
+      if (data) {
+        try {
+          setEditingReviewData(JSON.parse(data));
+        } catch (e) {
+          console.error(e);
+        }
+      } else {
+        setEditingReviewData(null);
+      }
+    };
+
+    const handleMessage = (event) => {
+      if (event.data && event.data.type === 'update-editing-review') {
+        setEditingReviewId(event.data.editingReviewId);
+        setEditingReviewData(event.data.editingReviewData);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('message', handleMessage);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('message', handleMessage);
+    };
   }, []);
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -67,21 +103,37 @@ export default function Reviews() {
 
   // Auto-slide every 5 seconds
   useEffect(() => {
-    if (reviewsList.length === 0) return;
+    const activeLength = finalReviews.length;
+    if (activeLength === 0) return;
     const timer = setInterval(() => {
       handleNext();
     }, 5000);
     return () => clearInterval(timer);
-  }, [currentIndex, reviewsList.length, isMobile]);
+  }, [currentIndex, isMobile]);
+
+  const finalReviews = (() => {
+    if (editingReviewId) {
+      const matched = reviewsList.find(r => r.id === editingReviewId || r._id === editingReviewId);
+      return [{
+        id: editingReviewId,
+        name: editingReviewData?.name || matched?.name || 'Customer Name',
+        initial: (editingReviewData?.name || matched?.name || 'C').charAt(0).toUpperCase(),
+        rating: editingReviewData?.rating || matched?.rating || 5,
+        verified: 'Verified Buyer',
+        comment: `"${editingReviewData?.comment || matched?.comment || ''}"`
+      }];
+    }
+    return reviewsList;
+  })();
 
   const handleNext = () => {
-    if (reviewsList.length === 0) return;
-    setCurrentIndex((prev) => (prev + 1) % reviewsList.length);
+    if (finalReviews.length === 0) return;
+    setCurrentIndex((prev) => (prev + 1) % finalReviews.length);
   };
 
   const handlePrev = () => {
-    if (reviewsList.length === 0) return;
-    setCurrentIndex((prev) => (prev - 1 + reviewsList.length) % reviewsList.length);
+    if (finalReviews.length === 0) return;
+    setCurrentIndex((prev) => (prev - 1 + finalReviews.length) % finalReviews.length);
   };
 
   const handleDotClick = (idx) => {
@@ -89,7 +141,7 @@ export default function Reviews() {
   };
 
   // Duplicate list to allow seamless loop sliding on desktop viewports
-  const displayReviews = [...reviewsList, ...reviewsList];
+  const displayReviews = [...finalReviews, ...finalReviews];
 
   return (
     <section id="reviews" className="py-16 lg:py-24 bg-[#EFECE6] scroll-mt-20 overflow-hidden">
@@ -183,9 +235,8 @@ export default function Reviews() {
 
         </div>
 
-        {/* Carousel Indicators / Dots */}
         <div className="flex justify-center items-center gap-2 mt-8">
-          {reviewsList.map((_, idx) => (
+          {finalReviews.map((_, idx) => (
             <button
               key={idx}
               onClick={() => handleDotClick(idx)}

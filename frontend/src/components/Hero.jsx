@@ -1,5 +1,6 @@
 import React from 'react';
-import { Leaf, Award, ShieldCheck, ArrowRight, Star } from 'lucide-react';
+import { Star, ArrowRight } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
 
 export default function Hero({ settings }) {
   const badge = settings?.badge || "Hausmade™ Luxury Bath Element";
@@ -7,6 +8,12 @@ export default function Hero({ settings }) {
   const title_italic = settings?.title_italic || "artisanal beauty";
   const title_normal_2 = settings?.title_normal_2 || "with Kesar.";
   const description = settings?.description || "Purely handmade cleansing bar infused with real saffron extract, camphor, and 100% coconut oil. Naturally removes sun tan, fades dark spots, and brightens your daily complexing glow.";
+
+  const trustBadges = settings?.trust_badges || [
+    { title: "100% Natural Ingredients", description: "Pure essential oils & plant extracts", icon: "Leaf" },
+    { title: "Small-Batch Cold Processed", description: "Cured slowly for 6 weeks", icon: "Award" },
+    { title: "Cruelty-Free & Plastic-Free", description: "Zero synthetic chemicals or packaging waste", icon: "ShieldCheck" }
+  ];
 
   return (
     <section className="pt-10 pb-10 sm:pt-16 sm:pb-16 lg:pt-20 lg:pb-24 relative overflow-hidden">
@@ -90,37 +97,32 @@ export default function Hero({ settings }) {
         </div>
 
         {/* Trust Strip Beneath Hero */}
-        <div className="mt-10 sm:mt-16 pt-6 sm:pt-8 border-t border-[#3A2E26]/10 grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 text-center sm:text-left">
-          <div className="flex items-center justify-center md:justify-start gap-3.5 p-3 rounded-2xl bg-white/40 border border-white/60">
-            <div className="p-2.5 rounded-xl bg-[#7A8B6F]/15 text-[#7A8B6F]">
-              <Leaf className="w-6 h-6" />
-            </div>
-            <div>
-              <h4 className="font-serif-brand font-bold text-[#3A2E26] text-sm">100% Natural Ingredients</h4>
-              <p className="text-xs text-[#3A2E26]/70">Pure essential oils & plant extracts</p>
-            </div>
-          </div>
+        {trustBadges && trustBadges.length > 0 && (
+          <div className="mt-10 sm:mt-16 pt-6 sm:pt-8 border-t border-[#3A2E26]/10 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 text-center sm:text-left">
+            {trustBadges.map((badge, idx) => {
+              const IconComp = LucideIcons[badge.icon] || LucideIcons.HelpCircle;
+              const colors = [
+                { bg: 'bg-[#7A8B6F]/15', text: 'text-[#7A8B6F]' },
+                { bg: 'bg-[#C97C5D]/15', text: 'text-[#C97C5D]' },
+                { bg: 'bg-[#3A2E26]/10', text: 'text-[#3A2E26]' },
+                { bg: 'bg-amber-100/60', text: 'text-amber-800' }
+              ];
+              const colorSet = colors[idx % colors.length];
 
-          <div className="flex items-center justify-center md:justify-start gap-3.5 p-3 rounded-2xl bg-white/40 border border-white/60">
-            <div className="p-2.5 rounded-xl bg-[#C97C5D]/15 text-[#C97C5D]">
-              <Award className="w-6 h-6" />
-            </div>
-            <div>
-              <h4 className="font-serif-brand font-bold text-[#3A2E26] text-sm">Small-Batch Cold Processed</h4>
-              <p className="text-xs text-[#3A2E26]/70">Cured slowly for 6 weeks</p>
-            </div>
+              return (
+                <div key={idx} className="flex items-center justify-center md:justify-start gap-3.5 p-3 rounded-2xl bg-white/40 border border-white/60 shadow-sm transition-all hover:scale-[1.02] hover:bg-white/60">
+                  <div className={`p-2.5 rounded-xl ${colorSet.bg} ${colorSet.text} shrink-0`}>
+                    <IconComp className="w-6 h-6" />
+                  </div>
+                  <div className="text-left">
+                    <h4 className="font-serif-brand font-bold text-[#3A2E26] text-sm">{badge.title}</h4>
+                    <p className="text-xs text-[#3A2E26]/70 leading-normal">{badge.description}</p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-
-          <div className="flex items-center justify-center md:justify-start gap-3.5 p-3 rounded-2xl bg-white/40 border border-white/60">
-            <div className="p-2.5 rounded-xl bg-[#3A2E26]/10 text-[#3A2E26]">
-              <ShieldCheck className="w-6 h-6" />
-            </div>
-            <div>
-              <h4 className="font-serif-brand font-bold text-[#3A2E26] text-sm">Cruelty-Free & Plastic-Free</h4>
-              <p className="text-xs text-[#3A2E26]/70">Zero synthetic chemicals or packaging waste</p>
-            </div>
-          </div>
-        </div>
+        )}
 
       </div>
     </section>

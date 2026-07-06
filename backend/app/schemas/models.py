@@ -86,8 +86,10 @@ class OfflineSaleCreate(BaseModel):
 
 
 class AnnouncementSettings(BaseModel):
-    text: str
+    text: str = ""
     active: bool = True
+    coupon_code: Optional[str] = ""
+    badge_text: Optional[str] = ""
 
 class HeroSettings(BaseModel):
     badge: str
@@ -105,6 +107,13 @@ class StorySettings(BaseModel):
     image_url: str = ""
     author_name: str = ""
     author_title: str = ""
+
+class SocialLinksSettings(BaseModel):
+    instagram: str = ""
+    facebook: str = ""
+    whatsapp: str = ""
+    twitter: str = ""
+    youtube: str = ""
 
 class ContactSettings(BaseModel):
     email: str
@@ -128,6 +137,11 @@ class FAQItem(BaseModel):
     q: str
     a: str
 
+class TrustBadgeItem(BaseModel):
+    title: str
+    description: str
+    icon: str = "Leaf"
+
 class IngredientItem(BaseModel):
     name: str
     benefit: str
@@ -140,8 +154,10 @@ class SiteSettingsModel(BaseModel):
     story: StorySettings
     contact: ContactSettings
     subscription: SubscriptionSettings
+    social_links: SocialLinksSettings = SocialLinksSettings()
     faqs: List[FAQItem] = []
     ingredients: List[IngredientItem] = []
+    trust_badges: List[TrustBadgeItem] = []
     ingredients_active: bool = True
     subscription_active: bool = True
     subscription_durations: List[int] = [6, 12]

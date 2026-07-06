@@ -38,11 +38,23 @@ export default function App() {
   
   const [cartItems, setCartItems] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [activeHash, setActiveHash] = useState(window.location.hash);
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      setActiveHash(window.location.hash);
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
   const [isOrderHistoryOpen, setIsOrderHistoryOpen] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('view') === 'profile';
+  });
   const [wishlistItems, setWishlistItems] = useState(() => {
     const saved = localStorage.getItem('hausmade_wishlist');
     return saved ? JSON.parse(saved) : [
@@ -80,8 +92,10 @@ export default function App() {
   }, [wishlistItems]);
   const [siteSettings, setSiteSettings] = useState({
     announcement: {
-      text: "Use promo code HAUS10 for extra 10% OFF at checkout!",
-      active: true
+      text: "",
+      active: true,
+      coupon_code: "",
+      badge_text: ""
     },
     hero: {
       badge: "Hausmade™ Luxury Bath Element",
@@ -142,10 +156,20 @@ export default function App() {
       }
     };
 
+    const handlePreviewMessage = (event) => {
+      if (event.data && event.data.type === 'update-preview-settings') {
+        setSiteSettings(event.data.settings);
+      }
+    };
+
     window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('message', handlePreviewMessage);
     handleStorageChange();
 
-    return () => window.removeEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('message', handlePreviewMessage);
+    };
   }, []);
 
   useEffect(() => {
@@ -163,8 +187,35 @@ export default function App() {
     window.addEventListener('hashchange', handleHashScroll);
     setTimeout(handleHashScroll, 500);
 
-    return () => window.removeEventListener('hashchange', handleHashScroll);
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      setIsProfileOpen(params.get('view') === 'profile');
+    };
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('hashchange', handleHashScroll);
+      window.removeEventListener('popstate', handlePopState);
+    };
   }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const currentView = params.get('view');
+    if (isProfileOpen) {
+      if (currentView !== 'profile') {
+        params.set('view', 'profile');
+        const newSearch = params.toString();
+        window.history.replaceState(null, '', `${window.location.pathname}?${newSearch}${window.location.hash}`);
+      }
+    } else {
+      if (currentView === 'profile') {
+        params.delete('view');
+        const newSearch = params.toString();
+        window.history.replaceState(null, '', `${window.location.pathname}${newSearch ? '?' + newSearch : ''}${window.location.hash}`);
+      }
+    }
+  }, [isProfileOpen]);
 
   const showNotification = useCallback((message, type = 'success') => {
     setNotification({ message, type });
@@ -377,9 +428,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Storefront — hidden when admin view is active */}
-      {/* Storefront — hidden when admin view is active */}
-      {!isAdminView && (() => {
+      {!isAdminView && !isProfileOpen && (() => {
         const isPreviewMode = window.location.search.includes('preview=true');
         const getSectionClass = (sectionId) => isPreviewMode 
           ? `cursor-pointer transition-all duration-300 hover:outline hover:outline-2 hover:outline-dashed hover:outline-amber-500/50 hover:bg-amber-500/[0.01] relative after:absolute after:top-2 after:right-2 after:bg-amber-500 after:text-white after:text-[8px] after:font-bold after:px-1.5 after:py-0.5 after:rounded-md after:content-['Click_to_Edit'] after:opacity-0 hover:after:opacity-100 after:transition-opacity after:z-[99] after:pointer-events-none` 
@@ -389,6 +438,20 @@ export default function App() {
           if (isPreviewMode) {
             window.parent.postMessage({ type: 'focus-section', section }, '*');
           }
+        };
+
+        const shouldShowSection = (sectionId) => {
+          if (!isPreviewMode || !activeHash || activeHash === '#' || activeHash === '') return true;
+          if (sectionId === 'identity') return activeHash === '#identity';
+          if (sectionId === 'hero') return activeHash === '#hero' || activeHash === '#trust_badges';
+          if (sectionId === 'subscription') return activeHash === '#subscription';
+          if (sectionId === 'ingredients') return activeHash === '#ingredients';
+          if (sectionId === 'story') return activeHash === '#story';
+          if (sectionId === 'faqs') return activeHash === '#faqs';
+          if (sectionId === 'contact') return activeHash === '#contact' || activeHash === '#social_links';
+          if (sectionId === 'products') return activeHash === '#products';
+          if (sectionId === 'reviews') return activeHash === '#reviews';
+          return false;
         };
 
         return (
@@ -407,64 +470,86 @@ export default function App() {
                 </button>
               </div>
             )}
-            <div id="identity" className={getSectionClass('identity')} onClick={() => handleSectionClick('identity')}>
-              <AnnouncementBanner settings={siteSettings.announcement} />
-            </div>
-            <Header
-              cartCount={cartItems.reduce((acc, item) => acc + item.quantity, 0)}
-              onOpenCart={() => setIsCartOpen(true)}
-              wishlistCount={wishlistItems.length}
-              onOpenWishlist={() => setIsWishlistOpen(true)}
-              user={user}
-              isAuthenticated={isAuthenticated}
-              onLogout={handleLogout}
-              onOpenLogin={() => setIsLoginOpen(true)}
-              onOpenOrderHistory={() => setIsOrderHistoryOpen(true)}
-              onOpenProfile={() => setIsProfileOpen(true)}
-              onOpenAdminLogin={() => setIsAdminLoginOpen(true)}
-              settings={siteSettings}
-            />
+            {shouldShowSection('identity') && (
+              <>
+                <div id="identity" className={getSectionClass('identity')} onClick={() => handleSectionClick('identity')}>
+                  <AnnouncementBanner settings={siteSettings.announcement} />
+                </div>
+                <Header
+                  cartCount={cartItems.reduce((acc, item) => acc + item.quantity, 0)}
+                  onOpenCart={() => setIsCartOpen(true)}
+                  wishlistCount={wishlistItems.length}
+                  onOpenWishlist={() => setIsWishlistOpen(true)}
+                  user={user}
+                  isAuthenticated={isAuthenticated}
+                  onLogout={handleLogout}
+                  onOpenLogin={() => setIsLoginOpen(true)}
+                  onOpenOrderHistory={() => setIsOrderHistoryOpen(true)}
+                  onOpenProfile={() => setIsProfileOpen(true)}
+                  onOpenAdminLogin={() => setIsAdminLoginOpen(true)}
+                  settings={siteSettings}
+                />
+              </>
+            )}
 
             <main className="flex-1">
-              <div id="hero" className={getSectionClass('hero')} onClick={() => handleSectionClick('hero')}>
-                <Hero settings={siteSettings.hero} />
-              </div>
-              <div id="subscription" className={getSectionClass('subscription')} onClick={() => handleSectionClick('subscription')}>
-                <SubscribeSave settings={siteSettings.subscription} />
-              </div>
-              <ProductSelector
-                products={products}
-                onAddToCart={handleAddToCart}
-                onBuyNow={handleBuyNow}
-                onAddToWishlist={handleAddToWishlist}
-                wishlistItems={wishlistItems}
-                selectedPack={selectedPack}
-                setSelectedPack={setSelectedPack}
-                isSubscription={isSubscription}
-                setIsSubscription={setIsSubscription}
-                quantity={quantity}
-                setQuantity={setQuantity}
-                activeImageIndex={activeImageIndex}
-                setActiveImageIndex={setActiveImageIndex}
-                settings={siteSettings}
-              />
-              {siteSettings.ingredients_active !== false && (
+              {shouldShowSection('hero') && (
+                <div id="hero" className={getSectionClass('hero')} onClick={() => handleSectionClick('hero')}>
+                  <Hero settings={siteSettings.hero} />
+                </div>
+              )}
+              {shouldShowSection('subscription') && (
+                <div id="subscription" className={getSectionClass('subscription')} onClick={() => handleSectionClick('subscription')}>
+                  <SubscribeSave settings={siteSettings.subscription} />
+                </div>
+              )}
+              {shouldShowSection('products') && (
+                <div id="products" className={getSectionClass('products')} onClick={() => handleSectionClick('products')}>
+                  <ProductSelector
+                    products={products}
+                    onAddToCart={handleAddToCart}
+                    onBuyNow={handleBuyNow}
+                    onAddToWishlist={handleAddToWishlist}
+                    wishlistItems={wishlistItems}
+                    selectedPack={selectedPack}
+                    setSelectedPack={setSelectedPack}
+                    isSubscription={isSubscription}
+                    setIsSubscription={setIsSubscription}
+                    quantity={quantity}
+                    setQuantity={setQuantity}
+                    activeImageIndex={activeImageIndex}
+                    setActiveImageIndex={setActiveImageIndex}
+                    settings={siteSettings}
+                  />
+                </div>
+              )}
+              {shouldShowSection('ingredients') && siteSettings.ingredients_active !== false && (
                 <div id="ingredients" className={getSectionClass('ingredients')} onClick={() => handleSectionClick('ingredients')}>
                   <Ingredients settings={siteSettings} />
                 </div>
               )}
-              <div id="story" className={getSectionClass('story')} onClick={() => handleSectionClick('story')}>
-                <Story settings={siteSettings.story} />
-              </div>
-              <Reviews />
-              <div id="faqs" className={getSectionClass('faqs')} onClick={() => handleSectionClick('faqs')}>
-                <FAQ settings={siteSettings} />
-              </div>
+              {shouldShowSection('story') && (
+                <div id="story" className={getSectionClass('story')} onClick={() => handleSectionClick('story')}>
+                  <Story settings={siteSettings.story} />
+                </div>
+              )}
+              {shouldShowSection('reviews') && (
+                <div id="reviews" className={getSectionClass('reviews')} onClick={() => handleSectionClick('reviews')}>
+                  <Reviews />
+                </div>
+              )}
+              {shouldShowSection('faqs') && (
+                <div id="faqs" className={getSectionClass('faqs')} onClick={() => handleSectionClick('faqs')}>
+                  <FAQ settings={siteSettings} />
+                </div>
+              )}
             </main>
 
-            <div id="contact" className={getSectionClass('contact')} onClick={() => handleSectionClick('contact')}>
-              <Footer settings={siteSettings.contact} />
-            </div>
+            {shouldShowSection('contact') && (
+              <div id="contact" className={getSectionClass('contact')} onClick={() => handleSectionClick('contact')}>
+                <Footer settings={siteSettings} />
+              </div>
+            )}
           </div>
         );
       })()}
@@ -476,6 +561,20 @@ export default function App() {
         onUpdateQuantity={handleUpdateQuantity}
         onRemoveItem={handleRemoveItem}
         onOpenCheckout={handleOpenCheckout}
+        onStartShopping={() => {
+          setIsCartOpen(false);
+          setIsProfileOpen(false);
+          setIsOrderHistoryOpen(false);
+          setIsWishlistOpen(false);
+          // Remove query params like ?view=profile
+          window.history.pushState({}, '', window.location.pathname + (window.location.hash || '#products'));
+          setTimeout(() => {
+            const el = document.getElementById('products');
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth' });
+            }
+          }, 250);
+        }}
       />
 
       <CheckoutModal

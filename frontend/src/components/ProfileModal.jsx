@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { X, User, Mail, Phone, ShieldCheck, Sparkles, Loader2, MapPin, Compass, Building, Globe, Navigation, ChevronRight, UserCheck, Check, Heart, ShoppingBag, Lock, LogOut, Trash2, Calendar, Hash, Package, RefreshCw } from 'lucide-react';
 import { updateUserProfile, getUserOrders, getUserSubscriptions, requestUrgentSoap } from '../utils/api';
 
+let isInitialPageLoad = true;
+
 export default function ProfileModal({ 
   isOpen, 
   onClose, 
@@ -18,6 +20,18 @@ export default function ProfileModal({
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [mobile, setMobile] = useState('');
+  const [animate, setAnimate] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      if (isInitialPageLoad) {
+        isInitialPageLoad = false;
+        setAnimate(false);
+      } else {
+        setAnimate(true);
+      }
+    }
+  }, [isOpen]);
   
   // Multiple addresses states
   const [addresses, setAddresses] = useState([]);
@@ -82,6 +96,39 @@ export default function ProfileModal({
       }
     }
   }, [user, isOpen]);
+
+  const handleClose = () => {
+    if (user) {
+      setName((user.name && !user.name.startsWith('Member ')) ? user.name : '');
+      setEmail(user.email || '');
+      setMobile(user.mobile || '');
+      if (user.addresses && user.addresses.length > 0) {
+        setAddresses(user.addresses);
+      } else if (user.address_line1 || user.city) {
+        setAddresses([
+          {
+            id: 'default-legacy',
+            label: 'Default Address',
+            address_line1: user.address_line1 || '',
+            address_line2: user.address_line2 || '',
+            city: user.city || '',
+            state: user.state || '',
+            zip_code: user.zip_code || '',
+            country: user.country || 'India',
+            is_default: true
+          }
+        ]);
+      } else {
+        setAddresses([]);
+      }
+    }
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setIsAddingNew(false);
+    setEditingAddressId(null);
+    if (onClose) onClose();
+  };
 
   useEffect(() => {
     if (activeTab === 'orders' && token && isOpen) {
@@ -197,8 +244,6 @@ export default function ProfileModal({
       if (showNotification) {
         showNotification('Personal details saved successfully!', 'success');
       }
-      
-      onClose();
     } catch (err) {
       setError(err.message || 'Failed to update profile');
       if (showNotification) {
@@ -315,7 +360,7 @@ export default function ProfileModal({
 
   return (
     <div 
-      className="fixed inset-0 z-50 w-full h-full bg-gradient-to-br from-[#FDFBF7] via-[#F5F1E8] to-[#EAE3D2] text-[#3A2E26] overflow-y-auto flex flex-col animate-fadeIn font-sans"
+      className={`fixed inset-0 z-50 w-full h-full bg-gradient-to-br from-[#FDFBF7] via-[#F5F1E8] to-[#EAE3D2] text-[#3A2E26] overflow-y-auto flex flex-col font-sans ${animate ? 'animate-fadeIn' : ''}`}
     >
       {/* Background Decorative Organic Accents */}
       <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-[#7A8B6F]/5 rounded-full blur-3xl pointer-events-none" />
@@ -334,7 +379,7 @@ export default function ProfileModal({
         </div>
 
         <button
-          onClick={onClose}
+          onClick={handleClose}
           className="px-4 py-2 rounded-xl bg-[#3A2E26] hover:bg-[#3A2E26]/90 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
         >
           <span>Exit Settings</span>
@@ -460,7 +505,7 @@ export default function ProfileModal({
               <button
                 onClick={() => {
                   if (onLogout) onLogout();
-                  if (onClose) onClose();
+                  handleClose();
                 }}
                 className="w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold uppercase tracking-wider text-red-600 hover:bg-red-50 transition-all cursor-pointer"
               >
@@ -551,7 +596,7 @@ export default function ProfileModal({
                 <div className="border-t border-[#3A2E26]/10 pt-6 flex items-center justify-end gap-3.5 mt-8">
                   <button
                     type="button"
-                    onClick={onClose}
+                    onClick={handleClose}
                     className="px-6 py-3 rounded-2xl border border-[#3A2E26]/20 hover:bg-[#3A2E26]/5 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer bg-white"
                   >
                     Discard
@@ -801,7 +846,28 @@ export default function ProfileModal({
                             type="text"
                             required
                             value={addrZip}
-                            onChange={(e) => setAddrZip(e.target.value)}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                              setAddrZip(val);
+                              if (val.length === 6) {
+                                fetch(`https://api.postalpincode.in/pincode/${val}`)
+                                  .then(res => res.json())
+                                  .then(data => {
+                                    if (data && data[0] && data[0].Status === 'Success') {
+                                      const postOffice = data[0].PostOffice[0];
+                                      if (postOffice) {
+                                        if (postOffice.District || postOffice.Block || postOffice.Name) {
+                                          setAddrCity(postOffice.District || postOffice.Block || postOffice.Name);
+                                        }
+                                        if (postOffice.State) {
+                                          setAddrState(postOffice.State);
+                                        }
+                                      }
+                                    }
+                                  })
+                                  .catch(err => console.error("Error auto-fetching pincode details:", err));
+                              }
+                            }}
                             placeholder="e.g. 395007"
                             className="w-full pl-11 pr-4 py-3 rounded-2xl bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all font-medium"
                           />
@@ -955,7 +1021,8 @@ export default function ProfileModal({
                               {new Date(order.created_at).toLocaleDateString('en-IN', {
                                 day: 'numeric',
                                 month: 'short',
-                                year: 'numeric'
+                                year: 'numeric',
+                                timeZone: 'Asia/Kolkata'
                               })}
                             </span>
                           </div>

@@ -456,18 +456,34 @@ export async function adminDeleteReview(id, token) {
   return response.json();
 }
 
-export async function adminUpdateReview(id, rating, comment, token) {
+export async function adminUpdateReview(id, reviewData, token) {
   const response = await fetch(`${API_URL}/api/admin/reviews/${encodeURIComponent(id)}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
     },
-    body: JSON.stringify({ rating, comment })
+    body: JSON.stringify(reviewData)
   });
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.detail || 'Failed to update review');
+  }
+  return response.json();
+}
+
+export async function adminCreateReview(reviewData, token) {
+  const response = await fetch(`${API_URL}/api/admin/reviews`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(reviewData)
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || 'Failed to manually create review');
   }
   return response.json();
 }

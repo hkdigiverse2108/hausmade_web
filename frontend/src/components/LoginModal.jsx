@@ -1,7 +1,104 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { X, Mail, Lock, User, Sparkles, ArrowRight, ShieldCheck, Check, Phone, Eye, EyeOff, Loader2, Key } from 'lucide-react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { registerUser, loginUser, sendOtp, verifyOtp, socialLogin } from '../utils/api';
+
+// A styled 6-digit OTP input using separate boxes
+function OtpBoxes({ value, onChange }) {
+  const inputsRef = useRef([]);
+
+  // Create an array of 6 elements for the 6 boxes
+  const boxes = Array(6).fill('');
+
+  // Sync value prop to the individual boxes
+  const getBoxValue = (index) => {
+    return value[index] || '';
+  };
+
+  const handleChange = (e, index) => {
+    const val = e.target.value.replace(/\D/g, '');
+    if (!val) {
+      // If cleared, update parent state
+      const newValue = value.slice(0, index) + value.slice(index + 1);
+      onChange(newValue);
+      return;
+    }
+
+    // If multiple characters pasted/entered, distribute them
+    const digits = val.split('');
+    let newValue = value.split('');
+    
+    for (let i = 0; i < digits.length; i++) {
+      if (index + i < 6) {
+        newValue[index + i] = digits[i];
+      }
+    }
+    
+    const finalVal = newValue.join('').slice(0, 6);
+    onChange(finalVal);
+
+    // Determine where to focus
+    const nextIndex = Math.min(index + digits.length, 5);
+    if (inputsRef.current[nextIndex]) {
+      inputsRef.current[nextIndex].focus();
+    }
+  };
+
+  const handleKeyDown = (e, index) => {
+    if (e.key === 'Backspace') {
+      if (!getBoxValue(index) && index > 0) {
+        // Focus previous input and clear it
+        const newValue = value.slice(0, index - 1) + value.slice(index);
+        onChange(newValue);
+        if (inputsRef.current[index - 1]) {
+          inputsRef.current[index - 1].focus();
+        }
+      } else {
+        const newValue = value.slice(0, index) + value.slice(index + 1);
+        onChange(newValue);
+      }
+    } else if (e.key === 'ArrowLeft' && index > 0) {
+      if (inputsRef.current[index - 1]) {
+        inputsRef.current[index - 1].focus();
+      }
+    } else if (e.key === 'ArrowRight' && index < 5) {
+      if (inputsRef.current[index + 1]) {
+        inputsRef.current[index + 1].focus();
+      }
+    }
+  };
+
+  const handlePaste = (e) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (pastedData) {
+      onChange(pastedData);
+      const focusIndex = Math.min(pastedData.length, 5);
+      if (inputsRef.current[focusIndex]) {
+        inputsRef.current[focusIndex].focus();
+      }
+    }
+  };
+
+  return (
+    <div className="flex justify-center items-center gap-2 sm:gap-3 py-2" onPaste={handlePaste}>
+      {boxes.map((_, index) => (
+        <input
+          key={index}
+          ref={(el) => (inputsRef.current[index] = el)}
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          maxLength={6}
+          value={getBoxValue(index)}
+          onChange={(e) => handleChange(e, index)}
+          onKeyDown={(e) => handleKeyDown(e, index)}
+          className="w-10 h-12 sm:w-12 sm:h-14 text-center text-lg sm:text-xl font-bold rounded-2xl bg-white border border-[#3A2E26]/20 text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/20 transition-all shadow-sm hover:border-[#C97C5D]/40"
+        />
+      ))}
+    </div>
+  );
+}
 
 export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotification, isAdminOnly = false }) {
   const { loginWithRedirect } = useAuth0();
@@ -317,18 +414,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotifi
                             Change Email
                           </button>
                         </div>
-                        <div className="relative">
-                          <Key className="w-4 h-4 text-[#C97C5D] absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
-                          <input
-                            type="text"
-                            required
-                            maxLength={6}
-                            value={otpCode}
-                            onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                            placeholder="Enter 6-digit code..."
-                            className="w-full pl-11 pr-4 py-2.5 rounded-2xl bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] placeholder:text-[#3A2E26]/40 focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/20 transition-all font-medium tracking-widest text-center"
-                          />
-                        </div>
+                        <OtpBoxes value={otpCode} onChange={setOtpCode} />
                         <div className="flex justify-end mt-1.5">
                           <button
                             type="button"

@@ -47,18 +47,31 @@ export default function Header({ cartCount, onOpenCart, wishlistCount, onOpenWis
   ];
 
   const [logoClicks, setLogoClicks] = useState(0);
+  const clickTimeoutRef = useRef(null);
 
   const handleLogoClick = (e) => {
     e.preventDefault();
+    
+    // Clear any pending redirect to "/"
+    if (clickTimeoutRef.current) {
+      clearTimeout(clickTimeoutRef.current);
+    }
+
     const newCount = logoClicks + 1;
     setLogoClicks(newCount);
+
     if (newCount >= 8) {
       setLogoClicks(0);
+      clickTimeoutRef.current = null;
       if (onOpenAdminLogin) {
         onOpenAdminLogin();
       }
     } else {
-      window.location.href = '/';
+      // Wait to see if the user is multi-tapping, otherwise redirect to home
+      clickTimeoutRef.current = setTimeout(() => {
+        setLogoClicks(0);
+        window.location.href = '/';
+      }, 400);
     }
   };
 

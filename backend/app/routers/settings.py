@@ -146,11 +146,29 @@ async def get_site_settings():
                 settings["subscription_durations"] = [6, 12]
                 await settings_collection.update_one({"key": "site_settings"}, {"$set": {"subscription_durations": [6, 12]}})
             if "subscription_quantities" not in settings:
-                settings["subscription_quantities"] = [2, 4, 6]
-                await settings_collection.update_one({"key": "site_settings"}, {"$set": {"subscription_quantities": [2, 4, 6]}})
+                settings["subscription_quantities"] = [1, 2, 3, 4, 5, 6]
+                await settings_collection.update_one({"key": "site_settings"}, {"$set": {"subscription_quantities": [1, 2, 3, 4, 5, 6]}})
             if "subscription_frequencies" not in settings:
                 settings["subscription_frequencies"] = ["monthly", "every_3_months"]
                 await settings_collection.update_one({"key": "site_settings"}, {"$set": {"subscription_frequencies": ["monthly", "every_3_months"]}})
+            if "trust_badges" not in settings:
+                default_trust_badges = [
+                    {"title": "100% Natural Ingredients", "description": "Pure essential oils & plant extracts", "icon": "Leaf"},
+                    {"title": "Small-Batch Cold Processed", "description": "Cured slowly for 6 weeks", "icon": "Award"},
+                    {"title": "Cruelty-Free & Plastic-Free", "description": "Zero synthetic chemicals or packaging waste", "icon": "ShieldCheck"}
+                ]
+                settings["trust_badges"] = default_trust_badges
+                await settings_collection.update_one({"key": "site_settings"}, {"$set": {"trust_badges": default_trust_badges}})
+            if "social_links" not in settings:
+                default_social_links = {
+                    "instagram": "https://instagram.com/hausmade_soap",
+                    "facebook": "",
+                    "whatsapp": "",
+                    "twitter": "",
+                    "youtube": ""
+                }
+                settings["social_links"] = default_social_links
+                await settings_collection.update_one({"key": "site_settings"}, {"$set": {"social_links": default_social_links}})
             
         if "_id" in settings:
             settings["_id"] = str(settings["_id"])

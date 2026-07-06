@@ -135,13 +135,16 @@ async def verify_otp(request: VerifyOtpRequest):
         if not record or record.get("otp") != otp:
             raise HTTPException(status_code=400, detail="Invalid OTP code")
             
-        if datetime.utcnow() - record.get("created_at") > timedelta(minutes=5):
+        created_at = record.get("created_at")
+        if isinstance(created_at, str):
+            created_at = datetime.fromisoformat(created_at.replace("Z", "+00:00")).replace(tzinfo=None)
+        if datetime.utcnow() - created_at > timedelta(minutes=5):
             raise HTTPException(status_code=400, detail="OTP code has expired")
             
         user = await users_collection.find_one({"email": email})
         if not user:
             user_doc = {
-                "name": f"Member {email.split('@')[0]}",
+                "name": "",
                 "email": email,
                 "password": "",
                 "created_at": datetime.utcnow()
@@ -156,13 +159,16 @@ async def verify_otp(request: VerifyOtpRequest):
         if not record or record.get("otp") != otp:
             raise HTTPException(status_code=400, detail="Invalid OTP code")
             
-        if datetime.utcnow() - record.get("created_at") > timedelta(minutes=5):
+        created_at = record.get("created_at")
+        if isinstance(created_at, str):
+            created_at = datetime.fromisoformat(created_at.replace("Z", "+00:00")).replace(tzinfo=None)
+        if datetime.utcnow() - created_at > timedelta(minutes=5):
             raise HTTPException(status_code=400, detail="OTP code has expired")
             
         user = await users_collection.find_one({"mobile": mobile})
         if not user:
             user_doc = {
-                "name": f"Member {mobile[-4:]}",
+                "name": "",
                 "mobile": mobile,
                 "password": "",
                 "created_at": datetime.utcnow()
@@ -208,7 +214,7 @@ async def social_login(request: SocialLoginRequest):
                 "updated_at": datetime.utcnow()
             },
             "$setOnInsert": {
-                "name": name,
+                "name": "",
                 "email": email,
                 "password": "",
                 "created_at": datetime.utcnow()
@@ -219,16 +225,6 @@ async def social_login(request: SocialLoginRequest):
 
     # Fetch the (possibly updated) user
     user = await users_collection.find_one({"email": email})
-
-    # Update name only if it's a generic placeholder
-    if user:
-        existing_name = user.get("name", "")
-        if (not existing_name or existing_name.startswith("Member ")) and name:
-            await users_collection.update_one(
-                {"_id": user["_id"]},
-                {"$set": {"name": name}}
-            )
-            user["name"] = name
 
     token = create_jwt_token(email)
     return {

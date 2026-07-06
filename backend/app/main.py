@@ -58,6 +58,8 @@ sensitive_limiter = InMemoryRateLimiter(requests_limit=5, window_seconds=60)
 
 @app.middleware("http")
 async def rate_limiting_middleware(request: Request, call_next):
+    if request.method == "OPTIONS":
+        return await call_next(request)
     sensitive_paths = ["/api/auth/login", "/api/auth/register", "/api/auth/send-otp", "/api/orders", "/api/coupons/validate"]
     if request.url.path in sensitive_paths:
         client_ip = request.client.host if request.client else "unknown"
@@ -72,6 +74,8 @@ async def rate_limiting_middleware(request: Request, call_next):
 # Security Headers Middleware
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
+    if request.method == "OPTIONS":
+        return await call_next(request)
     response = await call_next(request)
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-Content-Type-Options"] = "nosniff"
@@ -87,15 +91,10 @@ async def startup_event():
     # Seed default collections
     await seed_admin_and_data_func()
 
-# Allow requests from the React frontend development server dynamically
+# Allow requests from any origin dynamically to avoid CORS issues
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        f"http://localhost:{PORT_FRONTEND}",
-        f"http://127.0.0.1:{PORT_FRONTEND}",
-        f"http://localhost:{PORT_BACKEND}",
-        f"http://127.0.0.1:{PORT_BACKEND}"
-    ],
+    allow_origin_regex="https?://.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

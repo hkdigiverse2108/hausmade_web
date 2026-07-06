@@ -165,7 +165,32 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
   if (!isOpen) return null;
 
   const handleFormChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    
+    if (name === 'pincode') {
+      const cleaned = value.replace(/\D/g, '').slice(0, 6);
+      setFormData(prev => ({ ...prev, pincode: cleaned }));
+      
+      if (cleaned.length === 6) {
+        fetch(`https://api.postalpincode.in/pincode/${cleaned}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data && data[0] && data[0].Status === 'Success') {
+              const postOffice = data[0].PostOffice[0];
+              if (postOffice) {
+                setFormData(prev => ({
+                  ...prev,
+                  city: postOffice.District || postOffice.Block || postOffice.Name || prev.city,
+                  state: postOffice.State || prev.state
+                }));
+              }
+            }
+          })
+          .catch(err => console.error("Error auto-fetching pincode details:", err));
+      }
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
   };
 
   const handleProceedToPayment = (e) => {
