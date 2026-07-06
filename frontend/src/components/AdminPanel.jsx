@@ -29,7 +29,10 @@ import {
   Eye,
   Sliders,
   MessageSquare,
-  Star
+  Star,
+  Menu,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import { 
   getAdminStats, 
@@ -79,6 +82,10 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     ingredients: [],
     ingredients_active: true
   });
+  const [settingsSubTab, setSettingsSubTab] = useState('identity'); // 'identity', 'hero', 'story', 'subscription', 'faqs', 'ingredients', 'contact'
+  const [previewDevice, setPreviewDevice] = useState('pc'); // 'pc', 'tablet', 'mobile'
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [previewFullscreen, setPreviewFullscreen] = useState(false);
 
   useEffect(() => {
     if (settings) {
@@ -91,6 +98,35 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       });
     }
   }, [settings]);
+
+  useEffect(() => {
+    localStorage.setItem('hausmade_preview_settings', JSON.stringify(settingsForm));
+    window.dispatchEvent(new Event('storage'));
+  }, [settingsForm]);
+
+  useEffect(() => {
+    const handlePreviewMessage = (event) => {
+      if (event.data && event.data.type === 'focus-section') {
+        setSettingsSubTab(event.data.section);
+      }
+    };
+    window.addEventListener('message', handlePreviewMessage);
+    return () => window.removeEventListener('message', handlePreviewMessage);
+  }, []);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        setSidebarCollapsed(true);
+      } else {
+        setSidebarCollapsed(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    handleResize();
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const [orders, setOrders] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [products, setProducts] = useState([]);
@@ -536,134 +572,208 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   return (
     <div className="min-h-screen bg-[#FDFBF7] text-[#3A2E26] flex flex-col font-sans">
       {/* Top Banner Navigation */}
-      <header className="bg-[#3A2E26] text-white px-6 py-4 flex justify-between items-center sticky top-0 z-50 shadow-md">
-        <div className="flex items-center gap-3">
-          <div className="bg-[#E6D5C3]/20 p-2 rounded-xl border border-[#E6D5C3]/30">
-            <ShieldCheck className="w-6 h-6 text-[#E6D5C3]" />
+      <header className="bg-white/80 backdrop-blur-md border-b border-[#3A2E26]/10 px-6 py-4 flex justify-between items-center sticky top-0 z-50 shadow-sm transition-all duration-300">
+        <div className="flex items-center gap-2">
+          <button 
+            type="button" 
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="p-2 text-[#3A2E26] hover:bg-[#3A2E26]/5 rounded-xl transition-colors cursor-pointer mr-1 shrink-0"
+            title={sidebarCollapsed ? "Expand Navigation Menu" : "Collapse Navigation Menu"}
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#3A2E26] to-[#5A4E46] flex items-center justify-center text-white shadow-md shrink-0">
+            <ShieldCheck className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-lg font-bold tracking-tight">Hausmade™ Admin Portal</h1>
-            <p className="text-xs text-[#E6D5C3]/80">Manage your business operations securely</p>
+            <h1 className="text-sm font-bold tracking-tight uppercase font-sans text-[#3A2E26]">Hausmade™ Control Panel</h1>
+            <p className="text-[10px] uppercase tracking-widest text-[#7A8B6F] font-bold">Secure Operations Gateway</p>
           </div>
         </div>
         <div className="flex items-center gap-4">
           <button 
             onClick={handleRefresh}
             disabled={loading || refreshing}
-            className="p-2 text-[#E6D5C3] hover:text-white rounded-xl hover:bg-white/10 transition-colors disabled:opacity-50"
+            className="p-2.5 text-[#3A2E26]/60 hover:text-[#3A2E26] rounded-xl hover:bg-[#3A2E26]/5 transition-all duration-200 disabled:opacity-50"
             title="Refresh statistics and data lists"
           >
-            <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
           </button>
-          <div className="h-6 w-[1px] bg-white/20"></div>
+          <div className="h-6 w-[1px] bg-[#3A2E26]/10"></div>
           {onViewStorefront && (
             <button 
               onClick={onViewStorefront}
-              className="flex items-center gap-2 px-4 py-2 bg-[#7A8B6F] hover:bg-[#68785c] text-white rounded-xl font-bold text-sm transition-colors shadow-sm cursor-pointer"
+              className="flex items-center gap-2 px-4 py-2 bg-[#7A8B6F] hover:bg-[#68785c] text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer"
             >
-              <Eye className="w-4 h-4" />
+              <Eye className="w-3.5 h-3.5" />
               <span>View Storefront</span>
             </button>
           )}
           <button 
             onClick={onLogout}
-            className="flex items-center gap-2 px-4 py-2 bg-red-600/90 hover:bg-red-600 text-white rounded-xl font-bold text-sm transition-colors shadow-sm cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2 bg-[#C97C5D] hover:bg-[#b86c4d] text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer"
           >
-            <LogOut className="w-4 h-4" />
-            <span>Exit Admin Panel</span>
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Exit Admin</span>
           </button>
         </div>
       </header>
 
       {/* Main Layout Container */}
-      <div className="flex-1 flex flex-col md:flex-row">
+      <div className="flex-1 flex flex-col md:flex-row relative">
+        {/* Mobile Sidebar Backdrop */}
+        {!sidebarCollapsed && (
+          <div 
+            className="fixed inset-0 bg-[#3A2E26]/40 backdrop-blur-xs z-40 md:hidden transition-all duration-300"
+            onClick={() => setSidebarCollapsed(true)}
+          />
+        )}
+
         {/* Sidebar Tabs */}
-        <aside className="w-full md:w-64 bg-white border-r border-[#E6D5C3]/30 p-6 flex flex-col gap-2">
-          <div className="text-xs font-semibold uppercase tracking-wider text-[#3A2E26]/50 mb-3 px-3">
-            Menu Navigation
-          </div>
+        <aside className={`bg-[#FDFBF7] border-r border-[#3A2E26]/10 p-6 flex flex-col gap-2 shrink-0 transition-all duration-300 z-40
+          fixed inset-y-0 left-0 w-64 shadow-2xl md:shadow-none md:relative md:translate-x-0 ${
+            sidebarCollapsed ? '-translate-x-full md:w-20 md:translate-x-0 md:items-center md:px-3' : 'translate-x-0 w-64'
+          }
+        `}>
+          {(!sidebarCollapsed || window.innerWidth >= 768) && (
+            <div className="text-[10px] font-bold uppercase tracking-widest text-[#3A2E26]/40 mb-3 px-3">
+              Navigation Menu
+            </div>
+          )}
           <button
             onClick={() => setActiveTab('overview')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-semibold text-sm transition-all duration-200 ${
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+              sidebarCollapsed ? 'justify-center px-0' : ''
+            } ${
               activeTab === 'overview' 
-                ? 'bg-[#3A2E26] text-white shadow-md' 
-                : 'hover:bg-[#E6D5C3]/20 text-[#3A2E26]'
+                ? 'bg-[#3A2E26] text-white shadow-lg shadow-[#3A2E26]/10 translate-x-1' 
+                : 'hover:bg-[#3A2E26]/5 text-[#3A2E26]/75 hover:text-[#3A2E26]'
             }`}
+            title="Overview"
           >
             <Activity className="w-4 h-4" />
-            <span>Overview Dashboard</span>
+            {!sidebarCollapsed && <span>Overview</span>}
           </button>
           
           <button
             onClick={() => setActiveTab('orders')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-semibold text-sm transition-all duration-200 ${
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+              sidebarCollapsed ? 'justify-center px-0' : ''
+            } ${
               activeTab === 'orders' 
-                ? 'bg-[#3A2E26] text-white shadow-md' 
-                : 'hover:bg-[#E6D5C3]/20 text-[#3A2E26]'
+                ? 'bg-[#3A2E26] text-white shadow-lg shadow-[#3A2E26]/10 translate-x-1' 
+                : 'hover:bg-[#3A2E26]/5 text-[#3A2E26]/75 hover:text-[#3A2E26]'
             }`}
+            title="Orders"
           >
             <ShoppingBag className="w-4 h-4" />
-            <span>Order Management</span>
+            {!sidebarCollapsed && <span>Orders</span>}
           </button>
 
           <button
             onClick={() => setActiveTab('customers')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-semibold text-sm transition-all duration-200 ${
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+              sidebarCollapsed ? 'justify-center px-0' : ''
+            } ${
               activeTab === 'customers' 
-                ? 'bg-[#3A2E26] text-white shadow-md' 
-                : 'hover:bg-[#E6D5C3]/20 text-[#3A2E26]'
+                ? 'bg-[#3A2E26] text-white shadow-lg shadow-[#3A2E26]/10 translate-x-1' 
+                : 'hover:bg-[#3A2E26]/5 text-[#3A2E26]/75 hover:text-[#3A2E26]'
             }`}
+            title="Customers"
           >
             <Users className="w-4 h-4" />
-            <span>Registered Customers</span>
+            {!sidebarCollapsed && <span>Customers</span>}
           </button>
 
           <button
             onClick={() => setActiveTab('products')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-semibold text-sm transition-all duration-200 ${
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+              sidebarCollapsed ? 'justify-center px-0' : ''
+            } ${
               activeTab === 'products' 
-                ? 'bg-[#3A2E26] text-white shadow-md' 
-                : 'hover:bg-[#E6D5C3]/20 text-[#3A2E26]'
+                ? 'bg-[#3A2E26] text-white shadow-lg shadow-[#3A2E26]/10 translate-x-1' 
+                : 'hover:bg-[#3A2E26]/5 text-[#3A2E26]/75 hover:text-[#3A2E26]'
             }`}
+            title="Products"
           >
             <Package className="w-4 h-4" />
-            <span>Product Inventory</span>
+            {!sidebarCollapsed && <span>Products</span>}
           </button>
 
           <button
             onClick={() => setActiveTab('coupons')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-semibold text-sm transition-all duration-200 ${
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+              sidebarCollapsed ? 'justify-center px-0' : ''
+            } ${
               activeTab === 'coupons' 
-                ? 'bg-[#3A2E26] text-white shadow-md' 
-                : 'hover:bg-[#E6D5C3]/20 text-[#3A2E26]'
+                ? 'bg-[#3A2E26] text-white shadow-lg shadow-[#3A2E26]/10 translate-x-1' 
+                : 'hover:bg-[#3A2E26]/5 text-[#3A2E26]/75 hover:text-[#3A2E26]'
             }`}
+            title="Coupons"
           >
             <Tag className="w-4 h-4" />
-            <span>Coupons & Offers</span>
+            {!sidebarCollapsed && <span>Coupons</span>}
           </button>
 
-          <button
-            onClick={() => setActiveTab('settings')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-semibold text-sm transition-all duration-200 ${
-              activeTab === 'settings' 
-                ? 'bg-[#3A2E26] text-white shadow-md' 
-                : 'hover:bg-[#E6D5C3]/20 text-[#3A2E26]'
-            }`}
-          >
-            <Sliders className="w-4 h-4" />
-            <span>Site Settings</span>
-          </button>
+          <div className="flex flex-col w-full">
+            <button
+              onClick={() => {
+                setActiveTab('settings');
+              }}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                sidebarCollapsed ? 'justify-center px-0' : ''
+              } ${
+                activeTab === 'settings' 
+                  ? 'bg-[#3A2E26] text-white shadow-lg shadow-[#3A2E26]/10 translate-x-1' 
+                  : 'hover:bg-[#3A2E26]/5 text-[#3A2E26]/75 hover:text-[#3A2E26]'
+              }`}
+              title="Site Settings"
+            >
+              <Sliders className="w-4 h-4" />
+              {!sidebarCollapsed && <span>Site Settings</span>}
+            </button>
+            
+            {activeTab === 'settings' && !sidebarCollapsed && (
+              <div className="ml-6 mt-1 flex flex-col gap-0.5 border-l border-[#3A2E26]/15 pl-3 animate-fadeIn">
+                {[
+                  { id: 'identity', label: 'Identity & Banner' },
+                  { id: 'hero', label: 'Hero Section' },
+                  { id: 'story', label: 'Heritage Story' },
+                  { id: 'subscription', label: 'Subscription' },
+                  { id: 'faqs', label: 'FAQs' },
+                  { id: 'ingredients', label: 'Ingredients' },
+                  { id: 'contact', label: 'Contact Details' }
+                ].map((sub) => (
+                  <button
+                    key={sub.id}
+                    type="button"
+                    onClick={() => setSettingsSubTab(sub.id)}
+                    className={`w-full text-left py-1.5 px-2 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                      settingsSubTab === sub.id
+                        ? 'bg-[#3A2E26]/5 text-[#3A2E26] font-bold'
+                        : 'text-[#3A2E26]/40 hover:text-[#3A2E26] hover:bg-white/40'
+                    }`}
+                  >
+                    • {sub.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           <button
             onClick={() => setActiveTab('reviews')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-semibold text-sm transition-all duration-200 ${
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+              sidebarCollapsed ? 'justify-center px-0' : ''
+            } ${
               activeTab === 'reviews' 
-                ? 'bg-[#3A2E26] text-white shadow-md' 
-                : 'hover:bg-[#E6D5C3]/20 text-[#3A2E26]'
+                ? 'bg-[#3A2E26] text-white shadow-lg shadow-[#3A2E26]/10 translate-x-1' 
+                : 'hover:bg-[#3A2E26]/5 text-[#3A2E26]/75 hover:text-[#3A2E26]'
             }`}
+            title="Reviews"
           >
             <MessageSquare className="w-4 h-4" />
-            <span>Reviews Moderation</span>
+            {!sidebarCollapsed && <span>Reviews</span>}
           </button>
         </aside>
 
@@ -680,65 +790,67 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
               {activeTab === 'overview' && (
                 <div className="flex flex-col gap-8">
                   {/* Title Bar */}
-                  <div>
-                    <h2 className="text-2xl font-bold tracking-tight">Dashboard Overview</h2>
-                    <p className="text-sm text-[#3A2E26]/70">Real-time performance indicators and operational metrics</p>
+                  <div className="flex flex-col gap-1 border-b border-[#3A2E26]/10 pb-4">
+                    <h2 className="text-xl font-bold tracking-tight uppercase text-[#3A2E26] font-sans">Dashboard Overview</h2>
+                    <p className="text-xs text-[#3A2E26]/60">Real-time performance indicators and operational metrics</p>
                   </div>
 
                   {/* Summary Cards Grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                    <div className="bg-white p-6 rounded-3xl border border-[#E6D5C3]/30 shadow-sm flex items-center gap-5 hover:shadow-md transition-shadow">
-                      <div className="bg-green-100 text-green-700 p-4 rounded-2xl">
+                    <div className="bg-white p-6 rounded-3xl border border-[#3A2E26]/10 shadow-sm flex items-center gap-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+                      <div className="w-12 h-12 rounded-2xl bg-[#7A8B6F]/10 text-[#7A8B6F] flex items-center justify-center shrink-0">
                         <TrendingUp className="w-6 h-6" />
                       </div>
                       <div>
-                        <p className="text-xs font-semibold text-[#3A2E26]/60 uppercase tracking-wider">Total Revenue</p>
-                        <h3 className="text-2xl font-bold tracking-tight mt-1">{formatCurrency(stats.total_revenue)}</h3>
+                        <p className="text-[10px] font-bold text-[#3A2E26]/50 uppercase tracking-widest">Total Revenue</p>
+                        <h3 className="text-xl font-bold tracking-tight text-[#3A2E26] mt-1">{formatCurrency(stats.total_revenue)}</h3>
                       </div>
                     </div>
 
-                    <div className="bg-white p-6 rounded-3xl border border-[#E6D5C3]/30 shadow-sm flex items-center gap-5 hover:shadow-md transition-shadow">
-                      <div className="bg-blue-100 text-blue-700 p-4 rounded-2xl">
+                    <div className="bg-white p-6 rounded-3xl border border-[#3A2E26]/10 shadow-sm flex items-center gap-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+                      <div className="w-12 h-12 rounded-2xl bg-[#C97C5D]/10 text-[#C97C5D] flex items-center justify-center shrink-0">
                         <ShoppingBag className="w-6 h-6" />
                       </div>
                       <div>
-                        <p className="text-xs font-semibold text-[#3A2E26]/60 uppercase tracking-wider">Orders Received</p>
-                        <h3 className="text-2xl font-bold tracking-tight mt-1">{stats.order_count}</h3>
+                        <p className="text-[10px] font-bold text-[#3A2E26]/50 uppercase tracking-widest">Orders Received</p>
+                        <h3 className="text-xl font-bold tracking-tight text-[#3A2E26] mt-1">{stats.order_count}</h3>
                       </div>
                     </div>
 
-                    <div className="bg-white p-6 rounded-3xl border border-[#E6D5C3]/30 shadow-sm flex items-center gap-5 hover:shadow-md transition-shadow">
-                      <div className="bg-purple-100 text-purple-700 p-4 rounded-2xl">
+                    <div className="bg-white p-6 rounded-3xl border border-[#3A2E26]/10 shadow-sm flex items-center gap-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+                      <div className="w-12 h-12 rounded-2xl bg-[#3A2E26]/5 text-[#3A2E26] flex items-center justify-center shrink-0">
                         <Users className="w-6 h-6" />
                       </div>
                       <div>
-                        <p className="text-xs font-semibold text-[#3A2E26]/60 uppercase tracking-wider">Total Customers</p>
-                        <h3 className="text-2xl font-bold tracking-tight mt-1">{stats.customer_count}</h3>
+                        <p className="text-[10px] font-bold text-[#3A2E26]/50 uppercase tracking-widest">Total Customers</p>
+                        <h3 className="text-xl font-bold tracking-tight text-[#3A2E26] mt-1">{stats.customer_count}</h3>
                       </div>
                     </div>
                   </div>
 
                   {/* Recent Operations */}
-                  <div className="bg-white rounded-3xl border border-[#E6D5C3]/30 shadow-sm p-6">
-                    <h3 className="text-lg font-bold mb-4">Recent Activity</h3>
+                  <div className="bg-white rounded-3xl border border-[#3A2E26]/10 shadow-sm p-6">
+                    <div className="border-b border-[#3A2E26]/10 pb-3 mb-4">
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70">Recent Activity</h3>
+                    </div>
                     {orders.length === 0 ? (
-                      <p className="text-sm text-[#3A2E26]/60">No transaction data logged yet.</p>
+                      <p className="text-xs text-[#3A2E26]/60">No transaction data logged yet.</p>
                     ) : (
-                      <div className="divide-y divide-[#E6D5C3]/20">
+                      <div className="divide-y divide-[#3A2E26]/10">
                         {orders.slice(0, 5).map((order) => (
-                          <div key={order._id} className="py-4 flex justify-between items-center flex-wrap gap-2 text-sm">
+                          <div key={order._id} className="py-3.5 flex justify-between items-center flex-wrap gap-2 text-xs">
                             <div className="flex items-center gap-3">
-                              <div className="bg-[#E6D5C3]/20 p-2.5 rounded-xl">
-                                <Package className="w-4 h-4 text-[#3A2E26]" />
+                              <div className="bg-[#3A2E26]/5 p-2 rounded-xl text-[#3A2E26]/80">
+                                <Package className="w-4 h-4" />
                               </div>
                               <div>
-                                <p className="font-semibold">{order.orderId}</p>
-                                <p className="text-xs text-[#3A2E26]/60">{order.shippingAddress?.fullName} &bull; {formatDate(order.created_at)}</p>
+                                <p className="font-bold text-[#3A2E26]">{order.orderId}</p>
+                                <p className="text-[10px] text-[#3A2E26]/60 font-semibold">{order.shippingAddress?.fullName} &bull; {formatDate(order.created_at)}</p>
                               </div>
                             </div>
                             <div className="text-right">
                               <p className="font-bold text-[#3A2E26]">{formatCurrency(order.grandTotal)}</p>
-                              <p className="text-xs uppercase tracking-widest text-green-700 font-bold bg-green-50 px-2 py-0.5 rounded-full inline-block mt-0.5">
+                              <p className="text-[9px] uppercase tracking-widest text-[#7A8B6F] font-bold bg-[#7A8B6F]/10 px-2.5 py-0.5 rounded-full inline-block mt-1">
                                 {order.paymentMethod}
                               </p>
                             </div>
@@ -754,10 +866,10 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
               {activeTab === 'orders' && (
                 <div className="flex flex-col gap-6">
                   {/* Title & Filter Bar */}
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[#3A2E26]/10 pb-4">
                     <div>
-                      <h2 className="text-2xl font-bold tracking-tight">Order Management</h2>
-                      <p className="text-sm text-[#3A2E26]/70">Track customer purchases and verify fulfillment details</p>
+                      <h2 className="text-xl font-bold tracking-tight uppercase text-[#3A2E26] font-sans">Order Management</h2>
+                      <p className="text-xs text-[#3A2E26]/60">Track customer purchases and verify fulfillment details</p>
                     </div>
                     {/* Search Bar */}
                     <div className="relative w-full sm:w-80">
@@ -767,17 +879,17 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                         placeholder="Search ID, name or email..."
                         value={orderSearch}
                         onChange={(e) => setOrderSearch(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 bg-white border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] transition-colors"
+                        className="w-full pl-10 pr-4 py-2.5 bg-white border border-[#3A2E26]/10 rounded-2xl text-xs focus:outline-none focus:border-[#3A2E26] focus:ring-1 focus:ring-[#3A2E26]/20 transition-all font-medium"
                       />
                     </div>
                   </div>
 
                   {/* Orders Data Table */}
-                  <div className="bg-white rounded-3xl border border-[#E6D5C3]/30 shadow-sm overflow-hidden">
+                  <div className="bg-white rounded-3xl border border-[#3A2E26]/10 shadow-sm overflow-hidden">
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse">
                         <thead>
-                          <tr className="bg-[#FDFBF7] border-b border-[#E6D5C3]/30 text-xs font-bold uppercase tracking-wider text-[#3A2E26]/60">
+                          <tr className="bg-[#3A2E26]/5 border-b border-[#3A2E26]/10 text-[10px] font-bold uppercase tracking-widest text-[#3A2E26]/60">
                             <th className="p-4 pl-6">Order ID</th>
                             <th className="p-4">Customer Details</th>
                             <th className="p-4">Items Summary</th>
@@ -786,7 +898,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                             <th className="p-4 pr-6 text-right">Total Amount</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-[#E6D5C3]/20 text-sm">
+                        <tbody className="divide-y divide-[#3A2E26]/10 text-xs">
                           {filteredOrders.length === 0 ? (
                             <tr>
                               <td colSpan="6" className="p-8 text-center text-[#3A2E26]/50">
@@ -795,28 +907,28 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                             </tr>
                           ) : (
                             filteredOrders.map((order) => (
-                              <tr key={order._id} className="hover:bg-[#FDFBF7]/50 transition-colors">
-                                <td className="p-4 pl-6 font-semibold align-top">{order.orderId}</td>
+                              <tr key={order._id} className="hover:bg-[#3A2E26]/5 transition-colors">
+                                <td className="p-4 pl-6 font-bold text-[#3A2E26] align-top">{order.orderId}</td>
                                 <td className="p-4 align-top">
-                                  <div className="font-semibold">{order.shippingAddress?.fullName}</div>
-                                  <div className="text-xs text-[#3A2E26]/60 flex flex-col gap-0.5 mt-1">
-                                    <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {order.shippingAddress?.email || 'No email'}</span>
-                                    <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {order.shippingAddress?.phone}</span>
-                                    <span className="flex items-start gap-1 mt-0.5"><MapPin className="w-3 h-3 mt-0.5 shrink-0" /> {order.shippingAddress?.address}, {order.shippingAddress?.city} - {order.shippingAddress?.pincode}</span>
+                                  <div className="font-bold text-[#3A2E26]">{order.shippingAddress?.fullName}</div>
+                                  <div className="text-[10px] text-[#3A2E26]/60 flex flex-col gap-1 mt-1 font-semibold">
+                                    <span className="flex items-center gap-1.5"><Mail className="w-3 h-3 text-[#C97C5D]" /> {order.shippingAddress?.email || 'No email'}</span>
+                                    <span className="flex items-center gap-1.5"><Phone className="w-3 h-3 text-[#C97C5D]" /> {order.shippingAddress?.phone}</span>
+                                    <span className="flex items-start gap-1.5 mt-0.5"><MapPin className="w-3.5 h-3.5 text-[#C97C5D] shrink-0" /> {order.shippingAddress?.address}, {order.shippingAddress?.city} - {order.shippingAddress?.pincode}</span>
                                   </div>
                                 </td>
                                 <td className="p-4 align-top">
                                   <div className="flex flex-col gap-1.5">
                                     {order.cartItems?.map((item, idx) => (
-                                      <div key={idx} className="flex items-center gap-2 bg-[#FDFBF7] p-1.5 rounded-xl border border-[#E6D5C3]/20 text-xs">
+                                      <div key={idx} className="flex items-center gap-2 bg-[#3A2E26]/5 p-1.5 rounded-xl border border-[#3A2E26]/10 text-[11px] font-bold text-[#3A2E26]">
                                         {item.image && (
-                                          <img src={item.image} alt={item.title} className="w-6 h-6 object-cover rounded-md" />
+                                          <img src={item.image} alt={item.title} className="w-7 h-7 object-cover rounded-lg border border-[#3A2E26]/10" />
                                         )}
                                         <div>
-                                          <span className="font-bold">{item.title}</span>
-                                          <span className="text-[#3A2E26]/60 ml-1">x{item.quantity}</span>
+                                          <span>{item.title}</span>
+                                          <span className="text-[#3A2E26]/50 ml-1">x{item.quantity}</span>
                                           {item.isSubscription && (
-                                            <span className="ml-1 text-[10px] text-green-700 font-bold bg-green-50 px-1 rounded">Sub</span>
+                                            <span className="ml-1 text-[9px] text-[#7A8B6F] font-bold bg-[#7A8B6F]/10 px-1 rounded-md">Sub</span>
                                           )}
                                         </div>
                                       </div>
@@ -824,12 +936,12 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                   </div>
                                 </td>
                                 <td className="p-4 align-top">
-                                  <span className="inline-block px-2.5 py-1 bg-[#E6D5C3]/30 text-[#3A2E26] rounded-xl text-xs font-bold uppercase tracking-wider">
+                                  <span className="inline-block px-2.5 py-1 bg-[#3A2E26]/5 text-[#3A2E26]/80 rounded-full text-[10px] font-bold uppercase tracking-wider border border-[#3A2E26]/10">
                                     {order.paymentMethod}
                                   </span>
                                 </td>
-                                <td className="p-4 align-top text-xs text-[#3A2E26]/80">{formatDate(order.created_at)}</td>
-                                <td className="p-4 pr-6 align-top text-right font-bold text-base text-[#3A2E26]">
+                                <td className="p-4 align-top text-[10px] font-semibold text-[#3A2E26]/75">{formatDate(order.created_at)}</td>
+                                <td className="p-4 pr-6 align-top text-right font-bold text-sm text-[#3A2E26]">
                                   {formatCurrency(order.grandTotal)}
                                 </td>
                               </tr>
@@ -846,10 +958,10 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
               {activeTab === 'customers' && (
                 <div className="flex flex-col gap-6">
                   {/* Title & Filter Bar */}
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[#3A2E26]/10 pb-4">
                     <div>
-                      <h2 className="text-2xl font-bold tracking-tight">Customer Accounts</h2>
-                      <p className="text-sm text-[#3A2E26]/70">Explore registered user accounts and admin details</p>
+                      <h2 className="text-xl font-bold tracking-tight uppercase text-[#3A2E26] font-sans">Customer Accounts</h2>
+                      <p className="text-xs text-[#3A2E26]/60">Explore registered user accounts and admin details</p>
                     </div>
                     {/* Search Bar */}
                     <div className="relative w-full sm:w-80">
@@ -859,17 +971,17 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                         placeholder="Search name, email, or mobile..."
                         value={customerSearch}
                         onChange={(e) => setCustomerSearch(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 bg-white border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] transition-colors"
+                        className="w-full pl-10 pr-4 py-2.5 bg-white border border-[#3A2E26]/10 rounded-2xl text-xs focus:outline-none focus:border-[#3A2E26] focus:ring-1 focus:ring-[#3A2E26]/20 transition-all font-medium"
                       />
                     </div>
                   </div>
 
                   {/* Customers Data Table */}
-                  <div className="bg-white rounded-3xl border border-[#E6D5C3]/30 shadow-sm overflow-hidden">
+                  <div className="bg-white rounded-3xl border border-[#3A2E26]/10 shadow-sm overflow-hidden">
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse">
                         <thead>
-                          <tr className="bg-[#FDFBF7] border-b border-[#E6D5C3]/30 text-xs font-bold uppercase tracking-wider text-[#3A2E26]/60">
+                          <tr className="bg-[#3A2E26]/5 border-b border-[#3A2E26]/10 text-[10px] font-bold uppercase tracking-widest text-[#3A2E26]/60">
                             <th className="p-4 pl-6">Customer Name</th>
                             <th className="p-4">Email Address</th>
                             <th className="p-4">Mobile Number</th>
@@ -877,7 +989,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                             <th className="p-4 pr-6">Account Created</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-[#E6D5C3]/20 text-sm">
+                        <tbody className="divide-y divide-[#3A2E26]/10 text-xs">
                           {filteredCustomers.length === 0 ? (
                             <tr>
                               <td colSpan="5" className="p-8 text-center text-[#3A2E26]/50">
@@ -886,27 +998,27 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                             </tr>
                           ) : (
                             filteredCustomers.map((customer) => (
-                              <tr key={customer.id} className="hover:bg-[#FDFBF7]/50 transition-colors">
-                                <td className="p-4 pl-6 font-semibold flex items-center gap-2.5">
-                                  <div className="w-8 h-8 rounded-full bg-[#3A2E26]/10 text-[#3A2E26] flex items-center justify-center font-bold text-xs uppercase">
+                              <tr key={customer.id} className="hover:bg-[#3A2E26]/5 transition-colors">
+                                <td className="p-4 pl-6 font-bold text-[#3A2E26] flex items-center gap-2.5">
+                                  <div className="w-8 h-8 rounded-2xl bg-gradient-to-tr from-[#3A2E26] to-[#5A4E46] text-white flex items-center justify-center font-bold text-[10px] uppercase shadow-sm">
                                     {customer.name?.slice(0, 2) || 'M'}
                                   </div>
                                   <span>{customer.name || 'Anonymous Member'}</span>
                                 </td>
-                                <td className="p-4">{customer.email || 'N/A'}</td>
-                                <td className="p-4">{customer.mobile || 'N/A'}</td>
+                                <td className="p-4 font-semibold text-[#3A2E26]/80">{customer.email || 'N/A'}</td>
+                                <td className="p-4 font-semibold text-[#3A2E26]/80">{customer.mobile || 'N/A'}</td>
                                 <td className="p-4">
                                   {customer.is_admin ? (
-                                    <span className="inline-block px-2.5 py-0.5 bg-purple-100 text-purple-700 border border-purple-200 rounded-full text-xs font-bold">
+                                    <span className="inline-block px-2.5 py-0.5 bg-purple-50 text-purple-700 border border-purple-200 rounded-full text-[10px] font-bold">
                                       Administrator
                                     </span>
                                   ) : (
-                                    <span className="inline-block px-2.5 py-0.5 bg-gray-100 text-gray-600 border border-gray-200 rounded-full text-xs font-medium">
+                                    <span className="inline-block px-2.5 py-0.5 bg-[#3A2E26]/5 text-[#3A2E26]/75 border border-[#3A2E26]/10 rounded-full text-[10px] font-bold">
                                       Customer
                                     </span>
                                   )}
                                 </td>
-                                <td className="p-4 pr-6 text-xs text-[#3A2E26]/80">{formatDate(customer.created_at)}</td>
+                                <td className="p-4 pr-6 text-[10px] font-semibold text-[#3A2E26]/75">{formatDate(customer.created_at)}</td>
                               </tr>
                             ))
                           )}
@@ -920,10 +1032,10 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
               {/* Tab 4: Products */}
               {activeTab === 'products' && (
                 <div className="flex flex-col gap-6 animate-fadeIn">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[#3A2E26]/10 pb-4">
                     <div>
-                      <h2 className="text-2xl font-bold tracking-tight">Product Inventory</h2>
-                      <p className="text-sm text-[#3A2E26]/70">Add, edit, or remove soap pack options and manage stock levels</p>
+                      <h2 className="text-xl font-bold tracking-tight uppercase text-[#3A2E26] font-sans">Product Inventory</h2>
+                      <p className="text-xs text-[#3A2E26]/60">Add, edit, or remove soap pack options and manage stock levels</p>
                     </div>
                     <div className="flex items-center gap-3 w-full sm:w-auto">
                       <div className="relative w-full sm:w-64">
@@ -933,12 +1045,12 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                           placeholder="Search products..."
                           value={productSearch}
                           onChange={(e) => setProductSearch(e.target.value)}
-                          className="w-full pl-10 pr-4 py-2 bg-white border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] transition-colors"
+                          className="w-full pl-10 pr-4 py-2 bg-white border border-[#3A2E26]/10 rounded-2xl text-xs focus:outline-none focus:border-[#3A2E26] transition-all font-medium"
                         />
                       </div>
                       <button
                         onClick={handleOpenAddProduct}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-[#7A8B6F] hover:bg-[#68785c] text-white rounded-2xl font-bold text-sm transition-colors shadow-sm shrink-0"
+                        className="flex items-center gap-1.5 px-4 py-2 bg-[#7A8B6F] hover:bg-black text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-200 shadow-sm shrink-0 cursor-pointer"
                       >
                         <Plus className="w-4 h-4" />
                         <span>Add Product</span>
@@ -946,11 +1058,11 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                     </div>
                   </div>
 
-                  <div className="bg-white rounded-3xl border border-[#E6D5C3]/30 shadow-sm overflow-hidden">
+                  <div className="bg-white rounded-3xl border border-[#3A2E26]/10 shadow-sm overflow-hidden">
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse">
                         <thead>
-                          <tr className="bg-[#FDFBF7] border-b border-[#E6D5C3]/30 text-xs font-bold uppercase tracking-wider text-[#3A2E26]/60">
+                          <tr className="bg-[#3A2E26]/5 border-b border-[#3A2E26]/10 text-[10px] font-bold uppercase tracking-widest text-[#3A2E26]/60">
                             <th className="p-4 pl-6">Product Details</th>
                             <th className="p-4">Size Count</th>
                             <th className="p-4">Base Price</th>
@@ -960,10 +1072,10 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                             <th className="p-4 pr-6 text-right">Actions</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-[#E6D5C3]/20 text-sm">
+                        <tbody className="divide-y divide-[#3A2E26]/10 text-xs">
                           {filteredProducts.length === 0 ? (
                             <tr>
-                              <td colSpan="6" className="p-8 text-center text-[#3A2E26]/50">
+                              <td colSpan="7" className="p-8 text-center text-[#3A2E26]/50">
                                 No product pack records located. Click "Add Product" to create one.
                               </td>
                             </tr>
@@ -972,47 +1084,47 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                               const isLowStock = p.stock !== undefined && p.stock > 0 && p.stock <= 5;
                               const isOut = p.stock !== undefined && p.stock <= 0;
                               return (
-                                <tr key={p.id} className="hover:bg-[#FDFBF7]/50 transition-colors">
-                                  <td className="p-4 pl-6 align-middle font-semibold">
+                                <tr key={p.id} className="hover:bg-[#3A2E26]/5 transition-colors">
+                                  <td className="p-4 pl-6 align-middle font-bold text-[#3A2E26]">
                                     <div className="flex items-center gap-3">
                                       <img 
                                         src={p.image || '/images/pack-single.png'} 
                                         alt={p.title} 
-                                        className="w-12 h-12 object-cover rounded-xl border border-[#E6D5C3]/30"
+                                        className="w-12 h-12 object-cover rounded-xl border border-[#3A2E26]/10"
                                         onError={(e) => { e.target.src = '/images/pack-single.png'; }}
                                       />
                                       <div className="flex flex-col">
-                                        <span className="text-[#3A2E26] font-bold text-sm">{p.title}</span>
+                                        <span>{p.title}</span>
                                         <span className="text-[10px] text-gray-400 font-mono tracking-wider">ID: {p.id}</span>
                                       </div>
                                     </div>
                                   </td>
-                                  <td className="p-4 align-middle">{p.count} {p.count === 1 ? 'bar' : 'bars'}</td>
-                                  <td className="p-4 align-middle font-semibold">{formatCurrency(p.basePrice)}</td>
+                                  <td className="p-4 align-middle font-semibold text-[#3A2E26]/80">{p.count} {p.count === 1 ? 'bar' : 'bars'}</td>
+                                  <td className="p-4 align-middle font-bold text-[#3A2E26]">{formatCurrency(p.basePrice)}</td>
                                   <td className="p-4 align-middle">
                                     <div className="flex flex-wrap gap-1">
                                       {p.savingsBadge && (
-                                        <span className="px-2 py-0.5 bg-[#C97C5D]/10 text-[#C97C5D] border border-[#C97C5D]/20 rounded-md text-[10px] font-bold uppercase">{p.savingsBadge}</span>
+                                        <span className="px-2.5 py-0.5 bg-[#C97C5D]/10 text-[#C97C5D] border border-[#C97C5D]/20 rounded-md text-[9px] font-bold uppercase tracking-wider">{p.savingsBadge}</span>
                                       )}
                                       {p.popular && (
-                                        <span className="px-2 py-0.5 bg-[#7A8B6F]/10 text-[#7A8B6F] border border-[#7A8B6F]/20 rounded-md text-[10px] font-bold uppercase">Popular</span>
+                                        <span className="px-2.5 py-0.5 bg-[#7A8B6F]/10 text-[#7A8B6F] border border-[#7A8B6F]/20 rounded-md text-[9px] font-bold uppercase tracking-wider">Popular</span>
                                       )}
                                       {p.bestValue && (
-                                        <span className="px-2 py-0.5 bg-amber-100 text-amber-800 border border-amber-200 rounded-md text-[10px] font-bold uppercase">Best Value</span>
+                                        <span className="px-2.5 py-0.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-md text-[9px] font-bold uppercase tracking-wider">Best Value</span>
                                       )}
                                     </div>
                                   </td>
                                   <td className="p-4 align-middle">
                                     {isOut ? (
-                                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-red-50 text-red-700 border border-red-200 rounded-full text-xs font-bold animate-pulse">
+                                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-red-50 text-red-700 border border-red-200 rounded-full text-[10px] font-bold animate-pulse">
                                         <AlertCircle className="w-3 h-3" /> Out of Stock
                                       </span>
                                     ) : isLowStock ? (
-                                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-[#C97C5D]/10 text-[#C97C5D] border border-[#C97C5D]/20 rounded-full text-xs font-bold">
+                                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-[#C97C5D]/10 text-[#C97C5D] border border-[#C97C5D]/20 rounded-full text-[10px] font-bold">
                                         <AlertCircle className="w-3 h-3" /> Low Stock ({p.stock})
                                       </span>
                                     ) : (
-                                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded-full text-xs font-bold">
+                                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded-full text-[10px] font-bold">
                                         In Stock ({p.stock})
                                       </span>
                                     )}
@@ -1021,13 +1133,13 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                     <button
                                       type="button"
                                       onClick={() => handleToggleProductActive(p)}
-                                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                                      className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
                                         p.active !== false ? 'bg-[#7A8B6F]' : 'bg-gray-200'
                                       }`}
                                       title={p.active !== false ? "Click to Deactivate" : "Click to Activate"}
                                     >
                                       <span
-                                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                                        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
                                           p.active !== false ? 'translate-x-5' : 'translate-x-0'
                                         }`}
                                       />
@@ -1065,10 +1177,10 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
               {/* Tab 5: Coupons */}
               {activeTab === 'coupons' && (
                 <div className="flex flex-col gap-6 animate-fadeIn">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[#3A2E26]/10 pb-4">
                     <div>
-                      <h2 className="text-2xl font-bold tracking-tight">Coupons & Offer Discounts</h2>
-                      <p className="text-sm text-[#3A2E26]/70">Maintain promo codes and update customer discount percentages</p>
+                      <h2 className="text-xl font-bold tracking-tight uppercase text-[#3A2E26] font-sans">Coupons & Offer Discounts</h2>
+                      <p className="text-xs text-[#3A2E26]/60">Maintain promo codes and update customer discount percentages</p>
                     </div>
                     <div className="flex items-center gap-3 w-full sm:w-auto">
                       <div className="relative w-full sm:w-64">
@@ -1078,12 +1190,12 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                           placeholder="Search coupons..."
                           value={couponSearch}
                           onChange={(e) => setCouponSearch(e.target.value)}
-                          className="w-full pl-10 pr-4 py-2 bg-white border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] transition-colors"
+                          className="w-full pl-10 pr-4 py-2 bg-white border border-[#3A2E26]/10 rounded-2xl text-xs focus:outline-none focus:border-[#3A2E26] transition-colors font-medium"
                         />
                       </div>
                       <button
                         onClick={handleOpenAddCoupon}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-[#7A8B6F] hover:bg-[#68785c] text-white rounded-2xl font-bold text-sm transition-colors shadow-sm shrink-0"
+                        className="flex items-center gap-1.5 px-4 py-2 bg-[#7A8B6F] hover:bg-black text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-200 shadow-sm shrink-0 cursor-pointer"
                       >
                         <Plus className="w-4 h-4" />
                         <span>Add Coupon</span>
@@ -1091,11 +1203,11 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                     </div>
                   </div>
 
-                  <div className="bg-white rounded-3xl border border-[#E6D5C3]/30 shadow-sm overflow-hidden">
+                  <div className="bg-white rounded-3xl border border-[#3A2E26]/10 shadow-sm overflow-hidden">
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse">
                         <thead>
-                          <tr className="bg-[#FDFBF7] border-b border-[#E6D5C3]/30 text-xs font-bold uppercase tracking-wider text-[#3A2E26]/60">
+                          <tr className="bg-[#3A2E26]/5 border-b border-[#3A2E26]/10 text-[10px] font-bold uppercase tracking-widest text-[#3A2E26]/60">
                             <th className="p-4 pl-6">Coupon Code</th>
                             <th className="p-4">Discount Rate</th>
                             <th className="p-4">Offer Description</th>
@@ -1103,7 +1215,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                             <th className="p-4 pr-6 text-right">Actions</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-[#E6D5C3]/20 text-sm">
+                        <tbody className="divide-y divide-[#3A2E26]/10 text-xs">
                           {filteredCoupons.length === 0 ? (
                             <tr>
                               <td colSpan="5" className="p-8 text-center text-[#3A2E26]/50">
@@ -1112,20 +1224,20 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                             </tr>
                           ) : (
                             filteredCoupons.map((c) => (
-                              <tr key={c.code} className="hover:bg-[#FDFBF7]/50 transition-colors">
+                              <tr key={c.code} className="hover:bg-[#3A2E26]/5 transition-colors">
                                 <td className="p-4 pl-6 align-middle font-bold text-[#3A2E26] font-mono tracking-wider">{c.code}</td>
-                                <td className="p-4 align-middle font-semibold text-green-700 font-mono">{(c.discount * 100).toFixed(0)}% Off</td>
-                                <td className="p-4 align-middle text-gray-600">{c.description || 'No description provided'}</td>
+                                <td className="p-4 align-middle font-bold text-green-700 font-mono">{(c.discount * 100).toFixed(0)}% Off</td>
+                                <td className="p-4 align-middle font-medium text-gray-600">{c.description || 'No description provided'}</td>
                                 <td className="p-4 align-middle">
                                   <button
                                     type="button"
                                     onClick={() => handleToggleCouponActive(c)}
-                                    className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
-                                    style={{ backgroundColor: c.active ? '#7A8B6F' : '#E6D5C3' }}
+                                    className="relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+                                    style={{ backgroundColor: c.active ? '#7A8B6F' : '#E5E7EB' }}
                                     title={c.active ? "Click to Deactivate" : "Click to Activate"}
                                   >
                                     <span
-                                      className="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out"
+                                      className="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out"
                                       style={{ transform: c.active ? 'translateX(20px)' : 'translateX(0px)' }}
                                     />
                                   </button>
@@ -1158,19 +1270,24 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                 </div>
               )}
 
-               {activeTab === 'settings' && (
-                <form onSubmit={handleSaveSettings} className="space-y-8 animate-fadeIn text-[#3A2E26]">
-                  <div>
-                    <h2 className="text-2xl font-bold tracking-tight">Site Content & Settings</h2>
-                    <p className="text-sm text-[#3A2E26]/70">Modify brand logo, announcements, hero headlines, brand story details, and customer care contact fields.</p>
-                  </div>
+              {activeTab === 'settings' && (
+                 <div className="flex flex-col lg:flex-row gap-8 items-start w-full animate-fadeIn">
+                   {/* Left Column: Form */}
+                   <form onSubmit={handleSaveSettings} className={`space-y-6 text-[#3A2E26] shrink-0 transition-all duration-300 ${previewDevice === 'pc' ? 'w-full lg:w-[35%]' : 'w-full lg:w-[50%]'}`}>
+                     <div className="flex flex-col gap-1 border-b border-[#3A2E26]/10 pb-4">
+                       <h2 className="text-xl font-bold tracking-tight uppercase text-[#3A2E26] font-sans">Site Settings</h2>
+                       <p className="text-xs text-[#3A2E26]/60">Customize storefront content.</p>
+                     </div>
+
+                     {settingsSubTab === 'identity' && (
+                       <>
 
                   {/* Brand Logo Settings */}
-                  <div className="bg-white rounded-3xl p-6 border border-[#E6D5C3]/30 shadow-sm space-y-4">
-                    <h3 className="text-lg font-bold border-b border-[#E6D5C3]/20 pb-2">Brand Identity & Logo</h3>
+                  <div className="bg-white rounded-3xl p-6 border border-[#3A2E26]/10 shadow-sm space-y-4">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70 border-b border-[#3A2E26]/10 pb-2">Brand Identity & Logo</h3>
                     <div className="grid grid-cols-1 gap-4">
                       <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Brand Logo Image</label>
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-[#3A2E26]/50 mb-1.5">Brand Logo Image</label>
                         <div className="flex gap-3">
                           <input
                             type="text"
@@ -1180,10 +1297,10 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                               ...settingsForm,
                               logo_url: e.target.value
                             })}
-                            className="flex-1 px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                            className="flex-1 px-4 py-2.5 bg-[#FDFBF7] border border-[#3A2E26]/10 rounded-2xl text-xs focus:outline-none focus:border-[#3A2E26] focus:ring-1 focus:ring-[#3A2E26]/20 transition-all font-medium"
                           />
-                          <label className="bg-[#E6D5C3]/30 hover:bg-[#E6D5C3]/50 text-[#3A2E26] font-bold text-xs px-4 rounded-2xl flex items-center justify-center cursor-pointer border border-[#E6D5C3]/50 transition-colors shrink-0">
-                            <Plus className="w-4 h-4 mr-1" /> Upload Logo
+                          <label className="bg-[#3A2E26]/5 hover:bg-[#3A2E26]/10 text-[#3A2E26] font-bold text-xs uppercase tracking-wider px-4 rounded-2xl flex items-center justify-center cursor-pointer border border-[#3A2E26]/10 transition-colors shrink-0">
+                            <Plus className="w-4 h-4 mr-1 text-[#C97C5D]" /> Upload Logo
                             <input
                               type="file"
                               accept="image/*"
@@ -1193,11 +1310,11 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                           </label>
                         </div>
                         {settingsForm.logo_url && (
-                          <div className="mt-3 flex items-center gap-4 p-3 bg-[#FDFBF7] border border-[#E6D5C3]/20 rounded-2xl w-fit">
+                          <div className="mt-3 flex items-center gap-4 p-3 bg-[#FDFBF7] border border-[#3A2E26]/10 rounded-2xl w-fit">
                             <div className="w-12 h-12 rounded-full bg-[#C97C5D] flex items-center justify-center overflow-hidden">
                               <img src={settingsForm.logo_url} alt="Logo Preview" className="w-full h-full object-cover" />
                             </div>
-                            <span className="text-xs text-gray-500 font-medium">Header preview format</span>
+                            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Header preview format</span>
                           </div>
                         )}
                       </div>
@@ -1235,10 +1352,14 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                       </label>
                     </div>
                   </div>
+                </>
+              )}
 
+              {settingsSubTab === 'hero' && (
+                <>
                   {/* Hero Section Settings */}
-                  <div className="bg-white rounded-3xl p-6 border border-[#E6D5C3]/30 shadow-sm space-y-4">
-                    <h3 className="text-lg font-bold border-b border-[#E6D5C3]/20 pb-2">Hero Section</h3>
+                  <div className="bg-white rounded-3xl p-6 border border-[#3A2E26]/10 shadow-sm space-y-4">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70 border-b border-[#3A2E26]/10 pb-2">Hero Section</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="md:col-span-2">
                         <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Top Badge Text</label>
@@ -1307,10 +1428,14 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                       </div>
                     </div>
                   </div>
+                </>
+              )}
 
+              {settingsSubTab === 'story' && (
+                <>
                   {/* Story Section Settings */}
-                  <div className="bg-white rounded-3xl p-6 border border-[#E6D5C3]/30 shadow-sm space-y-4">
-                    <h3 className="text-lg font-bold border-b border-[#E6D5C3]/20 pb-2">Heritage Story</h3>
+                  <div className="bg-white rounded-3xl p-6 border border-[#3A2E26]/10 shadow-sm space-y-4">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70 border-b border-[#3A2E26]/10 pb-2">Heritage Story</h3>
                     <div className="grid grid-cols-1 gap-4">
                       <div>
                         <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Story Badge / Subtitle</label>
@@ -1432,10 +1557,14 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                       </div>
                     </div>
                   </div>
+                </>
+              )}
 
+              {settingsSubTab === 'contact' && (
+                <>
                   {/* Contact / Footer Details */}
-                  <div className="bg-white rounded-3xl p-6 border border-[#E6D5C3]/30 shadow-sm space-y-4">
-                    <h3 className="text-lg font-bold border-b border-[#E6D5C3]/20 pb-2">Customer Care & Footer Contact</h3>
+                  <div className="bg-white rounded-3xl p-6 border border-[#3A2E26]/10 shadow-sm space-y-4">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70 border-b border-[#3A2E26]/10 pb-2">Customer Care & Footer Contact</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Support Email</label>
@@ -1478,10 +1607,14 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                       </div>
                     </div>
                   </div>
+                </>
+              )}
 
+              {settingsSubTab === 'subscription' && (
+                <>
                   {/* Subscribe & Save Section Settings */}
-                  <div className="bg-white rounded-3xl p-6 border border-[#E6D5C3]/30 shadow-sm space-y-4">
-                    <h3 className="text-lg font-bold border-b border-[#E6D5C3]/20 pb-2">Subscribe & Save Banner</h3>
+                  <div className="bg-white rounded-3xl p-6 border border-[#3A2E26]/10 shadow-sm space-y-4">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70 border-b border-[#3A2E26]/10 pb-2">Subscribe & Save Banner</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Section Badge</label>
@@ -1628,11 +1761,15 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                       </div>
                     </div>
                   </div>
+                </>
+              )}
 
+              {settingsSubTab === 'faqs' && (
+                <>
                   {/* Frequently Asked Questions (FAQ) Settings */}
-                  <div className="bg-white rounded-3xl p-6 border border-[#E6D5C3]/30 shadow-sm space-y-4">
-                    <div className="flex items-center justify-between border-b border-[#E6D5C3]/20 pb-2 flex-wrap gap-2">
-                      <h3 className="text-lg font-bold">Frequently Asked Questions (FAQ)</h3>
+                  <div className="bg-white rounded-3xl p-6 border border-[#3A2E26]/10 shadow-sm space-y-4">
+                    <div className="flex items-center justify-between border-b border-[#3A2E26]/10 pb-2 flex-wrap gap-2">
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70">Frequently Asked Questions (FAQ)</h3>
                       <button
                         type="button"
                         onClick={() => {
@@ -1709,10 +1846,14 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                       )}
                     </div>
                   </div>
+                </>
+              )}
 
+              {settingsSubTab === 'ingredients' && (
+                <>
                   {/* Ingredients Editor */}
-                  <div className="bg-white rounded-3xl p-6 border border-[#E6D5C3]/30 shadow-sm space-y-4">
-                    <div className="flex items-center justify-between border-b border-[#E6D5C3]/20 pb-2 flex-wrap gap-2">
+                  <div className="bg-white rounded-3xl p-6 border border-[#3A2E26]/10 shadow-sm space-y-4">
+                    <div className="flex items-center justify-between border-b border-[#3A2E26]/10 pb-2 flex-wrap gap-2">
                       <div className="flex items-center gap-4">
                         <h3 className="text-lg font-bold">Ingredients List</h3>
                         <label className="relative inline-flex items-center cursor-pointer">
@@ -1819,8 +1960,8 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                       )}
                     </div>
                   </div>
-
-                  {/* Actions */}
+                </>
+              )}
                   <div className="flex justify-end gap-3 pt-2">
                     <button
                       type="submit"
@@ -1831,14 +1972,92 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                     </button>
                   </div>
                 </form>
-              )}
+
+                {/* Right Column: Live Storefront Mock Preview (only rendered if NOT fullscreen) */}
+                {!previewFullscreen && (
+                  <div className={`hidden lg:block sticky top-24 self-start bg-white p-6 rounded-3xl border border-[#3A2E26]/10 shadow-sm shrink-0 transition-all duration-300 ${previewDevice === 'pc' ? 'lg:w-[62%]' : 'lg:w-[48%]'}`}>
+                    <div className="flex justify-between items-center border-b border-[#3A2E26]/10 pb-3 mb-4">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-[#3A2E26]/50">Live Storefront Preview</span>
+                      
+                      <div className="flex items-center gap-3">
+                        {/* Device Viewport Toggle Buttons */}
+                        <div className="flex bg-[#3A2E26]/5 p-0.5 rounded-lg border border-[#3A2E26]/5">
+                          {[
+                            { id: 'pc', label: 'PC / Desktop' },
+                            { id: 'tablet', label: 'Tablet' },
+                            { id: 'mobile', label: 'Mobile' }
+                          ].map((device) => (
+                            <button
+                              key={device.id}
+                              type="button"
+                              onClick={() => setPreviewDevice(device.id)}
+                              className={`px-2.5 py-1 rounded-md text-[8px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                                previewDevice === device.id
+                                  ? 'bg-[#3A2E26] text-white shadow-sm'
+                                  : 'text-[#3A2E26]/60 hover:text-[#3A2E26]'
+                              }`}
+                            >
+                              {device.label}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Fullscreen Toggle Button */}
+                        <button
+                          type="button"
+                          onClick={() => setPreviewFullscreen(true)}
+                          className="p-1.5 text-[#3A2E26]/60 hover:text-[#3A2E26] hover:bg-[#3A2E26]/5 rounded-lg transition-all cursor-pointer border border-[#3A2E26]/10"
+                          title="Fullscreen Preview"
+                        >
+                          <Maximize2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Dynamic Mockup Sizing Wrapper */}
+                    <div 
+                      className="border border-[#3A2E26]/10 rounded-2xl bg-white shadow-lg overflow-hidden flex flex-col h-[560px] transition-all duration-300"
+                      style={{
+                        width: previewDevice === 'pc' ? '100%' : previewDevice === 'tablet' ? '420px' : '320px',
+                        marginLeft: 'auto',
+                        marginRight: 'auto'
+                      }}
+                    >
+                      {/* Mock Browser Titlebar */}
+                      <div className="bg-[#3A2E26]/5 border-b border-[#3A2E26]/10 px-4 py-2 flex items-center justify-between">
+                        <div className="flex gap-1.5 shrink-0">
+                          <span className="w-2.5 h-2.5 rounded-full bg-red-400"></span>
+                          <span className="w-2.5 h-2.5 rounded-full bg-yellow-400"></span>
+                          <span className="w-2.5 h-2.5 rounded-full bg-green-400"></span>
+                        </div>
+                        <div className="bg-white px-6 py-0.5 rounded-lg border border-[#3A2E26]/5 text-[9px] text-gray-400 font-medium select-none font-mono tracking-wide truncate max-w-[160px]">
+                          localhost:5173
+                        </div>
+                        <div className="w-10"></div>
+                      </div>
+                      
+                      {/* Real Storefront Live preview in iframe */}
+                      <div className="flex-1 bg-[#FDFBF7] relative">
+                        <iframe 
+                          key={settingsSubTab}
+                          src={`/?preview=true#${settingsSubTab}`} 
+                          className="w-full h-full border-none"
+                          title="Live Storefront Preview Frame"
+                          id="preview-storefront-frame"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
               {activeTab === 'reviews' && (
                 <div className="flex flex-col gap-6 animate-fadeIn">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[#3A2E26]/10 pb-4">
                     <div>
-                      <h2 className="text-2xl font-bold tracking-tight">Reviews Moderation</h2>
-                      <p className="text-sm text-[#3A2E26]/70">Approve or reject customer-submitted reviews for the storefront</p>
+                      <h2 className="text-xl font-bold tracking-tight uppercase text-[#3A2E26] font-sans">Reviews Moderation</h2>
+                      <p className="text-xs text-[#3A2E26]/60">Approve or reject customer-submitted reviews for the storefront</p>
                     </div>
                     <div className="relative w-full sm:w-64">
                       <Search className="w-4 h-4 text-[#3A2E26]/40 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -1847,16 +2066,16 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                         placeholder="Search reviews..."
                         value={reviewSearch}
                         onChange={(e) => setReviewSearch(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 bg-white border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] transition-colors"
+                        className="w-full pl-10 pr-4 py-2 bg-white border border-[#3A2E26]/10 rounded-2xl text-xs focus:outline-none focus:border-[#3A2E26] transition-colors font-medium"
                       />
                     </div>
                   </div>
 
-                  <div className="bg-white rounded-3xl border border-[#E6D5C3]/30 shadow-sm overflow-hidden">
+                  <div className="bg-white rounded-3xl border border-[#3A2E26]/10 shadow-sm overflow-hidden">
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse">
                         <thead>
-                          <tr className="bg-[#FDFBF7] border-b border-[#E6D5C3]/30 text-xs font-bold uppercase tracking-wider text-[#3A2E26]/60">
+                          <tr className="bg-[#3A2E26]/5 border-b border-[#3A2E26]/10 text-[10px] font-bold uppercase tracking-widest text-[#3A2E26]/60">
                             <th className="p-4 pl-6">Customer</th>
                             <th className="p-4">Product</th>
                             <th className="p-4">Rating</th>
@@ -1865,7 +2084,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                             <th className="p-4 pr-6 text-right">Actions</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-[#E6D5C3]/20 text-sm">
+                        <tbody className="divide-y divide-[#3A2E26]/10 text-xs">
                           {reviews.length === 0 ? (
                             <tr>
                               <td colSpan="6" className="p-8 text-center text-[#3A2E26]/50">
@@ -1883,12 +2102,12 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                 );
                               })
                               .map((r) => (
-                                <tr key={r.id || r._id} className="hover:bg-[#FDFBF7]/50 transition-colors">
+                                <tr key={r.id || r._id} className="hover:bg-[#3A2E26]/5 transition-colors">
                                   <td className="p-4 pl-6 align-middle font-bold text-[#3A2E26]">
                                     <div>{r.userName}</div>
-                                    <div className="text-[10px] font-medium text-gray-400 font-mono mt-0.5">{r.userEmail}</div>
+                                    <div className="text-[10px] font-semibold text-gray-400 font-mono mt-0.5">{r.userEmail}</div>
                                   </td>
-                                  <td className="p-4 align-middle font-semibold text-gray-700">{r.productTitle}</td>
+                                  <td className="p-4 align-middle font-bold text-gray-700">{r.productTitle}</td>
                                   <td className="p-4 align-middle text-amber-500">
                                     <div className="flex items-center gap-0.5">
                                       {[...Array(5)].map((_, i) => (
@@ -1908,11 +2127,11 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                   </td>
                                   <td className="p-4 align-middle">
                                     {r.approved ? (
-                                      <span className="px-2.5 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded-full text-xs font-bold uppercase tracking-wider">
+                                      <span className="px-2.5 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded-full text-[10px] font-bold uppercase tracking-wider">
                                         Approved
                                       </span>
                                     ) : (
-                                      <span className="px-2.5 py-0.5 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-full text-xs font-bold uppercase tracking-wider">
+                                      <span className="px-2.5 py-0.5 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-full text-[10px] font-bold uppercase tracking-wider">
                                         Pending
                                       </span>
                                     )}
@@ -1922,7 +2141,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                       {!r.approved && (
                                         <button
                                           onClick={() => handleApproveReview(r.id || r._id)}
-                                          className="px-2.5 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                                          className="px-2.5 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
                                         >
                                           Approve
                                         </button>
@@ -2310,6 +2529,86 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
             </form>
           </div>
         </div>
+      )}
+
+      {/* Fullscreen Preview Overlay */}
+      {previewFullscreen && (
+        <>
+          <div className="fixed inset-0 bg-[#3A2E26]/50 backdrop-blur-xs z-[9999] transition-all duration-300 animate-fadeIn" onClick={() => setPreviewFullscreen(false)} />
+          <div className="fixed inset-4 md:inset-8 z-[10000] bg-[#FDFBF7] p-6 rounded-3xl border border-[#3A2E26]/10 shadow-2xl flex flex-col animate-scaleUp">
+            <div className="flex justify-between items-center border-b border-[#3A2E26]/10 pb-3 mb-4">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[#3A2E26]/50">Live Storefront Preview</span>
+              
+              <div className="flex items-center gap-3">
+                {/* Device Viewport Toggle Buttons */}
+                <div className="flex bg-[#3A2E26]/5 p-0.5 rounded-lg border border-[#3A2E26]/5">
+                  {[
+                    { id: 'pc', label: 'PC / Desktop' },
+                    { id: 'tablet', label: 'Tablet' },
+                    { id: 'mobile', label: 'Mobile' }
+                  ].map((device) => (
+                    <button
+                      key={device.id}
+                      type="button"
+                      onClick={() => setPreviewDevice(device.id)}
+                      className={`px-2.5 py-1 rounded-md text-[8px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                        previewDevice === device.id
+                          ? 'bg-[#3A2E26] text-white shadow-sm'
+                          : 'text-[#3A2E26]/60 hover:text-[#3A2E26]'
+                      }`}
+                    >
+                      {device.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Exit Fullscreen Toggle Button */}
+                <button
+                  type="button"
+                  onClick={() => setPreviewFullscreen(false)}
+                  className="p-1.5 text-[#3A2E26]/60 hover:text-[#3A2E26] hover:bg-[#3A2E26]/5 rounded-lg transition-all cursor-pointer border border-[#3A2E26]/10"
+                  title="Exit Fullscreen"
+                >
+                  <Minimize2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Dynamic Mockup Sizing Wrapper */}
+            <div 
+              className="border border-[#3A2E26]/10 rounded-2xl bg-white shadow-lg overflow-hidden flex flex-col flex-1 transition-all duration-300"
+              style={{
+                width: previewDevice === 'pc' ? '100%' : previewDevice === 'tablet' ? '420px' : '320px',
+                marginLeft: 'auto',
+                marginRight: 'auto'
+              }}
+            >
+              {/* Mock Browser Titlebar */}
+              <div className="bg-[#3A2E26]/5 border-b border-[#3A2E26]/10 px-4 py-2 flex items-center justify-between">
+                <div className="flex gap-1.5 shrink-0">
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-400"></span>
+                  <span className="w-2.5 h-2.5 rounded-full bg-yellow-400"></span>
+                  <span className="w-2.5 h-2.5 rounded-full bg-green-400"></span>
+                </div>
+                <div className="bg-white px-6 py-0.5 rounded-lg border border-[#3A2E26]/5 text-[9px] text-gray-400 font-medium select-none font-mono tracking-wide truncate max-w-[160px]">
+                  localhost:5173
+                </div>
+                <div className="w-10"></div>
+              </div>
+              
+              {/* Real Storefront Live preview in iframe */}
+              <div className="flex-1 bg-[#FDFBF7] relative">
+                <iframe 
+                  key={settingsSubTab}
+                  src={`/?preview=true#${settingsSubTab}`} 
+                  className="w-full h-full border-none"
+                  title="Live Storefront Preview Frame"
+                  id="preview-storefront-frame-fullscreen"
+                />
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

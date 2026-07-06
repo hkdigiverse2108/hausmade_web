@@ -73,7 +73,7 @@ export default function SocialProofToast() {
   if (!visible || !toast) return null;
 
   return (
-    <div className="fixed top-4 left-4 right-4 sm:top-auto sm:bottom-20 sm:left-4 sm:right-auto z-50 bg-white/95 backdrop-blur-md p-3 sm:p-3.5 rounded-2xl border border-[#3A2E26]/15 shadow-2xl max-w-md sm:max-w-xs flex items-center gap-3 animate-fadeIn sm:animate-slideRight">
+    <div className="fixed bottom-20 left-4 right-4 sm:bottom-24 sm:left-6 sm:right-auto z-50 bg-white/95 backdrop-blur-md p-3 sm:p-3.5 rounded-2xl border border-[#3A2E26]/15 shadow-2xl max-w-md sm:max-w-xs flex items-center gap-3 animate-fadeIn sm:animate-slideRight">
       <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#C97C5D]/15 text-[#C97C5D] flex items-center justify-center shrink-0">
         <ShoppingBag className="w-5 h-5" />
       </div>

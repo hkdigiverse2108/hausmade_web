@@ -174,7 +174,7 @@ export default function Ingredients({ settings }) {
           {/* Glow behind card */}
           <div className="absolute -inset-4 bg-gradient-to-br from-[#7A8B6F]/10 via-transparent to-[#C97C5D]/10 rounded-[2rem] blur-2xl" />
           
-          <div className="relative bg-gradient-to-br from-[#EFECE6] to-[#F5F1E8] p-6 sm:p-10 md:p-12 rounded-3xl shadow-2xl border border-[#3A2E26]/8 transform transition-all duration-500 hover:shadow-[0_25px_60px_-12px_rgba(58,46,38,0.15)]">
+          <div className="relative max-w-full overflow-hidden bg-gradient-to-br from-[#EFECE6] to-[#F5F1E8] p-4 sm:p-10 md:p-12 rounded-3xl border border-[#3A2E26]/8 transform transition-all duration-500 hover:shadow-[0_25px_60px_-12px_rgba(58,46,38,0.15)]">
             
             <div className="text-center mb-8 sm:mb-10">
               <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#C97C5D]/10 border border-[#C97C5D]/20 mb-3">
@@ -189,8 +189,8 @@ export default function Ingredients({ settings }) {
               </p>
             </div>
 
-            <div className="overflow-hidden rounded-2xl border border-[#3A2E26]/8 shadow-inner bg-white/60 backdrop-blur-sm">
-              <table className="w-full text-left border-collapse">
+            <div className="overflow-x-auto w-full rounded-2xl border border-[#3A2E26]/8 shadow-inner bg-white/60 backdrop-blur-sm scrollbar-thin">
+              <table className="w-full min-w-[520px] text-left border-collapse">
                 <thead>
                   <tr className="border-b border-[#3A2E26]/10">
                     <th className="py-5 px-4 sm:px-6 font-bold text-xs sm:text-sm text-[#3A2E26] uppercase tracking-wider">Botanical Quality</th>

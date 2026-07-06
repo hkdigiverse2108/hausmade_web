@@ -62,7 +62,10 @@ export default function App() {
   const [openCheckoutAfterLogin, setOpenCheckoutAfterLogin] = useState(false);
   const [notification, setNotification] = useState(null);
   const [products, setProducts] = useState(PACK_OPTIONS);
-  const [showAdminView, setShowAdminView] = useState(true);
+  const [showAdminView, setShowAdminView] = useState(() => {
+    const isPreview = new URLSearchParams(window.location.search).get('preview') === 'true';
+    return !isPreview;
+  });
   const [isReviewOpen, setIsReviewOpen] = useState(false);
   const [reviewProduct, setReviewProduct] = useState(null);
 
@@ -123,6 +126,43 @@ export default function App() {
   useEffect(() => {
     fetchProductsList();
     fetchSiteSettings();
+
+    const handleStorageChange = () => {
+      const isPreview = new URLSearchParams(window.location.search).get('preview') === 'true';
+      if (isPreview) {
+        const previewSettings = localStorage.getItem('hausmade_preview_settings');
+        if (previewSettings) {
+          try {
+            setSiteSettings(JSON.parse(previewSettings));
+          } catch (e) {
+            console.error("Error parsing preview settings", e);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    handleStorageChange();
+
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  useEffect(() => {
+    const handleHashScroll = () => {
+      const hash = window.location.hash;
+      if (hash) {
+        const id = hash.replace('#', '');
+        const el = document.getElementById(id);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashScroll);
+    setTimeout(handleHashScroll, 500);
+
+    return () => window.removeEventListener('hashchange', handleHashScroll);
   }, []);
 
   const showNotification = useCallback((message, type = 'success') => {
@@ -314,65 +354,95 @@ export default function App() {
       )}
 
       {/* Storefront — hidden when admin view is active */}
-      {!isAdminView && (
-    <div className="min-h-screen flex flex-col selection:bg-[#7A8B6F] selection:text-white">
-      {user?.is_admin && (
-        <div className="bg-purple-950 text-[#E6D5C3] px-4 py-2 flex items-center justify-between text-xs font-semibold z-[100] border-b border-[#E6D5C3]/20">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-green-500 animate-ping"></span>
-            <span>Logged in as <strong>Administrator</strong> (Storefront Preview Mode)</span>
+      {/* Storefront — hidden when admin view is active */}
+      {!isAdminView && (() => {
+        const isPreviewMode = window.location.search.includes('preview=true');
+        const getSectionClass = (sectionId) => isPreviewMode 
+          ? `cursor-pointer transition-all duration-300 hover:outline hover:outline-2 hover:outline-dashed hover:outline-amber-500/50 hover:bg-amber-500/[0.01] relative after:absolute after:top-2 after:right-2 after:bg-amber-500 after:text-white after:text-[8px] after:font-bold after:px-1.5 after:py-0.5 after:rounded-md after:content-['Click_to_Edit'] after:opacity-0 hover:after:opacity-100 after:transition-opacity after:z-[99] after:pointer-events-none` 
+          : "";
+          
+        const handleSectionClick = (section) => {
+          if (isPreviewMode) {
+            window.parent.postMessage({ type: 'focus-section', section }, '*');
+          }
+        };
+
+        return (
+          <div className="min-h-screen flex flex-col selection:bg-[#7A8B6F] selection:text-white">
+            {user?.is_admin && (
+              <div className="bg-purple-950 text-[#E6D5C3] px-4 py-2 flex items-center justify-between text-xs font-semibold z-[100] border-b border-[#E6D5C3]/20">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-green-500 animate-ping"></span>
+                  <span>Logged in as <strong>Administrator</strong> (Storefront Preview Mode)</span>
+                </div>
+                <button 
+                  onClick={() => setShowAdminView(true)}
+                  className="bg-[#E6D5C3]/15 hover:bg-[#E6D5C3]/30 text-white px-3 py-1 rounded-lg font-bold transition-all text-[10px] uppercase tracking-wider cursor-pointer border border-[#E6D5C3]/30"
+                >
+                  Go to Admin Dashboard
+                </button>
+              </div>
+            )}
+            <div id="identity" className={getSectionClass('identity')} onClick={() => handleSectionClick('identity')}>
+              <AnnouncementBanner settings={siteSettings.announcement} />
+            </div>
+            <Header
+              cartCount={cartItems.reduce((acc, item) => acc + item.quantity, 0)}
+              onOpenCart={() => setIsCartOpen(true)}
+              wishlistCount={wishlistItems.length}
+              onOpenWishlist={() => setIsWishlistOpen(true)}
+              user={user}
+              isAuthenticated={isAuthenticated}
+              onLogout={handleLogout}
+              onOpenLogin={() => setIsLoginOpen(true)}
+              onOpenOrderHistory={() => setIsOrderHistoryOpen(true)}
+              onOpenProfile={() => setIsProfileOpen(true)}
+              onOpenAdminLogin={() => setIsAdminLoginOpen(true)}
+              settings={siteSettings}
+            />
+
+            <main className="flex-1">
+              <div id="hero" className={getSectionClass('hero')} onClick={() => handleSectionClick('hero')}>
+                <Hero settings={siteSettings.hero} />
+              </div>
+              <div id="subscription" className={getSectionClass('subscription')} onClick={() => handleSectionClick('subscription')}>
+                <SubscribeSave settings={siteSettings.subscription} />
+              </div>
+              <ProductSelector
+                products={products}
+                onAddToCart={handleAddToCart}
+                onBuyNow={handleBuyNow}
+                onAddToWishlist={handleAddToWishlist}
+                wishlistItems={wishlistItems}
+                selectedPack={selectedPack}
+                setSelectedPack={setSelectedPack}
+                isSubscription={isSubscription}
+                setIsSubscription={setIsSubscription}
+                quantity={quantity}
+                setQuantity={setQuantity}
+                activeImageIndex={activeImageIndex}
+                setActiveImageIndex={setActiveImageIndex}
+              />
+              {siteSettings.ingredients_active !== false && (
+                <div id="ingredients" className={getSectionClass('ingredients')} onClick={() => handleSectionClick('ingredients')}>
+                  <Ingredients settings={siteSettings} />
+                </div>
+              )}
+              <div id="story" className={getSectionClass('story')} onClick={() => handleSectionClick('story')}>
+                <Story settings={siteSettings.story} />
+              </div>
+              <Reviews />
+              <div id="faqs" className={getSectionClass('faqs')} onClick={() => handleSectionClick('faqs')}>
+                <FAQ settings={siteSettings} />
+              </div>
+            </main>
+
+            <div id="contact" className={getSectionClass('contact')} onClick={() => handleSectionClick('contact')}>
+              <Footer settings={siteSettings.contact} />
+            </div>
           </div>
-          <button 
-            onClick={() => setShowAdminView(true)}
-            className="bg-[#E6D5C3]/15 hover:bg-[#E6D5C3]/30 text-white px-3 py-1 rounded-lg font-bold transition-all text-[10px] uppercase tracking-wider cursor-pointer border border-[#E6D5C3]/30"
-          >
-            Go to Admin Dashboard
-          </button>
-        </div>
-      )}
-      <AnnouncementBanner settings={siteSettings.announcement} />
-      <Header
-        cartCount={cartItems.reduce((acc, item) => acc + item.quantity, 0)}
-        onOpenCart={() => setIsCartOpen(true)}
-        wishlistCount={wishlistItems.length}
-        onOpenWishlist={() => setIsWishlistOpen(true)}
-        user={user}
-        isAuthenticated={isAuthenticated}
-        onLogout={handleLogout}
-        onOpenLogin={() => setIsLoginOpen(true)}
-        onOpenOrderHistory={() => setIsOrderHistoryOpen(true)}
-        onOpenProfile={() => setIsProfileOpen(true)}
-        onOpenAdminLogin={() => setIsAdminLoginOpen(true)}
-        settings={siteSettings}
-      />
-
-      <main className="flex-1">
-        <Hero settings={siteSettings.hero} />
-        <SubscribeSave settings={siteSettings.subscription} />
-        <ProductSelector
-          products={products}
-          onAddToCart={handleAddToCart}
-          onBuyNow={handleBuyNow}
-          onAddToWishlist={handleAddToWishlist}
-          wishlistItems={wishlistItems}
-          selectedPack={selectedPack}
-          setSelectedPack={setSelectedPack}
-          isSubscription={isSubscription}
-          setIsSubscription={setIsSubscription}
-          quantity={quantity}
-          setQuantity={setQuantity}
-          activeImageIndex={activeImageIndex}
-          setActiveImageIndex={setActiveImageIndex}
-        />
-        {siteSettings.ingredients_active !== false && (
-          <Ingredients settings={siteSettings} />
-        )}
-        <Story settings={siteSettings.story} />
-        <Reviews />
-        <FAQ settings={siteSettings} />
-      </main>
-
-      <Footer settings={siteSettings.contact} />
+        );
+      })()}
 
       <CartDrawer
         isOpen={isCartOpen}
@@ -483,8 +553,6 @@ export default function App() {
         }}
         onScrollToSelector={scrollToSelector}
       />
-    </div>
-      )}
     </>
   );
 }
