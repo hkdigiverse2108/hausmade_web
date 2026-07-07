@@ -487,6 +487,10 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
                                         </span>
                                         <span className="text-gray-300">•</span>
                                         <span className="text-[10px] text-gray-500 font-semibold">
+                                          {offer.deliveryFrequency === 'every_3_months' ? 'Every 3 Months' : 'Monthly'}
+                                        </span>
+                                        <span className="text-gray-300">•</span>
+                                        <span className="text-[10px] text-gray-500 font-semibold">
                                           ₹{offerUnitPrice.toFixed(2)}/bar
                                         </span>
                                       </div>

@@ -451,6 +451,18 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     ? Math.max(0, Math.round((1 - (currentPackPrice / (baseSinglePrice * currentCount))) * 100))
     : 0;
 
+  // Real-time synchronization of settings changes to the storefront preview iframe
+  useEffect(() => {
+    const iframe = document.querySelector('iframe');
+    if (iframe && iframe.contentWindow) {
+      iframe.contentWindow.postMessage({
+        type: 'update-preview-settings',
+        settings: settingsForm
+      }, '*');
+    }
+    localStorage.setItem('hausmade_preview_settings', JSON.stringify(settingsForm));
+  }, [settingsForm]);
+
   // Real-time synchronization of the edited product to the storefront preview iframe
   useEffect(() => {
     if (isProductModalOpen && productForm.id) {
@@ -4260,17 +4272,37 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                       ) : (
                         settingsForm.subscription_offers.map((offer, idx) => (
                           <div key={offer.id || idx} className="p-4 bg-[#FDFBF7] rounded-2xl border border-[#E6D5C3]/40 space-y-3 relative text-[#3A2E26]">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const updated = (settingsForm.subscription_offers || []).filter((_, i) => i !== idx);
-                                setSettingsForm({ ...settingsForm, subscription_offers: updated });
-                              }}
-                              className="absolute top-4 right-4 text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded-lg transition-colors border-none bg-transparent cursor-pointer"
-                              title="Delete Offer"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            <div className="absolute top-4 right-4 flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = [...settingsForm.subscription_offers];
+                                  updated[idx] = { ...updated[idx], active: offer.active === false };
+                                  setSettingsForm({ ...settingsForm, subscription_offers: updated });
+                                }}
+                                className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border-none cursor-pointer flex items-center gap-1.5 ${
+                                  offer.active !== false
+                                    ? 'bg-[#7A8B6F]/10 text-[#7A8B6F] hover:bg-[#7A8B6F]/20'
+                                    : 'bg-red-50 text-red-500 hover:bg-red-100'
+                                }`}
+                                title={offer.active !== false ? 'Click to Inactivate' : 'Click to Activate'}
+                              >
+                                <span className={`w-1.5 h-1.5 rounded-full ${offer.active !== false ? 'bg-[#7A8B6F]' : 'bg-red-500 animate-pulse'}`} />
+                                {offer.active !== false ? 'Active' : 'Inactive'}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = (settingsForm.subscription_offers || []).filter((_, i) => i !== idx);
+                                  setSettingsForm({ ...settingsForm, subscription_offers: updated });
+                                }}
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded-lg transition-colors border-none bg-transparent cursor-pointer"
+                                title="Delete Offer"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pr-8">
                               <div className="sm:col-span-2 md:col-span-3">
