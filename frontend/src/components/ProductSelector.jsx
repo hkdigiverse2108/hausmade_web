@@ -329,117 +329,211 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
                 {/* Custom Subscription Configuration or Pack Selector */}
                 {isSubscription && (
                   <div className="space-y-4 animate-fadeIn">
-                    <div className="bg-[#C97C5D]/5 rounded-3xl p-5 border border-[#C97C5D]/25 space-y-4 shadow-xs">
-                      <span className="text-xs font-bold uppercase tracking-wider text-[#C97C5D] block">Configure Your Subscription</span>
+                    <div className="bg-[#C97C5D]/5 rounded-3xl p-5 border border-[#C97C5D]/20 space-y-6 shadow-sm">
+                      <div className="flex items-center gap-2 border-b border-[#C97C5D]/15 pb-3">
+                        <RefreshCw className="w-5 h-5 text-[#C97C5D] animate-spin-slow" />
+                        <div>
+                          <span className="text-sm font-extrabold text-[#3A2E26] block">Customize Your Subscription</span>
+                          <span className="text-[10px] text-gray-500 font-medium">Pause, skip, or cancel anytime. Free shipping included.</span>
+                        </div>
+                      </div>
                       
-                      {/* Soap quantity choice */}
-                      <div className="space-y-2">
-                        <label className="block text-[11px] font-bold uppercase tracking-wider text-[#3A2E26]/85">
-                          1. How many soaps do you need per month? (Monthly Quantity)
+                      {/* Step 1: Soap quantity choice */}
+                      <div className="space-y-3">
+                        <label className="block text-[11px] font-extrabold uppercase tracking-widest text-[#3A2E26]/80 flex items-center gap-1.5">
+                          <span className="w-5 h-5 rounded-full bg-[#C97C5D] text-white flex items-center justify-center text-[10px] font-bold">1</span>
+                          How many soap bars do you need per month?
                         </label>
-                        <div className="flex items-center gap-3 bg-white border border-[#3A2E26]/15 rounded-2xl p-1.5 w-fit">
+                        
+                        {/* Quick selector options */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          {[
+                            { value: 1, label: "1 Bar", desc: "Individual use" },
+                            { value: 2, label: "2 Bars", desc: "For couples" },
+                            { value: 3, label: "3 Bars", desc: "Small family" },
+                            { value: 5, label: "5 Bars", desc: "Best value" }
+                          ].map((opt) => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => setSoapsPerMonth(opt.value)}
+                              className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center ${
+                                soapsPerMonth === opt.value
+                                  ? 'border-[#C97C5D] bg-white ring-1 ring-[#C97C5D] shadow-xs'
+                                  : 'border-[#3A2E26]/10 bg-white hover:border-[#3A2E26]/20'
+                              }`}
+                            >
+                              <span className="text-xs font-bold text-[#3A2E26]">{opt.label}</span>
+                              <span className="text-[9px] text-gray-400 mt-0.5">{opt.desc}</span>
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Interactive Counter for custom quantity */}
+                        <div className="flex items-center gap-3 bg-white border border-[#3A2E26]/15 rounded-xl p-1.5 w-fit mt-2 shadow-xs">
                           <button
                             type="button"
                             onClick={() => setSoapsPerMonth(prev => Math.max(1, prev - 1))}
-                            className="w-8 h-8 rounded-lg bg-[#3A2E26]/5 hover:bg-[#3A2E26]/10 flex items-center justify-center font-bold text-sm text-[#3A2E26] select-none transition-colors cursor-pointer border-none"
+                            className="w-7 h-7 rounded-lg bg-[#3A2E26]/5 hover:bg-[#3A2E26]/10 flex items-center justify-center font-extrabold text-xs text-[#3A2E26] select-none transition-colors cursor-pointer border-none"
                           >
-                            -
+                            <Minus className="w-3.5 h-3.5" />
                           </button>
                           <input
                             type="number"
                             min="1"
                             value={soapsPerMonth}
                             onChange={(e) => setSoapsPerMonth(Math.max(1, parseInt(e.target.value) || 1))}
-                            className="w-12 text-center font-bold text-xs bg-transparent border-none focus:outline-none focus:ring-0 text-[#3A2E26]"
+                            className="w-10 text-center font-bold text-xs bg-transparent border-none focus:outline-none focus:ring-0 text-[#3A2E26]"
                           />
                           <button
                             type="button"
                             onClick={() => setSoapsPerMonth(prev => prev + 1)}
-                            className="w-8 h-8 rounded-lg bg-[#3A2E26]/5 hover:bg-[#3A2E26]/10 flex items-center justify-center font-bold text-sm text-[#3A2E26] select-none transition-colors cursor-pointer border-none"
+                            className="w-7 h-7 rounded-lg bg-[#3A2E26]/5 hover:bg-[#3A2E26]/10 flex items-center justify-center font-extrabold text-xs text-[#3A2E26] select-none transition-colors cursor-pointer border-none"
                           >
-                            +
+                            <Plus className="w-3.5 h-3.5" />
                           </button>
-                          <span className="text-xs font-bold text-[#3A2E26]/70 pr-3">
-                            {soapsPerMonth === 1 ? 'Soap' : 'Soaps'} / Month
+                          <span className="text-[11px] font-bold text-[#3A2E26]/70 pr-2">
+                            {soapsPerMonth === 1 ? 'Soap bar' : 'Soap bars'} / Month
                           </span>
                         </div>
                       </div>
 
-                      {/* Subscription Offer choice */}
-                      {activeOffers.length > 0 && (
-                        <div className="space-y-2.5">
-                          <label className="block text-[11px] font-bold uppercase tracking-wider text-[#3A2E26]/85">
-                            2. Select a Subscription Offer / Plan
-                          </label>
-                          <div className="flex flex-col gap-2.5">
-                            {activeOffers.map((offer) => {
-                              const isSelected = durationMonths === offer.durationMonths && deliveryFrequency === offer.deliveryFrequency;
+                      {/* Step 2: Delivery Frequency Tabs */}
+                      <div className="space-y-3">
+                        <label className="block text-[11px] font-extrabold uppercase tracking-widest text-[#3A2E26]/80 flex items-center gap-1.5">
+                          <span className="w-5 h-5 rounded-full bg-[#C97C5D] text-white flex items-center justify-center text-[10px] font-bold">2</span>
+                          Choose your shipping schedule
+                        </label>
+                        <div className="flex bg-[#3A2E26]/5 p-1 rounded-xl w-full">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDeliveryFrequency('monthly');
+                              // Automatically align with a monthly offer
+                              const opt = activeOffers.find(o => o.deliveryFrequency === 'monthly');
+                              if (opt) setDurationMonths(opt.durationMonths);
+                            }}
+                            className={`flex-1 py-2 text-center rounded-lg text-xs font-bold transition-all cursor-pointer border-none ${
+                              deliveryFrequency === 'monthly'
+                                ? 'bg-white text-[#C97C5D] shadow-xs'
+                                : 'text-gray-500 hover:text-[#3A2E26]'
+                            }`}
+                          >
+                            📦 Deliver Every Month
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDeliveryFrequency('every_3_months');
+                              // Automatically align with a quarterly offer
+                              const opt = activeOffers.find(o => o.deliveryFrequency === 'every_3_months');
+                              if (opt) setDurationMonths(opt.durationMonths);
+                            }}
+                            className={`flex-1 py-2 text-center rounded-lg text-xs font-bold transition-all cursor-pointer border-none ${
+                              deliveryFrequency === 'every_3_months'
+                                ? 'bg-white text-[#C97C5D] shadow-xs'
+                                : 'text-gray-500 hover:text-[#3A2E26]'
+                            }`}
+                          >
+                            🚚 Deliver Every 3 Months
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Step 3: Select Plan Duration */}
+                      <div className="space-y-3">
+                        <label className="block text-[11px] font-extrabold uppercase tracking-widest text-[#3A2E26]/80 flex items-center gap-1.5">
+                          <span className="w-5 h-5 rounded-full bg-[#C97C5D] text-white flex items-center justify-center text-[10px] font-bold">3</span>
+                          Select Plan Duration
+                        </label>
+                        
+                        <div className="grid grid-cols-1 gap-3">
+                          {activeOffers
+                            .filter(o => o.deliveryFrequency === deliveryFrequency)
+                            .map((offer) => {
+                              const isSelected = durationMonths === offer.durationMonths;
                               const offerDiscount = offer.discountPct !== undefined ? offer.discountPct : 15.0;
                               const offerUnitPrice = singleSoap.basePrice * (1.0 - (offerDiscount / 100.0));
                               const offerSoapsPerDelivery = offer.deliveryFrequency === 'every_3_months' ? soapsPerMonth * 3 : soapsPerMonth;
                               const offerDeliveryCost = offerUnitPrice * offerSoapsPerDelivery;
                               const offerTotalCost = offerUnitPrice * soapsPerMonth * offer.durationMonths;
+                              const regularTotalCost = singleSoap.basePrice * soapsPerMonth * offer.durationMonths;
+                              const offerSavings = regularTotalCost - offerTotalCost;
 
                               return (
                                 <button
                                   key={offer.id}
                                   type="button"
-                                  onClick={() => {
-                                    setDurationMonths(offer.durationMonths);
-                                    setDeliveryFrequency(offer.deliveryFrequency);
-                                  }}
-                                  className={`p-4 rounded-2xl border text-left transition-all cursor-pointer relative ${
+                                  onClick={() => setDurationMonths(offer.durationMonths)}
+                                  className={`p-4 rounded-2xl border text-left transition-all cursor-pointer relative flex flex-col justify-between ${
                                     isSelected
-                                      ? 'border-[#C97C5D] bg-[#C97C5D]/5 shadow-sm'
-                                      : 'border-[#3A2E26]/15 bg-white hover:border-[#3A2E26]/30'
+                                      ? 'border-[#C97C5D] bg-white ring-1 ring-[#C97C5D] shadow-sm'
+                                      : 'border-[#3A2E26]/10 bg-white hover:border-[#3A2E26]/20'
                                   }`}
                                 >
-                                  <div className="flex justify-between items-start gap-4">
+                                  {isSelected && (
+                                    <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-[#C97C5D] flex items-center justify-center">
+                                      <Check className="w-3.5 h-3.5 text-white" />
+                                    </div>
+                                  )}
+                                  
+                                  <div className="flex justify-between items-start pr-8">
                                     <div>
-                                      <span className="font-bold text-xs text-[#3A2E26] block">
+                                      <span className="font-extrabold text-sm text-[#3A2E26]">
                                         {offer.name || `${offer.durationMonths} Month Plan`}
                                       </span>
-                                      <span className="text-[10px] text-[#3A2E26]/60 font-semibold uppercase tracking-wider mt-1 block">
-                                        {offer.durationMonths} Months Plan • {offer.deliveryFrequency === 'every_3_months' ? 'Delivered Every 3 Months' : 'Delivered Every Month'}
-                                      </span>
+                                      <div className="flex items-center gap-1.5 mt-1">
+                                        <span className="text-[10px] text-gray-500 font-semibold">
+                                          {offer.durationMonths} Months Plan
+                                        </span>
+                                        <span className="text-gray-300">•</span>
+                                        <span className="text-[10px] text-gray-500 font-semibold">
+                                          ₹{offerUnitPrice.toFixed(2)}/bar
+                                        </span>
+                                      </div>
                                     </div>
-                                    <div className="bg-[#C97C5D] text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider border-none">
+                                    <span className="bg-[#C97C5D] text-white text-[10px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider shrink-0">
                                       {offerDiscount}% OFF
-                                    </div>
+                                    </span>
                                   </div>
 
-                                  <div className="flex justify-between items-end border-t border-[#E6D5C3]/40 mt-3 pt-2.5 text-xs">
+                                  <div className="grid grid-cols-2 gap-4 border-t border-[#E6D5C3]/40 mt-4 pt-3 text-xs">
                                     <div>
-                                      <div className="text-[10px] text-[#3A2E26]/50 uppercase tracking-wider font-bold">Price per delivery</div>
-                                      <div className="font-extrabold text-[#3A2E26] mt-0.5">₹{offerDeliveryCost.toFixed(2)}</div>
+                                      <span className="text-[9px] text-[#3A2E26]/50 uppercase tracking-wider font-bold block">Delivery Cost</span>
+                                      <span className="font-extrabold text-sm text-[#3A2E26] mt-0.5 block">₹{offerDeliveryCost.toFixed(2)}</span>
+                                      <span className="text-[9px] text-gray-400 font-medium">({offerSoapsPerDelivery} soaps per box)</span>
                                     </div>
-                                    <div className="text-right">
-                                      <div className="text-[10px] text-[#3A2E26]/50 uppercase tracking-wider font-bold">Total Plan Cost</div>
-                                      <div className="font-extrabold text-[#C97C5D] mt-0.5">₹{offerTotalCost.toFixed(2)}</div>
+                                    <div className="text-right flex flex-col items-end justify-between">
+                                      <div>
+                                        <span className="text-[9px] text-[#3A2E26]/50 uppercase tracking-wider font-bold block">Total Plan Cost</span>
+                                        <span className="font-extrabold text-sm text-[#C97C5D] mt-0.5 block">₹{offerTotalCost.toFixed(2)}</span>
+                                      </div>
+                                      <span className="bg-[#7A8B6F]/10 text-[#7A8B6F] text-[9px] font-bold px-2 py-0.5 rounded-full mt-1.5 inline-block shrink-0">
+                                        🎉 Save ₹{offerSavings.toFixed(0)} overall!
+                                      </span>
                                     </div>
                                   </div>
                                 </button>
                               );
                             })}
-                          </div>
                         </div>
-                      )}
+                      </div>
 
                       {/* Cost summary explanation */}
-                      <div className="p-4 bg-white rounded-2xl border border-[#3A2E26]/10 text-xs space-y-2 text-[#3A2E26]/85 font-medium">
+                      <div className="p-4 bg-white rounded-2xl border border-[#3A2E26]/10 text-xs space-y-2 text-[#3A2E26]/85 font-medium shadow-2xs">
                         <div className="flex justify-between">
-                          <span>Regular soap price (Base Price/Soap):</span>
+                          <span>Regular Single Soap Price:</span>
                           <span className="line-through text-gray-400">₹{singleSoap.basePrice.toFixed(2)}</span>
                         </div>
-                        <div className="flex justify-between text-[#C97C5D]">
-                          <span>Subscription Discount ({discountPct}% Off):</span>
+                        <div className="flex justify-between text-[#C97C5D] font-semibold">
+                          <span>Your Active Discount ({discountPct}% Off):</span>
                           <span>-₹{(singleSoap.basePrice * (discountPct / 100)).toFixed(2)}</span>
                         </div>
-                        <div className="flex justify-between font-bold border-t border-gray-100 pt-2">
-                          <span>Net Price per soap:</span>
+                        <div className="flex justify-between font-extrabold border-t border-gray-100 pt-2 text-[#3A2E26]">
+                          <span>Net Price per Soap:</span>
                           <span>₹{subUnitPrice.toFixed(2)}</span>
                         </div>
-                        <div className="flex flex-col gap-2 text-xs text-[#3A2E26] bg-[#C97C5D]/10 p-3.5 rounded-xl mt-2 border border-[#C97C5D]/30 shadow-xs">
+                        <div className="flex flex-col gap-2 text-xs text-[#3A2E26] bg-[#C97C5D]/10 p-3.5 rounded-xl mt-2.5 border border-[#C97C5D]/20 shadow-2xs">
                           <div className="flex justify-between items-center text-[10px] text-[#3A2E26]/75 uppercase tracking-wider font-bold">
                             <span>Delivery Cycle:</span>
                             <span>
@@ -450,8 +544,8 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
                             </span>
                           </div>
                           <div className="flex justify-between items-center border-t border-[#C97C5D]/25 pt-2">
-                            <span className="font-bold text-[11px] text-[#C97C5D] uppercase tracking-wider">
-                              Total Subscription Cost ({durationMonths} Months):
+                            <span className="font-extrabold text-[11px] text-[#C97C5D] uppercase tracking-wider">
+                              Total Cost ({durationMonths} Months):
                             </span>
                             <span className="text-sm font-extrabold text-[#C97C5D] bg-white px-2.5 py-1 rounded-lg border border-[#C97C5D]/20 shadow-xs">
                               ₹{(subUnitPrice * soapsPerMonth * durationMonths).toFixed(2)}
@@ -562,8 +656,13 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
                         </div>
 
                         <div className="mt-3 flex items-baseline justify-between">
-                          <div className="flex items-baseline gap-1.5">
+                          <div className="flex items-baseline gap-1.5 flex-wrap">
                             <span className="text-xl font-bold text-[#3A2E26]">₹{pPrice}</span>
+                            {parseFloat(pPrice) < (singleSoap.basePrice * p.count) && (
+                              <span className="text-xs line-through text-gray-400">
+                                ₹{(singleSoap.basePrice * p.count).toFixed(2)}
+                              </span>
+                            )}
                           </div>
                           <span className="text-xs text-[#3A2E26]/60">₹{pUnit} / bar</span>
                         </div>

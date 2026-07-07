@@ -154,12 +154,25 @@ export default function App() {
             console.error("Error parsing preview settings", e);
           }
         }
+        const previewProducts = localStorage.getItem('hausmade_preview_products');
+        if (previewProducts) {
+          try {
+            setProducts(JSON.parse(previewProducts));
+          } catch (e) {
+            console.error("Error parsing preview products", e);
+          }
+        }
       }
     };
 
     const handlePreviewMessage = (event) => {
-      if (event.data && event.data.type === 'update-preview-settings') {
-        setSiteSettings(event.data.settings);
+      if (event.data) {
+        if (event.data.type === 'update-preview-settings') {
+          setSiteSettings(event.data.settings);
+        }
+        if (event.data.type === 'update-preview-products') {
+          setProducts(event.data.products);
+        }
       }
     };
 
