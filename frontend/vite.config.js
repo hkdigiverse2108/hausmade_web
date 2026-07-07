@@ -7,6 +7,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   envDir: '../',
   server: {
+    strictPort: true,
     watch: {
       ignored: [
         '**/backend/**',
