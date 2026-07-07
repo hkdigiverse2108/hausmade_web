@@ -58,6 +58,7 @@ import {
   adminCreateReview,
   adminLogOfflineSale
 } from '../utils/api';
+import ConfirmModal from './ConfirmModal';
 
 const AutoResizeTextarea = ({ value, onChange, placeholder, className, rows = 3, ...props }) => {
   const textareaRef = React.useRef(null);
@@ -219,6 +220,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   const [activeTab, setActiveTab] = useState(() => {
     return localStorage.getItem('hausmade_admin_active_tab') || 'overview';
   });
+  const [confirmConfig, setConfirmConfig] = useState(null);
   const [stats, setStats] = useState({ total_revenue: 0, order_count: 0, customer_count: 0, average_order_value: 0 });
   const [recentUsers, setRecentUsers] = useState([]);
   const [subscriptions, setSubscriptions] = useState([]);
@@ -701,14 +703,21 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   };
 
   const handleDeleteReview = async (reviewId) => {
-    if (!window.confirm('Are you sure you want to permanently delete this review?')) return;
-    try {
-      await adminDeleteReview(reviewId, token);
-      showNotification('Review deleted successfully.', 'success');
-      setReviews(prev => prev.filter(r => r.id !== reviewId && r._id !== reviewId));
-    } catch (err) {
-      showNotification(err.message || 'Failed to delete review', 'error');
-    }
+    setConfirmConfig({
+      title: 'Delete Review',
+      message: 'Are you sure you want to permanently delete this review?',
+      type: 'danger',
+      onConfirm: async () => {
+        setConfirmConfig(null);
+        try {
+          await adminDeleteReview(reviewId, token);
+          showNotification('Review deleted successfully.', 'success');
+          setReviews(prev => prev.filter(r => r.id !== reviewId && r._id !== reviewId));
+        } catch (err) {
+          showNotification(err.message || 'Failed to delete review', 'error');
+        }
+      }
+    });
   };
 
   const handleOpenEditReview = (review) => {
@@ -927,17 +936,24 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   };
 
   const handleDeleteProduct = async (prodId) => {
-    if (!window.confirm('Are you sure you want to delete this product?')) return;
-    setSaving(true);
-    try {
-      await adminDeleteProduct(prodId, token);
-      showNotification('Product deleted successfully!');
-      fetchAdminData(true);
-    } catch (err) {
-      showNotification(err.message || 'Failed to delete product', 'error');
-    } finally {
-      setSaving(false);
-    }
+    setConfirmConfig({
+      title: 'Delete Product',
+      message: 'Are you sure you want to delete this product?',
+      type: 'danger',
+      onConfirm: async () => {
+        setConfirmConfig(null);
+        setSaving(true);
+        try {
+          await adminDeleteProduct(prodId, token);
+          showNotification('Product deleted successfully!');
+          fetchAdminData(true);
+        } catch (err) {
+          showNotification(err.message || 'Failed to delete product', 'error');
+        } finally {
+          setSaving(false);
+        }
+      }
+    });
   };
 
   const handleToggleProductActive = async (prod) => {
@@ -1050,17 +1066,24 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   };
 
   const handleDeleteCoupon = async (code) => {
-    if (!window.confirm(`Are you sure you want to delete coupon ${code}?`)) return;
-    setSaving(true);
-    try {
-      await adminDeleteCoupon(code, token);
-      showNotification('Coupon deleted successfully!');
-      fetchAdminData(true);
-    } catch (err) {
-      showNotification(err.message || 'Failed to delete coupon', 'error');
-    } finally {
-      setSaving(false);
-    }
+    setConfirmConfig({
+      title: 'Delete Coupon',
+      message: `Are you sure you want to delete coupon ${code}?`,
+      type: 'danger',
+      onConfirm: async () => {
+        setConfirmConfig(null);
+        setSaving(true);
+        try {
+          await adminDeleteCoupon(code, token);
+          showNotification('Coupon deleted successfully!');
+          fetchAdminData(true);
+        } catch (err) {
+          showNotification(err.message || 'Failed to delete coupon', 'error');
+        } finally {
+          setSaving(false);
+        }
+      }
+    });
   };
 
   const handleToggleCouponActive = async (couponObj) => {
@@ -1114,17 +1137,24 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   };
 
   const handleUpdateSubscriptionStatus = async (orderId, newStatus) => {
-    if (!window.confirm(`Are you sure you want to change this subscription status to ${newStatus}?`)) return;
-    setSaving(true);
-    try {
-      await updateSubscriptionStatus(orderId, newStatus, token);
-      showNotification(`Subscription status updated to ${newStatus}!`);
-      setSubscriptions(prev => prev.map(sub => sub.subscriptionId === orderId || sub.dbId === orderId || sub.orderId === orderId ? { ...sub, status: newStatus } : sub));
-    } catch (err) {
-      showNotification(err.message || 'Failed to update subscription status', 'error');
-    } finally {
-      setSaving(false);
-    }
+    setConfirmConfig({
+      title: 'Update Subscription Status',
+      message: `Are you sure you want to change this subscription status to ${newStatus}?`,
+      type: 'warning',
+      onConfirm: async () => {
+        setConfirmConfig(null);
+        setSaving(true);
+        try {
+          await updateSubscriptionStatus(orderId, newStatus, token);
+          showNotification(`Subscription status updated to ${newStatus}!`);
+          setSubscriptions(prev => prev.map(sub => sub.subscriptionId === orderId || sub.dbId === orderId || sub.orderId === orderId ? { ...sub, status: newStatus } : sub));
+        } catch (err) {
+          showNotification(err.message || 'Failed to update subscription status', 'error');
+        } finally {
+          setSaving(false);
+        }
+      }
+    });
   };
 
   const handleSaveSettings = async (e) => {
@@ -4810,6 +4840,16 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
           </div>
         </>
       )}
+      <ConfirmModal
+        isOpen={confirmConfig !== null}
+        title={confirmConfig?.title}
+        message={confirmConfig?.message}
+        type={confirmConfig?.type}
+        confirmText={confirmConfig?.confirmText}
+        cancelText={confirmConfig?.cancelText}
+        onConfirm={confirmConfig?.onConfirm}
+        onCancel={() => setConfirmConfig(null)}
+      />
     </div>
   );
 }

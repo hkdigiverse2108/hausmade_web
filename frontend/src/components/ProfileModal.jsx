@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, User, Mail, Phone, ShieldCheck, Sparkles, Loader2, MapPin, Compass, Building, Globe, Navigation, ChevronRight, UserCheck, Check, Heart, ShoppingBag, Lock, LogOut, Trash2, Calendar, Hash, Package, RefreshCw } from 'lucide-react';
 import { updateUserProfile, getUserOrders, getUserSubscriptions, requestUrgentSoap } from '../utils/api';
+import ConfirmModal from './ConfirmModal';
 
 let isInitialPageLoad = true;
 
@@ -21,6 +22,7 @@ export default function ProfileModal({
   const [email, setEmail] = useState('');
   const [mobile, setMobile] = useState('');
   const [animate, setAnimate] = useState(false);
+  const [confirmConfig, setConfirmConfig] = useState(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -156,17 +158,26 @@ export default function ProfileModal({
   };
 
   const handleRequestUrgentSoap = async (subId) => {
-    if (!window.confirm('તાત્કાલિક સાબુ મંગાવવા માટે સહમત છો? આ ઓર્ડર માટે અલગથી ચૂકવણી કરવાની રહેશે અને આનાથી તમારા સબ્સ્ક્રિપ્શન ક્વોટા પર કોઈ અસર નહીં થાય.')) return;
-    setLoading(true);
-    try {
-      await requestUrgentSoap(subId, token);
-      showNotification('તાત્કાલિક ઓર્ડર સફળતાપૂર્વક જનરેટ થઈ ગયો છે! (Urgent order placed successfully)');
-      loadUserSubscriptions();
-    } catch (err) {
-      showNotification(err.message || 'Urgent request failed', 'error');
-    } finally {
-      setLoading(false);
-    }
+    setConfirmConfig({
+      title: 'તાત્કાલિક ઓર્ડર વિનંતી (Urgent Order)',
+      message: 'તાત્કાલિક સાબુ મંગાવવા માટે સહમત છો? આ ઓર્ડર માટે અલગથી ચૂકવણી કરવાની રહેશે અને આનાથી તમારા સબ્સ્ક્રિપ્શન ક્વોટા પર કોઈ અસર નહીં થાય.',
+      type: 'warning',
+      confirmText: 'હા, મંગાવો',
+      cancelText: 'ના, કેન્સલ કરો',
+      onConfirm: async () => {
+        setConfirmConfig(null);
+        setLoading(true);
+        try {
+          await requestUrgentSoap(subId, token);
+          showNotification('તાત્કાલિક ઓર્ડર સફળતાપૂર્વક જનરેટ થઈ ગયો છે! (Urgent order placed successfully)');
+          loadUserSubscriptions();
+        } catch (err) {
+          showNotification(err.message || 'Urgent request failed', 'error');
+        } finally {
+          setLoading(false);
+        }
+      }
+    });
   };
 
   const loadUserOrders = async () => {
@@ -1255,6 +1266,17 @@ export default function ProfileModal({
         <ShieldCheck className="w-4.5 h-4.5 text-[#7A8B6F]" />
         <span>SSL Secured Checkout & Encrypted Personal Information Vault</span>
       </div>
+
+      <ConfirmModal
+        isOpen={confirmConfig !== null}
+        title={confirmConfig?.title}
+        message={confirmConfig?.message}
+        type={confirmConfig?.type}
+        confirmText={confirmConfig?.confirmText}
+        cancelText={confirmConfig?.cancelText}
+        onConfirm={confirmConfig?.onConfirm}
+        onCancel={() => setConfirmConfig(null)}
+      />
     </div>
   );
 }
