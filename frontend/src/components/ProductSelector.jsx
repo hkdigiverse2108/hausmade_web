@@ -102,8 +102,7 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
 
   const matchedOffer = activeOffers.find(o => o.durationMonths === durationMonths && o.deliveryFrequency === deliveryFrequency) || activeOffers[0] || defaultOffers[0];
 
-  // Base pricing
-  const singleSoap = items.find(i => i.id === 'single') || items[0] || { basePrice: 299.0 };
+  const singleSoap = (products && products.length > 0 ? products : PACK_OPTIONS).find(i => i.id === 'single') || { basePrice: 299.0 };
   const discountPct = matchedOffer?.discountPct !== undefined ? matchedOffer.discountPct : 15.0;
   const subUnitPrice = singleSoap.basePrice * (1.0 - (discountPct / 100.0));
   
@@ -501,7 +500,7 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
                                     <div>
                                       <span className="text-[9px] text-[#3A2E26]/50 uppercase tracking-wider font-bold block">Delivery Cost</span>
                                       <span className="font-extrabold text-sm text-[#3A2E26] mt-0.5 block">₹{offerDeliveryCost.toFixed(2)}</span>
-                                      <span className="text-[9px] text-gray-400 font-medium">({offerSoapsPerDelivery} soaps per box)</span>
+                                      <span className="text-[9px] text-gray-400 font-medium">({soapsPerMonth} {soapsPerMonth === 1 ? 'soap' : 'soaps'}/month • {offerSoapsPerDelivery} soaps per box)</span>
                                     </div>
                                     <div className="text-right flex flex-col items-end justify-between">
                                       <div>

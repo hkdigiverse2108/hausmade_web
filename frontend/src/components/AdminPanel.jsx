@@ -393,7 +393,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
               discountPct = parseInt(match[1]) || 0;
             }
           }
-          newPrice = Math.floor(newBase * p.count * (1 - discountPct / 100));
+          newPrice = parseFloat((newBase * p.count * (1 - discountPct / 100)).toFixed(2));
         }
         const payload = {
           ...p,
@@ -443,6 +443,13 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     stock: 0,
     active: true
   });
+
+  const baseSinglePrice = parseFloat(globalBasePrice) || 299;
+  const currentCount = parseInt(productForm.count) || 1;
+  const currentPackPrice = parseFloat(productForm.basePrice) || 0;
+  const calculatedDiscountPct = currentCount > 0 && baseSinglePrice > 0 
+    ? Math.max(0, Math.round((1 - (currentPackPrice / (baseSinglePrice * currentCount))) * 100))
+    : 0;
 
   // Real-time synchronization of the edited product to the storefront preview iframe
   useEffect(() => {
@@ -872,12 +879,22 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     }
     setSaving(true);
     try {
+      const payloadCount = parseInt(productForm.count) || 1;
+      const payloadBasePrice = parseFloat(productForm.basePrice) || 0;
+      let savingsBadge = productForm.savingsBadge || null;
+      if (payloadCount > 1 && baseSinglePrice > 0) {
+        const pct = Math.max(0, Math.round((1 - (payloadBasePrice / (baseSinglePrice * payloadCount))) * 100));
+        savingsBadge = pct > 0 ? `Save ${pct}%` : null;
+      } else if (payloadCount === 1) {
+        savingsBadge = null;
+      }
+
       const payload = {
         ...productForm,
-        count: parseInt(productForm.count) || 1,
-        basePrice: parseFloat(productForm.basePrice) || 0,
+        count: payloadCount,
+        basePrice: payloadBasePrice,
         stock: parseInt(productForm.stock) || 0,
-        savingsBadge: productForm.savingsBadge || null,
+        savingsBadge: savingsBadge,
         active: productForm.active !== false
       };
       
@@ -2190,7 +2207,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                 value={productForm.count}
                                 onChange={(e) => {
                                   const newCount = Math.max(1, parseInt(e.target.value) || 1);
-                                  const currentSingle = productForm.count > 0 ? (parseFloat(productForm.basePrice) / productForm.count) : 299;
+                                  const currentSingle = baseSinglePrice;
                                   setProductForm({ 
                                     ...productForm, 
                                     count: newCount,
@@ -2201,18 +2218,18 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                               />
                             </div>
                             <div>
-                              <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Price / Soap (₹)</label>
+                              <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Discount (%)</label>
                               <input
                                 type="number"
-                                required
-                                min="0.01"
-                                step="0.01"
-                                value={productForm.count > 0 ? (parseFloat(productForm.basePrice) / productForm.count).toFixed(2) : ''}
+                                min="0"
+                                max="100"
+                                value={calculatedDiscountPct !== undefined ? calculatedDiscountPct : ''}
                                 onChange={(e) => {
-                                  const newSingle = parseFloat(e.target.value) || 0;
-                                  setProductForm({ 
-                                    ...productForm, 
-                                    basePrice: (newSingle * productForm.count).toFixed(2)
+                                  const newDisc = e.target.value === '' ? '' : (parseFloat(e.target.value) || 0);
+                                  const updatedPrice = (baseSinglePrice * currentCount * (1 - (newDisc === '' ? 0 : newDisc) / 100)).toFixed(2);
+                                  setProductForm({
+                                    ...productForm,
+                                    basePrice: updatedPrice
                                   });
                                 }}
                                 className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-medium"
@@ -2392,7 +2409,6 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                 <tr className="bg-[#3A2E26]/5 border-b border-[#3A2E26]/10 text-[10px] font-bold uppercase tracking-widest text-[#3A2E26]/60">
                                   <th className="p-4 pl-6">Product Details</th>
                                   <th className="p-4">Size Count</th>
-                                  <th className="p-4">Price / Soap</th>
                                   <th className="p-4">Pack Price</th>
                                   <th className="p-4">Promo Badges</th>
                                   <th className="p-4">Stock Status</th>
@@ -2403,7 +2419,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                               <tbody className="divide-y divide-[#3A2E26]/10 text-xs">
                                 {filteredProducts.length === 0 ? (
                                   <tr>
-                                    <td colSpan="8" className="p-8 text-center text-[#3A2E26]/50">
+                                    <td colSpan="7" className="p-8 text-center text-[#3A2E26]/50">
                                       No product pack records located. Click "Add Product" to create one.
                                     </td>
                                   </tr>
@@ -2428,9 +2444,6 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                           </div>
                                         </td>
                                         <td className="p-4 align-middle font-semibold text-[#3A2E26]/80">{p.count} {p.count === 1 ? 'bar' : 'bars'}</td>
-                                        <td className="p-4 align-middle font-bold text-[#3A2E26]">
-                                          {formatCurrency(p.basePrice / p.count)}
-                                        </td>
                                         <td className="p-4 align-middle font-bold text-[#7A8B6F]">
                                           {formatCurrency(p.basePrice)}
                                         </td>
@@ -3321,10 +3334,10 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                           min="0"
                           max="100"
                           step="0.5"
-                          value={settingsForm.subscription_discount_pct !== undefined ? settingsForm.subscription_discount_pct : 15}
+                          value={settingsForm.subscription_discount_pct !== undefined ? settingsForm.subscription_discount_pct : ''}
                           onChange={(e) => setSettingsForm({
                             ...settingsForm,
-                            subscription_discount_pct: parseFloat(e.target.value) || 0
+                            subscription_discount_pct: e.target.value === '' ? '' : (parseFloat(e.target.value) || 0)
                           })}
                           className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
                         />
@@ -4282,10 +4295,10 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                   type="number"
                                   required
                                   min="1"
-                                  value={offer.durationMonths || 6}
+                                  value={offer.durationMonths !== undefined ? offer.durationMonths : ''}
                                   onChange={(e) => {
                                     const updated = [...settingsForm.subscription_offers];
-                                    updated[idx] = { ...updated[idx], durationMonths: parseInt(e.target.value) || 1 };
+                                    updated[idx] = { ...updated[idx], durationMonths: e.target.value === '' ? '' : (parseInt(e.target.value) || 1) };
                                     setSettingsForm({ ...settingsForm, subscription_offers: updated });
                                   }}
                                   className="w-full px-3 py-2 bg-white border border-[#E6D5C3]/40 rounded-xl text-xs font-bold text-[#3A2E26]"
@@ -4319,16 +4332,46 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                   min="0"
                                   max="100"
                                   step="0.5"
-                                  value={offer.discountPct !== undefined ? offer.discountPct : 15.0}
+                                  value={offer.discountPct !== undefined ? offer.discountPct : ''}
                                   onChange={(e) => {
                                     const updated = [...settingsForm.subscription_offers];
-                                    updated[idx] = { ...updated[idx], discountPct: parseFloat(e.target.value) || 0.0 };
+                                    updated[idx] = { ...updated[idx], discountPct: e.target.value === '' ? '' : (parseFloat(e.target.value) || 0.0) };
                                     setSettingsForm({ ...settingsForm, subscription_offers: updated });
                                   }}
                                   className="w-full px-3 py-2 bg-white border border-[#E6D5C3]/40 rounded-xl text-xs font-bold text-[#3A2E26]"
                                 />
                               </div>
                             </div>
+
+                            {(() => {
+                              const singleProd = products.find(p => p.id === 'single') || { basePrice: 299 };
+                              const baseVal = parseFloat(singleProd.basePrice) || 299;
+                              const disc = parseFloat(offer.discountPct) || 0;
+                              const duration = parseInt(offer.durationMonths) || 1;
+                              const unitPrice = baseVal * (1 - disc / 100);
+                              
+                              return (
+                                <div className="p-3 bg-[#7A8B6F]/5 rounded-xl border border-[#7A8B6F]/20 text-[11px] text-[#3A2E26]/80 space-y-1.5 font-medium">
+                                  <div className="font-extrabold text-[#7A8B6F] uppercase tracking-wider text-[10px]">
+                                    Live Calculator Preview (Based on ₹{baseVal} single soap base price):
+                                  </div>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div className="bg-white/60 p-2 rounded-lg border border-[#E6D5C3]/30">
+                                      <div className="font-bold text-[#3A2E26]">1 Soap / Month</div>
+                                      <div>Unit Price: <span className="font-bold text-[#7A8B6F]">₹{unitPrice.toFixed(2)}</span> / soap</div>
+                                      <div>Delivery cost: <span className="font-bold">₹{(unitPrice * (offer.deliveryFrequency === 'every_3_months' ? 3 : 1)).toFixed(2)}</span></div>
+                                      <div className="text-[10px] text-gray-500 mt-0.5">Total Plan Cost: ₹{(unitPrice * duration).toFixed(2)} over {duration} months</div>
+                                    </div>
+                                    <div className="bg-white/60 p-2 rounded-lg border border-[#E6D5C3]/30">
+                                      <div className="font-bold text-[#3A2E26]">3 Soaps / Month</div>
+                                      <div>Unit Price: <span className="font-bold text-[#7A8B6F]">₹{unitPrice.toFixed(2)}</span> / soap</div>
+                                      <div>Delivery cost: <span className="font-bold">₹{(unitPrice * 3 * (offer.deliveryFrequency === 'every_3_months' ? 3 : 1)).toFixed(2)}</span></div>
+                                      <div className="text-[10px] text-gray-500 mt-0.5">Total Plan Cost: ₹{(unitPrice * 3 * duration).toFixed(2)} over {duration} months</div>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })()}
 
                             <div className="flex items-center gap-2 pt-1.5 border-t border-[#E6D5C3]/20">
                               <label className="flex items-center gap-2 text-xs text-[#3A2E26]/70 cursor-pointer">
