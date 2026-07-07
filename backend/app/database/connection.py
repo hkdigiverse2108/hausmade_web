@@ -168,6 +168,8 @@ reviews_collection = AsyncCollectionProxy("reviews", "reviews.json")
 subscriptions_collection = AsyncCollectionProxy("subscriptions", "subscriptions.json")
 
 def check_mongodb_connection(uri):
+    if not uri:
+        raise ValueError("MongoDB URI is not configured.")
     import pymongo
     client = pymongo.MongoClient(uri, serverSelectionTimeoutMS=2000, connectTimeoutMS=2000)
     client.admin.command('ping')
@@ -177,6 +179,8 @@ async def initialize_db():
     global motor_client, motor_db, use_local_json
     print("Connecting to MongoDB Atlas...")
     try:
+        if not MONGODB_URI:
+            raise ValueError("MONGODB_URI environment variable is missing.")
         # Run the synchronous ping check in a separate thread to prevent blocking the event loop
         await asyncio.to_thread(check_mongodb_connection, MONGODB_URI)
         

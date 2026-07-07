@@ -6,11 +6,11 @@ load_dotenv(find_dotenv())
 PORT_FRONTEND = os.getenv("PORT_FRONTEND", "5173")
 PORT_BACKEND = os.getenv("PORT_BACKEND", "8005")
 
-MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017/soap_db")
+MONGODB_URI = os.getenv("MONGODB_URI")
 JWT_SECRET = os.getenv("JWT_SECRET", "super_secret_hausmade_key_12345")
 ALGORITHM = "HS256"
 AUTH0_DOMAIN = os.getenv("AUTH0_DOMAIN", "dev-your-domain.auth0.com")
-AUTH0_AUDIENCE = os.getenv("AUTH0_AUDIENCE", f"http://localhost:{PORT_BACKEND}")
+AUTH0_AUDIENCE = os.getenv("AUTH0_AUDIENCE", "")
 
 CLOUDINARY_CLOUD_NAME = os.getenv("CLOUDINARY_CLOUD_NAME")
 CLOUDINARY_API_KEY = os.getenv("CLOUDINARY_API_KEY")

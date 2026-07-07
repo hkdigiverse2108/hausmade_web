@@ -1156,7 +1156,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
               <span className="w-2.5 h-2.5 rounded-full bg-green-400"></span>
             </div>
             <div className="bg-white px-6 py-0.5 rounded-lg border border-[#3A2E26]/5 text-[9px] text-gray-400 font-medium select-none font-mono tracking-wide truncate max-w-[160px]">
-              localhost:5173
+              {window.location.host || 'localhost:5173'}
             </div>
             <div className="w-10"></div>
           </div>
@@ -4564,7 +4564,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                   <span className="w-2.5 h-2.5 rounded-full bg-green-400"></span>
                 </div>
                 <div className="bg-white px-6 py-0.5 rounded-lg border border-[#3A2E26]/5 text-[9px] text-gray-400 font-medium select-none font-mono tracking-wide truncate max-w-[160px]">
-                  localhost:5173
+                  {window.location.host || 'localhost:5173'}
                 </div>
                 <div className="w-10"></div>
               </div>
