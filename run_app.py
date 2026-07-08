@@ -32,10 +32,17 @@ def main():
                     key = key.strip()
                     if key in ports:
                         ports[key] = value.strip()
+    # Automatically detect and use .venv python if available
+    python_exec = sys.executable
+    venv_python = os.path.join(root_dir, ".venv", "bin", "python")
+    if os.name == "nt":
+        venv_python = os.path.join(root_dir, ".venv", "Scripts", "python.exe")
+    if os.path.exists(venv_python) and not os.environ.get("VIRTUAL_ENV"):
+        python_exec = venv_python
 
-    # Service commands using dynamic ports
-    backend_cmd = f'"{sys.executable}" -m uvicorn app.main:app --reload --port {ports["PORT_BACKEND"]}'
-    frontend_cmd = f"npm run dev -- --port {ports['PORT_FRONTEND']}"
+    # Service commands using dynamic ports and binding to 0.0.0.0 for server/remote access
+    backend_cmd = f'"{python_exec}" -m uvicorn app.main:app --host 0.0.0.0 --reload --port {ports["PORT_BACKEND"]}'
+    frontend_cmd = f"npm run dev -- --host --port {ports['PORT_FRONTEND']}"
 
     processes = []
     try:
