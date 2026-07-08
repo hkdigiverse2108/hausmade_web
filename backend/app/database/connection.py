@@ -53,6 +53,8 @@ coupons_collection = AsyncCollectionProxy("coupons")
 settings_collection = AsyncCollectionProxy("settings")
 reviews_collection = AsyncCollectionProxy("reviews")
 subscriptions_collection = AsyncCollectionProxy("subscriptions")
+targets_collection = AsyncCollectionProxy("targets")
+
 
 def check_mongodb_connection(uri):
     if not uri:
@@ -63,7 +65,7 @@ def check_mongodb_connection(uri):
     client.close()
 
 async def migrate_json_to_mongodb():
-    collections_to_migrate = ["users", "orders", "otps", "products", "coupons", "settings", "reviews", "subscriptions"]
+    collections_to_migrate = ["users", "orders", "otps", "products", "coupons", "settings", "reviews", "subscriptions", "targets"]
     for coll_name in collections_to_migrate:
         try:
             coll = motor_db[coll_name]
@@ -136,6 +138,10 @@ async def initialize_db():
         await motor_db["subscriptions"].create_index("subscriptionId", unique=True)
         await motor_db["otps"].create_index("mobile", unique=True)
         await motor_db["otps"].create_index("created_at", expireAfterSeconds=300)
+        try:
+            await motor_db["targets"].drop_index("year_1_month_1")
+        except Exception:
+            pass
         print("MongoDB Indexes initialized successfully.")
     except Exception as idx_err:
         print(f"Failed to initialize MongoDB Indexes: {idx_err}")

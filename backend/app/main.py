@@ -22,7 +22,7 @@ from .config.settings import (
     PORT_BACKEND
 )
 from .database.connection import initialize_db, seed_admin_and_data_func
-from .routers import auth, products, orders, coupons, settings, reviews, users, subscriptions
+from .routers import auth, products, orders, coupons, settings, reviews, users, subscriptions, targets
 
 load_dotenv(find_dotenv())
 
@@ -132,3 +132,5 @@ app.include_router(settings.router)
 app.include_router(reviews.router)
 app.include_router(users.router)
 app.include_router(subscriptions.router)
+app.include_router(targets.router)
+

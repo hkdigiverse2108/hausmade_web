@@ -224,3 +224,11 @@ class SubscriptionCreate(BaseModel):
     shippingAddress: ShippingAddress
     paymentMethod: str
 
+class SalesTargetCreate(BaseModel):
+    name: str
+    start_date: str  # YYYY-MM-DD
+    end_date: str    # YYYY-MM-DD
+    target: float
+
+
+

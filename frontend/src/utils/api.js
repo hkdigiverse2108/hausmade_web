@@ -612,3 +612,64 @@ export async function requestUrgentSoap(subscriptionId, token) {
   return response.json();
 }
 
+export async function adminGetTargets(token) {
+  const response = await fetch(`${API_URL}/api/admin/targets`, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || 'Failed to fetch sales targets');
+  }
+  return response.json();
+}
+
+export async function adminSetTarget(targetData, token) {
+  const response = await fetch(`${API_URL}/api/admin/targets`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(targetData)
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || 'Failed to set sales target');
+  }
+  return response.json();
+}
+
+export async function adminDeleteTarget(targetId, token) {
+  const response = await fetch(`${API_URL}/api/admin/targets/${encodeURIComponent(targetId)}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || 'Failed to delete sales target');
+  }
+  return response.json();
+}
+
+export async function adminSetTargetRange(rangeData, token) {
+  const response = await fetch(`${API_URL}/api/admin/targets/range`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(rangeData)
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || 'Failed to set sales target range');
+  }
+  return response.json();
+}
+
+
+

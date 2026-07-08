@@ -32,7 +32,8 @@ import {
   Star,
   Menu,
   Maximize2,
-  Minimize2
+  Minimize2,
+  Target
 } from 'lucide-react';
 import { 
   getAdminStats, 
@@ -56,7 +57,10 @@ import {
   adminDeleteReview,
   adminUpdateReview,
   adminCreateReview,
-  adminLogOfflineSale
+  adminLogOfflineSale,
+  adminGetTargets,
+  adminSetTarget,
+  adminDeleteTarget
 } from '../utils/api';
 import ConfirmModal from './ConfirmModal';
 
@@ -222,6 +226,8 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   });
   const [confirmConfig, setConfirmConfig] = useState(null);
   const [stats, setStats] = useState({ total_revenue: 0, order_count: 0, customer_count: 0, average_order_value: 0 });
+  const [targetsData, setTargetsData] = useState({ targets: [], comparison: [], yearly_comparison: [] });
+  const [targetForm, setTargetForm] = useState({ name: '', start_date: '', end_date: '', target: '' });
   const [recentUsers, setRecentUsers] = useState([]);
   const [subscriptions, setSubscriptions] = useState([]);
   const [settingsForm, setSettingsForm] = useState({
@@ -651,7 +657,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     else setRefreshing(true);
     
     try {
-      const [statsData, ordersData, usersData, productsData, couponsData, reviewsData, recentUsersData, subscriptionsData] = await Promise.all([
+      const [statsData, ordersData, usersData, productsData, couponsData, reviewsData, recentUsersData, subscriptionsData, targetsDataRes] = await Promise.all([
         getAdminStats(token),
         getAdminOrders(token),
         getAdminUsers(token),
@@ -659,7 +665,8 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
         adminGetCoupons(token),
         adminGetReviews(token),
         getAdminRecentUsers(token),
-        getAdminSubscriptions(token)
+        getAdminSubscriptions(token),
+        adminGetTargets(token)
       ]);
       
       setStats(statsData);
@@ -670,6 +677,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       setReviews(reviewsData);
       setRecentUsers(recentUsersData);
       setSubscriptions(subscriptionsData);
+      setTargetsData(targetsDataRes);
 
       // Trigger a reload of the live storefront preview iframe so it pulls the latest database changes
       const iframe = document.getElementById('preview-storefront-frame');
@@ -1063,6 +1071,59 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSaveTarget = async (e) => {
+    e.preventDefault();
+    if (!targetForm.name || !targetForm.start_date || !targetForm.end_date || !targetForm.target) {
+      showNotification('Please fill in all fields', 'error');
+      return;
+    }
+    if (new Date(targetForm.start_date) > new Date(targetForm.end_date)) {
+      showNotification('Start date cannot be after end date', 'error');
+      return;
+    }
+    setSaving(true);
+    try {
+      const payload = {
+        name: targetForm.name,
+        start_date: targetForm.start_date,
+        end_date: targetForm.end_date,
+        target: parseFloat(targetForm.target)
+      };
+      if (isNaN(payload.target) || payload.target <= 0) {
+        throw new Error("Target value must be a positive number greater than 0");
+      }
+      await adminSetTarget(payload, token);
+      showNotification('Sales target created successfully!', 'success');
+      setTargetForm({ name: '', start_date: '', end_date: '', target: '' });
+      fetchAdminData(true);
+    } catch (err) {
+      showNotification(err.message || 'Failed to create sales target', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteTarget = async (targetId) => {
+    setConfirmConfig({
+      title: 'Delete Sales Target',
+      message: 'Are you sure you want to permanently delete this sales target?',
+      type: 'danger',
+      onConfirm: async () => {
+        setConfirmConfig(null);
+        setSaving(true);
+        try {
+          await adminDeleteTarget(targetId, token);
+          showNotification('Sales target deleted successfully.', 'success');
+          fetchAdminData(true);
+        } catch (err) {
+          showNotification(err.message || 'Failed to delete sales target', 'error');
+        } finally {
+          setSaving(false);
+        }
+      }
+    });
   };
 
   const handleDeleteCoupon = async (code) => {
@@ -1556,6 +1617,22 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
             <Clock className="w-4 h-4" />
             {!sidebarCollapsed && <span>Subscriptions</span>}
           </button>
+
+          <button
+            onClick={() => setActiveTab('targets')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+              sidebarCollapsed ? 'justify-center px-0' : ''
+            } ${
+              activeTab === 'targets' 
+                ? 'bg-[#3A2E26] text-white shadow-lg shadow-[#3A2E26]/10 translate-x-1' 
+                : 'hover:bg-[#3A2E26]/5 text-[#3A2E26]/75 hover:text-[#3A2E26]'
+            }`}
+            title="Sales Targets"
+          >
+            <Target className="w-4 h-4" />
+            {!sidebarCollapsed && <span>Sales Targets</span>}
+          </button>
+
 
           <div className="flex flex-col w-full">
             <button
@@ -4453,6 +4530,229 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                           </div>
                         ))
                       )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'targets' && (
+                <div className="flex flex-col gap-8 animate-fadeIn">
+                  {/* Title Bar */}
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[#3A2E26]/10 pb-4">
+                    <div>
+                      <h2 className="text-xl font-bold tracking-tight uppercase text-[#3A2E26] font-sans">Sales Targets & Performance</h2>
+                      <p className="text-xs text-[#3A2E26]/60">Establish custom campaign milestones, track date-range sales performance vs objectives</p>
+                    </div>
+                  </div>
+
+                  {/* Summary Cards */}
+                  {(() => {
+                    const totalTargets = targetsData.targets?.length || 0;
+                    const highestTarget = targetsData.targets?.length > 0 ? Math.max(...targetsData.targets.map(t => t.target)) : 0;
+                    const totalTargetSalesVal = targetsData.targets?.reduce((sum, t) => sum + t.target, 0) || 0;
+                    const totalActualSalesVal = targetsData.targets?.reduce((sum, t) => sum + t.actual_sales, 0) || 0;
+
+                    return (
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        {/* Targets Count Card */}
+                        <div className="bg-[#FDFBF7] border border-[#E6D5C3]/40 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
+                          <div>
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-[#7A8B6F] block mb-1">
+                              Target Campaigns
+                            </span>
+                            <h3 className="text-lg font-bold text-[#3A2E26]">
+                              Active Milestones
+                            </h3>
+                            <div className="mt-6 flex items-baseline gap-2">
+                              <span className="text-3xl font-extrabold text-[#3A2E26]">{totalTargets}</span>
+                              <span className="text-xs text-[#3A2E26]/60">defined targets</span>
+                            </div>
+                            <div className="mt-1 text-xs text-[#3A2E26]/60 font-semibold">
+                              Highest Target: <span className="text-[#3A2E26]">{formatCurrency(highestTarget)}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Overall Progress Card */}
+                        <div className="bg-[#FDFBF7] border border-[#E6D5C3]/40 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
+                          <div>
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-[#7A8B6F] block mb-1">
+                              Aggregated Performance
+                            </span>
+                            <h3 className="text-lg font-bold text-[#3A2E26]">
+                              Total Target Sales
+                            </h3>
+                            <div className="mt-6 flex items-baseline gap-2">
+                              <span className="text-3xl font-extrabold text-[#3A2E26]">{formatCurrency(totalActualSalesVal)}</span>
+                              <span className="text-xs text-[#3A2E26]/60">actual sales</span>
+                            </div>
+                            <div className="mt-1 text-xs text-[#3A2E26]/60 font-semibold">
+                              Target Value: <span className="text-[#3A2E26]">{formatCurrency(totalTargetSalesVal)}</span>
+                            </div>
+                            
+                            {/* Aggregated Progress Bar */}
+                            <div className="mt-4">
+                              <div className="w-full bg-[#3A2E26]/5 h-2 rounded-full overflow-hidden border border-[#3A2E26]/5">
+                                <div 
+                                  className="h-full bg-[#7A8B6F] rounded-full transition-all duration-500"
+                                  style={{ width: `${Math.min((totalActualSalesVal / (totalTargetSalesVal || 1)) * 100, 100)}%` }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Add Sales Target Form Card */}
+                        <div className="bg-[#FDFBF7] border border-[#E6D5C3]/40 rounded-3xl p-6 shadow-sm">
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-[#7A8B6F] block mb-1">
+                            Configuration Panel
+                          </span>
+                          <h3 className="text-lg font-bold text-[#3A2E26] mb-4">
+                            Create Sales Target
+                          </h3>
+
+                          <form onSubmit={handleSaveTarget} className="space-y-4">
+                            <div>
+                              <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/50 mb-1">Target Name</label>
+                              <input
+                                type="text"
+                                required
+                                placeholder="e.g. Monsoon Special Promo"
+                                value={targetForm.name}
+                                onChange={(e) => setTargetForm({ ...targetForm, name: e.target.value })}
+                                className="w-full px-3 py-2 bg-white border border-[#E6D5C3]/40 rounded-xl text-xs font-bold text-[#3A2E26] focus:outline-none focus:border-[#3A2E26]"
+                              />
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/50 mb-1">Start Date</label>
+                                <input
+                                  type="date"
+                                  required
+                                  value={targetForm.start_date}
+                                  onChange={(e) => setTargetForm({ ...targetForm, start_date: e.target.value })}
+                                  className="w-full px-3 py-2 bg-white border border-[#E6D5C3]/40 rounded-xl text-xs font-bold text-[#3A2E26] focus:outline-none focus:border-[#3A2E26]"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/50 mb-1">End Date</label>
+                                <input
+                                  type="date"
+                                  required
+                                  value={targetForm.end_date}
+                                  onChange={(e) => setTargetForm({ ...targetForm, end_date: e.target.value })}
+                                  className="w-full px-3 py-2 bg-white border border-[#E6D5C3]/40 rounded-xl text-xs font-bold text-[#3A2E26] focus:outline-none focus:border-[#3A2E26]"
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/50 mb-1">Target Sales (INR)</label>
+                              <div className="relative">
+                                <span className="absolute left-3 top-2 text-xs text-[#3A2E26]/60 font-bold">₹</span>
+                                <input
+                                  type="number"
+                                  required
+                                  min="1"
+                                  step="0.01"
+                                  placeholder="E.g. 50000"
+                                  value={targetForm.target}
+                                  onChange={(e) => setTargetForm({ ...targetForm, target: e.target.value })}
+                                  className="w-full pl-7 pr-3 py-2 bg-white border border-[#E6D5C3]/40 rounded-xl text-xs font-bold text-[#3A2E26] focus:outline-none focus:border-[#3A2E26]"
+                                />
+                              </div>
+                            </div>
+
+                            <button
+                              type="submit"
+                              disabled={saving}
+                              className="w-full py-2.5 bg-[#7A8B6F] hover:bg-[#68785c] text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-200 shadow-sm cursor-pointer disabled:opacity-50"
+                            >
+                              {saving ? 'Creating...' : 'Add Sales Target'}
+                            </button>
+                          </form>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Targets List */}
+                  <div className="bg-white rounded-3xl border border-[#3A2E26]/10 shadow-sm p-6">
+                    <div>
+                      <h3 className="text-sm font-bold uppercase text-[#3A2E26] mb-1">Active Sales Targets</h3>
+                      <p className="text-[10px] text-[#3A2E26]/60 mb-4">Manage and monitor custom target date periods</p>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-[#3A2E26]/5 border-b border-[#3A2E26]/10 text-[10px] font-bold uppercase tracking-widest text-[#3A2E26]/60">
+                            <th className="p-4 pl-6">Campaign / Target Name</th>
+                            <th className="p-4">Target Period</th>
+                            <th className="p-4 text-right">Target Sales</th>
+                            <th className="p-4 text-right">Actual Sales</th>
+                            <th className="p-4 text-right">Difference</th>
+                            <th className="p-4 text-center">Progress</th>
+                            <th className="p-4 pr-6 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#3A2E26]/10 text-xs">
+                          {targetsData && targetsData.targets && targetsData.targets.length > 0 ? (
+                            targetsData.targets.map((item, idx) => {
+                              const isGoalAchieved = item.percentage >= 100;
+                              const isGoodProgress = item.percentage >= 75;
+                              
+                              return (
+                                <tr key={item.id || idx} className="hover:bg-[#3A2E26]/5 transition-colors">
+                                  <td className="p-4 pl-6 align-middle font-bold text-[#3A2E26]">{item.name}</td>
+                                  <td className="p-4 align-middle text-gray-500 font-semibold">
+                                    {new Date(item.start_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} to{' '}
+                                    {new Date(item.end_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                  </td>
+                                  <td className="p-4 align-middle text-right font-bold text-[#3A2E26]">
+                                    {formatCurrency(item.target)}
+                                  </td>
+                                  <td className="p-4 align-middle text-right font-bold text-green-700">
+                                    {formatCurrency(item.actual_sales)}
+                                  </td>
+                                  <td className={`p-4 align-middle text-right font-bold ${item.difference >= 0 ? 'text-[#7A8B6F]' : 'text-red-500'}`}>
+                                    {item.difference >= 0 ? '+' : ''}{formatCurrency(item.difference)}
+                                  </td>
+                                  <td className="p-4 align-middle">
+                                    <div className="flex flex-col items-center gap-1">
+                                      <span className={`text-[10px] font-bold ${isGoalAchieved ? 'text-[#7A8B6F]' : isGoodProgress ? 'text-[#3A2E26]' : 'text-red-500'}`}>
+                                        {item.percentage.toFixed(1)}%
+                                      </span>
+                                      <div className="w-20 h-1.5 bg-[#3A2E26]/5 rounded-full overflow-hidden border border-[#3A2E26]/5">
+                                        <div 
+                                          className={`h-full rounded-full ${isGoalAchieved ? 'bg-[#7A8B6F]' : isGoodProgress ? 'bg-[#3A2E26]' : 'bg-red-500'}`}
+                                          style={{ width: `${Math.min(item.percentage, 100)}%` }}
+                                        />
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="p-4 pr-6 align-middle text-right">
+                                    <button
+                                      onClick={() => handleDeleteTarget(item.id)}
+                                      className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer border-none bg-transparent"
+                                      title="Delete target campaign"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          ) : (
+                            <tr>
+                              <td colSpan="7" className="p-8 text-center text-[#3A2E26]/50">
+                                No sales targets defined yet. Use the configuration panel to create one.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                 </div>
