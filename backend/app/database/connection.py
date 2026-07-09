@@ -111,6 +111,13 @@ async def initialize_db():
         if not MONGODB_URI:
             raise ValueError("MONGODB_URI environment variable is missing.")
         
+        # Debug: Print masked URI to verify correct .env is loaded
+        try:
+            masked = MONGODB_URI.split("://")[0] + "://" + MONGODB_URI.split("://")[1].split("@")[0].split(":")[0] + ":****@" + MONGODB_URI.split("@")[1]
+        except Exception:
+            masked = "Could not parse URI"
+        print(f"[DEBUG] Using MONGODB_URI: {masked}")
+        
         # Run the synchronous ping check in a separate thread to prevent blocking the event loop
         await asyncio.to_thread(check_mongodb_connection, MONGODB_URI)
         
