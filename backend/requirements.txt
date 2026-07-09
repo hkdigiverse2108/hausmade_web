@@ -9,3 +9,4 @@ cloudinary==1.44.2
 python-multipart==0.0.29
 cryptography==46.0.6
 motor==3.7.1
+httpx==0.28.1
