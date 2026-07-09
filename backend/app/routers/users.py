@@ -1,7 +1,7 @@
 from typing import List, Optional
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, Depends
-from app.schemas.models import UserUpdate
+from app.schemas.models import UserUpdate, UpdateCartRequest
 from app.database.connection import users_collection, orders_collection
 from app.dependencies.auth_deps import get_current_user_email, get_admin_user
 from app.security.auth import hash_password, verify_password
@@ -47,9 +47,12 @@ async def get_profile(current_user_email: str = Depends(get_current_user_email))
             "zip_code": user.get("zip_code", ""),
             "country": user.get("country", ""),
             "addresses": user.get("addresses", []),
-            "is_admin": user.get("is_admin", False)
+            "is_admin": user.get("is_admin", False),
+            "cart": user.get("cart", []),
+            "cart_updated_at": str(user.get("cart_updated_at")) if user.get("cart_updated_at") else ""
         }
     }
+
 
 @router.post("/api/user/update")
 async def update_profile(user_data: UserUpdate, current_user_email: str = Depends(get_current_user_email)):
@@ -243,3 +246,68 @@ async def update_subscription_status(order_id: str, payload: dict, admin: dict =
         {"$set": {"subscription_status": new_status}}
     )
     return {"status": "success", "message": f"Subscription status updated to {new_status}"}
+
+@router.post("/api/user/cart")
+async def update_cart(cart_data: UpdateCartRequest, current_user_email: str = Depends(get_current_user_email)):
+    if not current_user_email:
+        raise HTTPException(status_code=401, detail="Authentication required")
+        
+    user = await users_collection.find_one({
+        "$or": [
+            {"email": current_user_email},
+            {"mobile": current_user_email},
+            {"auth0_sub": current_user_email}
+        ]
+    })
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    # Convert cart items to list of dicts
+    cart_list = [item.dict() for item in cart_data.cartItems]
+    
+    await users_collection.update_one(
+        {"_id": user["_id"]},
+        {"$set": {
+            "cart": cart_list,
+            "cart_updated_at": datetime.utcnow()
+        }}
+    )
+    return {"status": "success", "message": "Cart synchronized successfully"}
+
+@router.get("/api/admin/active-carts")
+async def get_admin_active_carts(admin: dict = Depends(get_admin_user)):
+    # Find all users with a non-empty cart array
+    users_with_carts = await users_collection.find({
+        "cart": {"$exists": True, "$ne": []}
+    }).to_list(length=None)
+    
+    active_carts = []
+    for u in users_with_carts:
+        # Check how many orders they've placed
+        user_email = u.get("email", "")
+        user_mobile = u.get("mobile", "")
+        
+        order_query = []
+        if user_email:
+            order_query.append({"user_email": user_email})
+            order_query.append({"shippingAddress.email": user_email})
+        if user_mobile:
+            order_query.append({"shippingAddress.phone": user_mobile})
+            
+        order_count = 0
+        if order_query:
+            order_count = await orders_collection.count_documents({"$or": order_query})
+            
+        active_carts.append({
+            "id": str(u.get("_id")),
+            "name": u.get("name") or "Guest Customer",
+            "email": user_email,
+            "mobile": user_mobile,
+            "cart": u.get("cart", []),
+            "cart_updated_at": str(u.get("cart_updated_at")) if u.get("cart_updated_at") else "",
+            "order_count": order_count
+        })
+        
+    return active_carts
+

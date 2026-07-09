@@ -101,7 +101,7 @@ function OtpBoxes({ value, onChange }) {
 }
 
 export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotification, isAdminOnly = false }) {
-  const { loginWithRedirect } = useAuth0();
+  const { loginWithPopup } = useAuth0();
 
   const handleGoogleLogin = async () => {
     const auth0Domain = import.meta.env.VITE_AUTH0_DOMAIN || '';
@@ -129,8 +129,14 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotifi
         }
       }
     } else {
-      // Production: trigger actual Auth0 redirect
-      loginWithRedirect({ authorizationParams: { connection: 'google-oauth2' } });
+      // Production: trigger actual Auth0 popup login
+      try {
+        await loginWithPopup({ authorizationParams: { connection: 'google-oauth2' } });
+      } catch (err) {
+        if (showNotification) {
+          showNotification(err.message || 'Google login failed', 'error');
+        }
+      }
     }
   };
 
@@ -268,42 +274,23 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotifi
   };
 
   return (
-    <div className="fixed inset-0 z-50 w-full h-full bg-gradient-to-br from-[#FDFBF7] via-[#F5F1E8] to-[#EAE3D2] text-[#3A2E26] overflow-y-auto flex flex-col animate-fadeIn font-sans">
-      {/* Background Decorative Accents */}
-      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-[#7A8B6F]/5 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-[#C97C5D]/5 rounded-full blur-3xl pointer-events-none" />
+    <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-black/45 backdrop-blur-xs font-sans">
+      {/* Backdrop click to close */}
+      <div className="absolute inset-0 cursor-default" onClick={onClose} />
 
-      {/* Top Nav Bar */}
-      <div className="sticky top-0 bg-white/70 backdrop-blur-xl border-b border-[#3A2E26]/10 px-6 py-4 flex items-center justify-between z-10 shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#C97C5D] to-[#E09F80] flex items-center justify-center text-white shadow-md">
-            <Sparkles className="w-5 h-5 animate-pulse" />
-          </div>
-          <div>
-            <h1 className="font-serif-brand text-xl font-bold tracking-tight text-[#3A2E26]">
-              {isAdminOnly ? 'Hausmade™ Admin Portal' : 'Hausmade™ Account'}
-            </h1>
-            <p className="text-[9px] uppercase tracking-widest text-[#7A8B6F] font-bold">
-              {isAdminOnly ? 'Authorized Access Only' : 'Sign In / Sign Up Gateway'}
-            </p>
-          </div>
-        </div>
-
+      <div className="relative w-full max-w-4xl bg-[#FDFBF7] rounded-3xl border border-[#3A2E26]/10 shadow-2xl overflow-hidden text-[#3A2E26] flex flex-col md:flex-row min-h-[520px] animate-scaleUp z-10">
+        
+        {/* Close Button */}
         <button
           onClick={onClose}
-          className="px-4 py-2 rounded-xl bg-[#3A2E26] hover:bg-[#3A2E26]/90 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
+          className="absolute top-4 right-4 p-2 text-[#3A2E26]/60 hover:text-[#3A2E26] rounded-full hover:bg-[#3A2E26]/5 transition-colors z-20 cursor-pointer"
+          aria-label="Close modal"
         >
-          <span>{isAdminOnly ? 'Exit Admin Gate' : 'Exit Account Gate'}</span>
-          <X className="w-4 h-4" />
+          <X className="w-5 h-5" />
         </button>
-      </div>
 
-      {/* Centered card container */}
-      <div className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 py-8 flex items-center justify-center relative z-10">
-        <div className="w-full bg-[#FDFBF7] rounded-3xl border border-[#3A2E26]/10 shadow-2xl overflow-hidden text-[#3A2E26] flex flex-col md:flex-row min-h-[520px]">
-          
-          {/* Left Column - Image Section (Hidden on mobile) */}
-          <div className="hidden md:flex md:w-1/2 relative bg-[#3A2E26] text-white flex-col justify-between p-10 overflow-hidden select-none">
+        {/* Left Column - Image Section (Hidden on mobile) */}
+        <div className="hidden md:flex md:w-1/2 relative bg-[#3A2E26] text-white flex-col justify-between p-10 overflow-hidden select-none">
             {/* Background Image */}
             <img 
               src="/botanical_soap.png" 
@@ -601,6 +588,5 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotifi
           </div>
         </div>
       </div>
-    </div>
   );
 }

@@ -91,10 +91,17 @@ async def startup_event():
     # Seed default collections
     await seed_admin_and_data_func()
 
-# Allow requests from any origin dynamically to avoid CORS issues
+# Allow requests from specific origins explicitly to avoid CORS issues
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex="https?://.*",
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "https://hausmade.in",
+        "http://hausmade.in",
+        "https://www.hausmade.in",
+        "https://api.hausmade.in"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -136,7 +136,12 @@ async def initialize_db():
         await motor_db["coupons"].create_index("code", unique=True)
         await motor_db["reviews"].create_index([("productId", 1), ("created_at", -1)])
         await motor_db["subscriptions"].create_index("subscriptionId", unique=True)
-        await motor_db["otps"].create_index("mobile", unique=True)
+        try:
+            await motor_db["otps"].drop_index("mobile_1")
+        except Exception:
+            pass
+        await motor_db["otps"].create_index("email", unique=True, sparse=True)
+        await motor_db["otps"].create_index("mobile", unique=True, sparse=True)
         await motor_db["otps"].create_index("created_at", expireAfterSeconds=300)
         try:
             await motor_db["targets"].drop_index("year_1_month_1")

@@ -8,6 +8,26 @@ from app.security.email_sender import send_otp_email
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
+def clean_user_response(user):
+    if not user:
+        return {}
+    return {
+        "name": user.get("name", ""),
+        "email": user.get("email", ""),
+        "mobile": user.get("mobile", ""),
+        "address_line1": user.get("address_line1", ""),
+        "address_line2": user.get("address_line2", ""),
+        "city": user.get("city", ""),
+        "state": user.get("state", ""),
+        "zip_code": user.get("zip_code", ""),
+        "country": user.get("country", ""),
+        "addresses": user.get("addresses", []),
+        "is_admin": user.get("is_admin", False),
+        "cart": user.get("cart", []),
+        "cart_updated_at": str(user.get("cart_updated_at")) if user.get("cart_updated_at") else ""
+    }
+
+
 @router.post("/register", status_code=201)
 async def register(user_data: UserRegister):
     existing_user_email = await users_collection.find_one({"email": user_data.email.lower()})
@@ -41,19 +61,7 @@ async def register(user_data: UserRegister):
     
     return {
         "token": token,
-        "user": {
-            "name": user_doc["name"],
-            "email": user_doc["email"],
-            "mobile": user_doc.get("mobile", ""),
-            "address_line1": "",
-            "address_line2": "",
-            "city": "",
-            "state": "",
-            "zip_code": "",
-            "country": "",
-            "addresses": [],
-            "is_admin": user_doc.get("is_admin", False)
-        }
+        "user": clean_user_response(user_doc)
     }
 
 @router.post("/login")
@@ -74,19 +82,7 @@ async def login(user_data: UserLogin):
     token = create_jwt_token(user["email"] or user["mobile"])
     return {
         "token": token,
-        "user": {
-            "name": user["name"],
-            "email": user.get("email", ""),
-            "mobile": user.get("mobile", ""),
-            "address_line1": user.get("address_line1", ""),
-            "address_line2": user.get("address_line2", ""),
-            "city": user.get("city", ""),
-            "state": user.get("state", ""),
-            "zip_code": user.get("zip_code", ""),
-            "country": user.get("country", ""),
-            "addresses": user.get("addresses", []),
-            "is_admin": user.get("is_admin", False)
-        }
+        "user": clean_user_response(user)
     }
 
 @router.post("/send-otp")
@@ -181,19 +177,7 @@ async def verify_otp(request: VerifyOtpRequest):
         
     return {
         "token": token,
-        "user": {
-            "name": user["name"],
-            "email": user.get("email", ""),
-            "mobile": user.get("mobile", ""),
-            "address_line1": user.get("address_line1", ""),
-            "address_line2": user.get("address_line2", ""),
-            "city": user.get("city", ""),
-            "state": user.get("state", ""),
-            "zip_code": user.get("zip_code", ""),
-            "country": user.get("country", ""),
-            "addresses": user.get("addresses", []),
-            "is_admin": user.get("is_admin", False)
-        }
+        "user": clean_user_response(user)
     }
 
 @router.post("/social-login")
@@ -223,23 +207,17 @@ async def social_login(request: SocialLoginRequest):
         upsert=True
     )
 
-    # Fetch the (possibly updated) user
     user = await users_collection.find_one({"email": email})
+    if not user:
+        user = {
+            "name": name,
+            "email": email,
+            "mobile": "",
+            "is_admin": False
+        }
 
     token = create_jwt_token(email)
     return {
         "token": token,
-        "user": {
-            "name": user["name"] if user else name,
-            "email": user.get("email", "") if user else email,
-            "mobile": user.get("mobile", "") if user else "",
-            "address_line1": user.get("address_line1", "") if user else "",
-            "address_line2": user.get("address_line2", "") if user else "",
-            "city": user.get("city", "") if user else "",
-            "state": user.get("state", "") if user else "",
-            "zip_code": user.get("zip_code", "") if user else "",
-            "country": user.get("country", "") if user else "",
-            "addresses": user.get("addresses", []) if user else [],
-            "is_admin": user.get("is_admin", False) if user else False
-        }
+        "user": clean_user_response(user)
     }

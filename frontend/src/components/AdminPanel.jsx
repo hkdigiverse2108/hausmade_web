@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   TrendingUp, 
   ShoppingBag, 
+  ShoppingCart,
   Users, 
   Search, 
   DollarSign, 
@@ -60,7 +61,8 @@ import {
   adminLogOfflineSale,
   adminGetTargets,
   adminSetTarget,
-  adminDeleteTarget
+  adminDeleteTarget,
+  adminGetActiveCarts
 } from '../utils/api';
 import ConfirmModal from './ConfirmModal';
 
@@ -421,6 +423,8 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   const [coupons, setCoupons] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [reviewSearch, setReviewSearch] = useState('');
+  const [activeCarts, setActiveCarts] = useState([]);
+  const [activeCartsSearch, setActiveCartsSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -657,7 +661,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     else setRefreshing(true);
     
     try {
-      const [statsData, ordersData, usersData, productsData, couponsData, reviewsData, recentUsersData, subscriptionsData, targetsDataRes] = await Promise.all([
+      const [statsData, ordersData, usersData, productsData, couponsData, reviewsData, recentUsersData, subscriptionsData, targetsDataRes, activeCartsData] = await Promise.all([
         getAdminStats(token),
         getAdminOrders(token),
         getAdminUsers(token),
@@ -666,7 +670,8 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
         adminGetReviews(token),
         getAdminRecentUsers(token),
         getAdminSubscriptions(token),
-        adminGetTargets(token)
+        adminGetTargets(token),
+        adminGetActiveCarts(token)
       ]);
       
       setStats(statsData);
@@ -678,6 +683,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       setRecentUsers(recentUsersData);
       setSubscriptions(subscriptionsData);
       setTargetsData(targetsDataRes);
+      setActiveCarts(activeCartsData || []);
 
       // Trigger a reload of the live storefront preview iframe so it pulls the latest database changes
       const iframe = document.getElementById('preview-storefront-frame');
@@ -1619,6 +1625,26 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
           </button>
 
           <button
+            onClick={() => setActiveTab('cart-tracking')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+              sidebarCollapsed ? 'justify-center px-0' : ''
+            } ${
+              activeTab === 'cart-tracking' 
+                ? 'bg-[#3A2E26] text-white shadow-lg shadow-[#3A2E26]/10 translate-x-1' 
+                : 'hover:bg-[#3A2E26]/5 text-[#3A2E26]/75 hover:text-[#3A2E26]'
+            }`}
+            title="Cart Tracking"
+          >
+            <ShoppingCart className="w-4 h-4" />
+            {!sidebarCollapsed && <span>Cart Tracking</span>}
+            {!sidebarCollapsed && activeCarts.length > 0 && (
+              <span className="bg-[#C97C5D] text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold ml-auto animate-pulse">
+                {activeCarts.length}
+              </span>
+            )}
+          </button>
+
+          <button
             onClick={() => setActiveTab('targets')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all duration-200 cursor-pointer ${
               sidebarCollapsed ? 'justify-center px-0' : ''
@@ -2267,6 +2293,181 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                         </tbody>
                       </table>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'cart-tracking' && (
+                <div className="flex flex-col gap-6 animate-fadeIn">
+                  {/* Title & Filter Bar */}
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[#3A2E26]/10 pb-4">
+                    <div>
+                      <h2 className="text-xl font-bold tracking-tight uppercase text-[#3A2E26] font-sans">Active Cart Tracking</h2>
+                      <p className="text-xs text-[#3A2E26]/60">Track items currently in customer carts and identify abandoned checkouts</p>
+                    </div>
+                    {/* Search Bar */}
+                    <div className="relative w-full sm:w-80">
+                      <Search className="w-4 h-4 text-[#3A2E26]/40 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input 
+                        type="text"
+                        placeholder="Search customer name, email, or mobile..."
+                        value={activeCartsSearch}
+                        onChange={(e) => setActiveCartsSearch(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2.5 bg-white border border-[#3A2E26]/10 rounded-2xl text-xs focus:outline-none focus:border-[#3A2E26] focus:ring-1 focus:ring-[#3A2E26]/20 transition-all font-medium"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Summary Metric Cards */}
+                  {(() => {
+                    const totalCarts = activeCarts.length;
+                    const totalValue = activeCarts.reduce((sum, c) => {
+                      const cartSum = c.cart?.reduce((s, item) => s + (parseFloat(item.totalPrice) || 0), 0) || 0;
+                      return sum + cartSum;
+                    }, 0);
+                    const avgValue = totalCarts > 0 ? totalValue / totalCarts : 0;
+
+                    return (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                        <div className="bg-white p-6 rounded-3xl border border-[#3A2E26]/10 shadow-sm flex items-center gap-5 hover:shadow-md transition-all duration-300">
+                          <div className="w-12 h-12 rounded-2xl bg-[#7A8B6F]/10 text-[#7A8B6F] flex items-center justify-center shrink-0">
+                            <ShoppingCart className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold text-[#3A2E26]/50 uppercase tracking-widest">Active Carts</p>
+                            <h3 className="text-xl font-bold tracking-tight text-[#3A2E26] mt-1">{totalCarts}</h3>
+                          </div>
+                        </div>
+
+                        <div className="bg-white p-6 rounded-3xl border border-[#3A2E26]/10 shadow-sm flex items-center gap-5 hover:shadow-md transition-all duration-300">
+                          <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                            <DollarSign className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold text-[#3A2E26]/50 uppercase tracking-widest">Potential Revenue</p>
+                            <h3 className="text-xl font-bold tracking-tight text-[#3A2E26] mt-1">{formatCurrency(totalValue)}</h3>
+                          </div>
+                        </div>
+
+                        <div className="bg-white p-6 rounded-3xl border border-[#3A2E26]/10 shadow-sm flex items-center gap-5 hover:shadow-md transition-all duration-300">
+                          <div className="w-12 h-12 rounded-2xl bg-[#C97C5D]/10 text-[#C97C5D] flex items-center justify-center shrink-0">
+                            <TrendingUp className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold text-[#3A2E26]/50 uppercase tracking-widest">Average Cart Value</p>
+                            <h3 className="text-xl font-bold tracking-tight text-[#3A2E26] mt-1">{formatCurrency(avgValue)}</h3>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Active Carts List */}
+                  <div className="space-y-4">
+                    {(() => {
+                      const filtered = activeCarts.filter(c => {
+                        const term = activeCartsSearch.toLowerCase();
+                        return (
+                          c.name?.toLowerCase().includes(term) ||
+                          c.email?.toLowerCase().includes(term) ||
+                          c.mobile?.toLowerCase().includes(term)
+                        );
+                      });
+
+                      if (filtered.length === 0) {
+                        return (
+                          <div className="bg-white rounded-3xl p-12 text-center border border-[#3A2E26]/10 text-[#3A2E26]/50 shadow-sm">
+                            <ShoppingCart className="w-12 h-12 text-[#3A2E26]/20 mx-auto mb-3" />
+                            <p className="font-bold text-sm">No active customer carts found</p>
+                            <p className="text-xs text-gray-400 mt-1">Carts will appear here when registered customers add products on the storefront.</p>
+                          </div>
+                        );
+                      }
+
+                      return filtered.map((c) => {
+                        const cartTotal = c.cart?.reduce((s, item) => s + (parseFloat(item.totalPrice) || 0), 0) || 0;
+                        const isNewCustomer = c.order_count === 0;
+
+                        return (
+                          <div key={c.id} className="bg-white rounded-3xl border border-[#3A2E26]/10 shadow-sm overflow-hidden hover:shadow-md transition-all duration-300 p-6 flex flex-col gap-4">
+                            
+                            {/* Customer Profile Summary */}
+                            <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#7A8B6F] to-[#68785c] text-white flex items-center justify-center font-bold text-xs uppercase shadow-sm shrink-0">
+                                  {c.name?.slice(0, 2) || 'GC'}
+                                </div>
+                                <div>
+                                  <div className="font-bold text-base text-[#3A2E26] flex flex-wrap items-center gap-2">
+                                    <span>{c.name || 'Anonymous Customer'}</span>
+                                    {isNewCustomer ? (
+                                      <span className="inline-block px-2.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-[9px] font-bold uppercase tracking-wider">
+                                        New Customer
+                                      </span>
+                                    ) : (
+                                      <span className="inline-block px-2.5 py-0.5 bg-purple-50 text-purple-700 border border-purple-200 rounded-full text-[9px] font-bold uppercase tracking-wider">
+                                        Repeat Buyer ({c.order_count} Orders)
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-xs text-[#3A2E26]/60 flex flex-col sm:flex-row sm:items-center gap-x-4 gap-y-1 mt-1 font-semibold">
+                                    {c.email && <span className="flex items-center gap-1"><Mail className="w-3.5 h-3.5 text-[#C97C5D]" /> {c.email}</span>}
+                                    {c.mobile && <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5 text-[#C97C5D]" /> {c.mobile}</span>}
+                                    <span className="flex items-center gap-1 text-[10px] text-gray-400 font-normal">
+                                      <Clock className="w-3 h-3 text-[#7A8B6F]" /> Updated: {c.cart_updated_at ? formatDate(c.cart_updated_at) : 'N/A'}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Cart Value Box */}
+                              <div className="bg-[#FDFBF7] border border-[#E6D5C3]/40 rounded-2xl p-4 min-w-[12rem] flex flex-row md:flex-col justify-between self-stretch md:self-auto gap-3">
+                                <div className="flex justify-between items-center md:gap-8">
+                                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#3A2E26]/40">Items</span>
+                                  <span className="bg-[#7A8B6F]/15 text-[#7A8B6F] text-xs font-bold px-2 py-0.5 rounded-md">
+                                    {c.cart?.reduce((acc, item) => acc + item.quantity, 0) || 0} bars
+                                  </span>
+                                </div>
+                                <div className="flex justify-between items-end md:gap-8">
+                                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#3A2E26]/40">Value</span>
+                                  <span className="text-lg font-extrabold text-[#3A2E26]">{formatCurrency(cartTotal)}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Cart Items List */}
+                            <div className="border-t border-[#3A2E26]/5 pt-4">
+                              <div className="text-[10px] font-bold uppercase tracking-widest text-[#3A2E26]/40 mb-3">Cart Contents</div>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {c.cart?.map((item, idx) => (
+                                  <div key={idx} className="flex items-center gap-3 bg-[#FDFBF7] p-2.5 rounded-2xl border border-[#3A2E26]/10 text-xs shadow-xs hover:border-[#3A2E26]/20 transition-all">
+                                    <img 
+                                      src={item.image || '/images/pack-single.png'} 
+                                      alt={item.title} 
+                                      className="w-10 h-10 object-cover rounded-xl border border-[#3A2E26]/10"
+                                      onError={(e) => { e.target.src = '/images/pack-single.png'; }}
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                      <div className="font-bold text-[#3A2E26] truncate">{item.title}</div>
+                                      <div className="text-[10px] text-gray-400 mt-0.5 flex justify-between items-center">
+                                        <span>Qty: <span className="font-bold text-[#3A2E26]">{item.quantity}</span></span>
+                                        <span className="font-bold text-[#7A8B6F]">{formatCurrency(item.totalPrice)}</span>
+                                      </div>
+                                      {item.isSubscription && (
+                                        <span className="inline-block mt-1 text-[8px] font-bold text-[#7A8B6F] bg-[#7A8B6F]/10 px-1.5 py-0.5 rounded-md">
+                                          Subscription ({item.frequency})
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                          </div>
+                        );
+                      });
+                    })()}
                   </div>
                 </div>
               )}

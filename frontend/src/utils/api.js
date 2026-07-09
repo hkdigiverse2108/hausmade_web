@@ -680,5 +680,36 @@ export async function adminSetTargetRange(rangeData, token) {
   return response.json();
 }
 
+export async function updateUserCart(cartItems, token) {
+  const response = await fetch(`${API_URL}/api/user/cart`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ cartItems })
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || 'Failed to update cart');
+  }
+  return response.json();
+}
+
+export async function adminGetActiveCarts(token) {
+  const response = await fetch(`${API_URL}/api/admin/active-carts`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || 'Failed to fetch active carts');
+  }
+  return response.json();
+}
+
+
 
 

@@ -17,7 +17,7 @@ import ProfileModal from './components/ProfileModal';
 import WishlistModal from './components/WishlistModal';
 import AdminPanel from './components/AdminPanel';
 import ReviewModal from './components/ReviewModal';
-import { getUserProfile, getProducts, getSiteSettings, socialLogin } from './utils/api';
+import { getUserProfile, getProducts, getSiteSettings, socialLogin, updateUserCart } from './utils/api';
 
 
 import SocialProofToast from './components/SocialProofToast';
@@ -309,8 +309,6 @@ export default function App() {
 
   useEffect(() => {
     if (activeToken && !isAuth0Authenticated) {
-      // Only sync profile for local tokens, not during Auth0 flow
-      // (Auth0 flow already syncs via socialLogin above)
       getUserProfile(activeToken).then(data => {
         setLocalUser(data.user);
         localStorage.setItem('hausmade_user', JSON.stringify(data.user));
@@ -318,6 +316,30 @@ export default function App() {
     }
   }, [activeToken, isAuth0Authenticated]);
 
+  const cartInitializedRef = useRef(false);
+
+  // Sync cart from user profile on initial load or login
+  useEffect(() => {
+    if (localUser) {
+      if (!cartInitializedRef.current) {
+        if (localUser.cart && localUser.cart.length > 0) {
+          setCartItems(localUser.cart);
+        }
+        cartInitializedRef.current = true;
+      }
+    } else {
+      // If not logged in, it's a guest cart, so it's initialized immediately
+      cartInitializedRef.current = true;
+    }
+  }, [localUser]);
+
+  // Sync cart changes back to DB
+  useEffect(() => {
+    if (activeToken && localUser && cartInitializedRef.current) {
+      updateUserCart(cartItems, activeToken)
+        .catch(err => console.error("Error syncing cart to database:", err));
+    }
+  }, [cartItems, activeToken, localUser]);
 
   const handleLogout = useCallback(() => {
     // Always clear local storage since we store unified tokens there
@@ -326,6 +348,8 @@ export default function App() {
     setLocalUser(null);
     setLocalToken(null);
     setAuth0Token(null);
+    setCartItems([]);
+    cartInitializedRef.current = false;
 
     if (isAuth0Authenticated) {
       auth0Logout({ logoutParams: { returnTo: window.location.origin } });

@@ -230,5 +230,9 @@ class SalesTargetCreate(BaseModel):
     end_date: str    # YYYY-MM-DD
     target: float
 
+class UpdateCartRequest(BaseModel):
+    cartItems: List[CartItem]
+
+
 
 
