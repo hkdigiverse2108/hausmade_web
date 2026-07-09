@@ -1,19 +1,4 @@
-const getApiUrl = () => {
-  if (
-    window.location.hostname === 'localhost' || 
-    window.location.hostname === '127.0.0.1' || 
-    window.location.hostname === 'hausmade.in' || 
-    window.location.hostname.endsWith('.local')
-  ) {
-    return `${window.location.protocol}//${window.location.hostname}:8005`;
-  }
-  const envUrl = import.meta.env.VITE_API_URL;
-  if (envUrl) {
-    return envUrl;
-  }
-  return window.location.origin;
-};
-const API_URL = getApiUrl();
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 export async function registerUser(name, email, mobile, password) {
   const response = await fetch(`${API_URL}/api/auth/register`, {
@@ -23,12 +8,12 @@ export async function registerUser(name, email, mobile, password) {
     },
     body: JSON.stringify({ name, email, mobile, password }),
   });
-  
+
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.detail || 'Registration failed');
   }
-  
+
   return response.json();
 }
 
@@ -40,12 +25,12 @@ export async function loginUser(identifier, password) {
     },
     body: JSON.stringify({ identifier, password }),
   });
-  
+
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.detail || 'Login failed');
   }
-  
+
   return response.json();
 }
 
@@ -111,22 +96,22 @@ export async function placeOrder(orderData, token = null) {
   const headers = {
     'Content-Type': 'application/json',
   };
-  
+
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
-  
+
   const response = await fetch(`${API_URL}/api/orders`, {
     method: 'POST',
     headers,
     body: JSON.stringify(orderData),
   });
-  
+
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.detail || 'Failed to place order');
   }
-  
+
   return response.json();
 }
 
@@ -137,12 +122,12 @@ export async function getUserOrders(token) {
       'Authorization': `Bearer ${token}`,
     },
   });
-  
+
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.detail || 'Failed to fetch orders');
   }
-  
+
   return response.json();
 }
 
