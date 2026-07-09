@@ -44,7 +44,7 @@ export default function OrderHistoryModal({ isOpen, onClose, token, onWriteRevie
       <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-[#C97C5D]/5 rounded-full blur-3xl pointer-events-none" />
 
       {/* Top Nav Bar */}
-      <div className="sticky top-0 bg-white/70 backdrop-blur-xl border-b border-[#3A2E26]/10 px-6 py-4 flex items-center justify-between z-10 shrink-0">
+      <div className="sticky top-0 bg-white/70 backdrop-blur-xl border-b border-[#3A2E26]/10 px-6 py-4 flex items-center justify-between z-20 shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#7A8B6F] to-[#8FA283] flex items-center justify-center text-white shadow-md">
             <ShoppingBag className="w-5 h-5" />
