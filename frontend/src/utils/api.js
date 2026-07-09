@@ -1,4 +1,17 @@
-const API_URL = import.meta.env.VITE_API_URL || '';
+const getApiUrl = () => {
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (envUrl) {
+    return envUrl;
+  }
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return `${window.location.protocol}//${window.location.hostname}:8005`;
+  }
+  if (window.location.hostname === 'hausmade.in' || window.location.hostname === 'www.hausmade.in') {
+    return 'https://api.hausmade.in';
+  }
+  return window.location.origin;
+};
+const API_URL = getApiUrl();
 
 export async function registerUser(name, email, mobile, password) {
   const response = await fetch(`${API_URL}/api/auth/register`, {
