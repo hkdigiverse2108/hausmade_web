@@ -107,49 +107,56 @@ async def migrate_json_to_mongodb():
 async def initialize_db():
     global motor_client, motor_db, USE_JSON_FALLBACK
     print("Connecting to MongoDB Atlas...")
-    if not MONGODB_URI:
-        raise ValueError("MONGODB_URI environment variable is missing.")
-    
-    # Run the synchronous ping check in a separate thread to prevent blocking the event loop
-    await asyncio.to_thread(check_mongodb_connection, MONGODB_URI)
-    
-    motor_client = AsyncIOMotorClient(MONGODB_URI, serverSelectionTimeoutMS=10000)
-    db_name = MONGODB_URI.split('/')[-1].split('?')[0]
-    if not db_name or db_name == "localhost:27017" or db_name.strip() == "":
-        db_name = "soap_db"
-        
-    motor_db = motor_client[db_name]
-    print(f"Successfully connected to MongoDB Database: {db_name}")
-    
-    # Migrate any existing JSON fallback data to MongoDB
-    await migrate_json_to_mongodb()
-    
-    # Initialize indexes on startup
-    print("Initializing MongoDB Indexes...")
     try:
-        await motor_db["users"].create_index("email", unique=True, sparse=True)
-        await motor_db["users"].create_index("mobile", unique=True, sparse=True)
-        await motor_db["users"].create_index("auth0_sub", unique=True, sparse=True)
-        await motor_db["orders"].create_index("orderId", unique=True)
-        await motor_db["orders"].create_index([("user_email", 1), ("created_at", -1)])
-        await motor_db["products"].create_index("id", unique=True)
-        await motor_db["coupons"].create_index("code", unique=True)
-        await motor_db["reviews"].create_index([("productId", 1), ("created_at", -1)])
-        await motor_db["subscriptions"].create_index("subscriptionId", unique=True)
+        if not MONGODB_URI:
+            raise ValueError("MONGODB_URI environment variable is missing.")
+        
+        # Run the synchronous ping check in a separate thread to prevent blocking the event loop
+        await asyncio.to_thread(check_mongodb_connection, MONGODB_URI)
+        
+        motor_client = AsyncIOMotorClient(MONGODB_URI, serverSelectionTimeoutMS=10000)
+        db_name = MONGODB_URI.split('/')[-1].split('?')[0]
+        if not db_name or db_name == "localhost:27017" or db_name.strip() == "":
+            db_name = "soap_db"
+            
+        motor_db = motor_client[db_name]
+        print(f"Successfully connected to MongoDB Database: {db_name}")
+        
+        # Migrate any existing JSON fallback data to MongoDB
+        await migrate_json_to_mongodb()
+        
+        # Initialize indexes on startup
+        print("Initializing MongoDB Indexes...")
         try:
-            await motor_db["otps"].drop_index("mobile_1")
-        except Exception:
-            pass
-        await motor_db["otps"].create_index("email", unique=True, sparse=True)
-        await motor_db["otps"].create_index("mobile", unique=True, sparse=True)
-        await motor_db["otps"].create_index("created_at", expireAfterSeconds=300)
-        try:
-            await motor_db["targets"].drop_index("year_1_month_1")
-        except Exception:
-            pass
-        print("MongoDB Indexes initialized successfully.")
-    except Exception as idx_err:
-        print(f"Failed to initialize MongoDB Indexes: {idx_err}")
+            await motor_db["users"].create_index("email", unique=True, sparse=True)
+            await motor_db["users"].create_index("mobile", unique=True, sparse=True)
+            await motor_db["users"].create_index("auth0_sub", unique=True, sparse=True)
+            await motor_db["orders"].create_index("orderId", unique=True)
+            await motor_db["orders"].create_index([("user_email", 1), ("created_at", -1)])
+            await motor_db["products"].create_index("id", unique=True)
+            await motor_db["coupons"].create_index("code", unique=True)
+            await motor_db["reviews"].create_index([("productId", 1), ("created_at", -1)])
+            await motor_db["subscriptions"].create_index("subscriptionId", unique=True)
+            try:
+                await motor_db["otps"].drop_index("mobile_1")
+            except Exception:
+                pass
+            await motor_db["otps"].create_index("email", unique=True, sparse=True)
+            await motor_db["otps"].create_index("mobile", unique=True, sparse=True)
+            await motor_db["otps"].create_index("created_at", expireAfterSeconds=300)
+            try:
+                await motor_db["targets"].drop_index("year_1_month_1")
+            except Exception:
+                pass
+            print("MongoDB Indexes initialized successfully.")
+        except Exception as idx_err:
+            print(f"Failed to initialize MongoDB Indexes: {idx_err}")
+    except Exception as db_err:
+        print(f"\n[CRITICAL DATABASE ERROR] Failed to initialize/connect to MongoDB Database.")
+        print(f"Error Details: {db_err}")
+        import traceback
+        traceback.print_exc()
+        raise db_err
 
 async def seed_admin_and_data_func():
     existing = await users_collection.find_one({"email": ADMIN_EMAIL})
