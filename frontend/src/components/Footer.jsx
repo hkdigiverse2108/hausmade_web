@@ -2,7 +2,7 @@ import React from 'react';
 import { Sparkles, Heart } from 'lucide-react';
 
 
-export default function Footer({ settings }) {
+export default function Footer({ settings, onOpenPolicy }) {
   const contactEmail = settings?.contact?.email || "info@hausmade.in";
   const contactPhone = settings?.contact?.phone || "+91 76000 81431";
   const contactAddress = settings?.contact?.address || "305 Muktidham Society, Near Sitanagar Chowk, Surat - 395 010 (Guj.)";
@@ -102,11 +102,21 @@ export default function Footer({ settings }) {
 
         </div>
 
-        <div className="pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-[#F5F1E8]/50 gap-4">
-          <p>© {new Date().getFullYear()} PureBotanica Goods Co. All rights reserved.</p>
-          <p className="flex items-center gap-1">
-            Handcrafted with <Heart className="w-3.5 h-3.5 text-[#C97C5D] fill-current" /> for healthy skin.
-          </p>
+        <div className="pt-8 flex flex-col md:flex-row items-center justify-between text-xs text-[#F5F1E8]/50 gap-4">
+          <p>© {new Date().getFullYear()} Hausmade. All rights reserved.</p>
+          <div className="flex flex-wrap items-center justify-center md:justify-end gap-x-4 gap-y-2">
+            <button onClick={() => onOpenPolicy?.('terms')} className="hover:text-[#C97C5D] transition-colors cursor-pointer focus:outline-none">Terms & Conditions</button>
+            <span className="text-[#F5F1E8]/20">|</span>
+            <button onClick={() => onOpenPolicy?.('privacy')} className="hover:text-[#C97C5D] transition-colors cursor-pointer focus:outline-none">Privacy Policy</button>
+            <span className="text-[#F5F1E8]/20">|</span>
+            <button onClick={() => onOpenPolicy?.('shipping')} className="hover:text-[#C97C5D] transition-colors cursor-pointer focus:outline-none">Shipping & Delivery</button>
+            <span className="text-[#F5F1E8]/20">|</span>
+            <button onClick={() => onOpenPolicy?.('refund')} className="hover:text-[#C97C5D] transition-colors cursor-pointer focus:outline-none">Return & Refund</button>
+            <span className="text-[#F5F1E8]/20">|</span>
+            <p className="flex items-center gap-1">
+              Handcrafted with <Heart className="w-3.5 h-3.5 text-[#C97C5D] fill-current" /> for healthy skin.
+            </p>
+          </div>
         </div>
 
       </div>

@@ -9,6 +9,7 @@ import Reviews from './components/Reviews';
 import SubscribeSave from './components/SubscribeSave';
 import FAQ from './components/FAQ';
 import Footer from './components/Footer';
+import PoliciesModal from './components/PoliciesModal';
 import CartDrawer from './components/CartDrawer';
 import CheckoutModal from './components/CheckoutModal';
 import LoginModal from './components/LoginModal';
@@ -17,7 +18,7 @@ import ProfileModal from './components/ProfileModal';
 import WishlistModal from './components/WishlistModal';
 import AdminPanel from './components/AdminPanel';
 import ReviewModal from './components/ReviewModal';
-import { getUserProfile, getProducts, getSiteSettings, socialLogin, updateUserCart } from './utils/api';
+import { getUserProfile, getProducts, getSiteSettings, socialLogin, updateUserCart, verifyCashfreePayment } from './utils/api';
 
 
 import SocialProofToast from './components/SocialProofToast';
@@ -49,6 +50,13 @@ export default function App() {
   }, []);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isPoliciesOpen, setIsPoliciesOpen] = useState(false);
+  const [activePolicyTab, setActivePolicyTab] = useState('terms');
+
+  const handleOpenPolicy = useCallback((tab) => {
+    setActivePolicyTab(tab);
+    setIsPoliciesOpen(true);
+  }, []);
   const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
   const [isOrderHistoryOpen, setIsOrderHistoryOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(() => {
@@ -108,7 +116,7 @@ export default function App() {
     story: {
       title: "From our kitchen counter to your daily sanctuary.",
       subtitle: "Our Heritage",
-      paragraph1: "PureBotanica began in the autumn of 2018 when our founder Elena could not find a commercial soap that didn’t leave her skin dry, itchy, and irritated by synthetic dyes and fake fragrances.",
+      paragraph1: "Hausmade began in the autumn of 2018 when our founder Elena could not find a commercial soap that didn’t leave her skin dry, itchy, and irritated by synthetic dyes and fake fragrances.",
       paragraph2: "We went back to ancient cold-process saponification roots: slowly combining raw organic butter, wildflower honey, and steam-distilled essential oils. Every single bar is poured by hand, cut with guitar wire, and cured for 6 full weeks to ensure a long-lasting, ultra-creamy bar."
     },
     contact: {
@@ -253,6 +261,33 @@ export default function App() {
   const showNotification = useCallback((message, type = 'success') => {
     setNotification({ message, type });
   }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const payment = params.get('payment');
+    const orderId = params.get('order_id');
+    
+    if (payment === 'verify' && orderId) {
+      showNotification('Verifying your online payment...', 'info');
+      params.delete('payment');
+      params.delete('order_id');
+      const newSearch = params.toString();
+      window.history.replaceState(null, '', `${window.location.pathname}${newSearch ? '?' + newSearch : ''}${window.location.hash}`);
+      
+      verifyCashfreePayment(orderId)
+        .then(res => {
+          if (res.payment_status === 'success') {
+            showNotification(`Payment successful! Order ${orderId} confirmed.`, 'success');
+            setCartItems([]);
+          } else {
+            showNotification(`Payment verification failed. Status: ${res.order_status}`, 'error');
+          }
+        })
+        .catch(err => {
+          showNotification(err.message || 'Payment verification failed', 'error');
+        });
+    }
+  }, [showNotification]);
 
   useEffect(() => {
     if (notification) {
@@ -505,7 +540,7 @@ export default function App() {
           if (sectionId === 'ingredients') return activeHash === '#ingredients';
           if (sectionId === 'story') return activeHash === '#story';
           if (sectionId === 'faqs') return activeHash === '#faqs';
-          if (sectionId === 'contact') return activeHash === '#contact' || activeHash === '#social_links';
+          if (sectionId === 'contact') return activeHash === '#contact' || activeHash === '#social_links' || activeHash === '#policies';
           if (sectionId === 'products') return activeHash === '#products';
           if (sectionId === 'reviews') return activeHash === '#reviews';
           return false;
@@ -604,7 +639,7 @@ export default function App() {
 
             {shouldShowSection('contact') && (
               <div id="contact" className={getSectionClass('contact')} onClick={() => handleSectionClick('contact')}>
-                <Footer settings={siteSettings} />
+                <Footer settings={siteSettings} onOpenPolicy={handleOpenPolicy} />
               </div>
             )}
           </div>
@@ -641,6 +676,7 @@ export default function App() {
         onOrderComplete={() => setCartItems([])}
         token={activeToken}
         user={user}
+        settings={siteSettings}
       />
 
       <LoginModal
@@ -709,6 +745,13 @@ export default function App() {
         onRemoveFromWishlist={handleRemoveFromWishlist}
         onAddToCart={handleAddToCart}
         onBuyNow={handleBuyNow}
+      />
+
+      <PoliciesModal
+        isOpen={isPoliciesOpen}
+        onClose={() => setIsPoliciesOpen(false)}
+        defaultTab={activePolicyTab}
+        settings={siteSettings}
       />
 
 

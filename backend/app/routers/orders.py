@@ -1,9 +1,10 @@
 from typing import Optional
 from datetime import datetime
 import uuid
+import httpx
 from fastapi import APIRouter, HTTPException, Depends, status
 from app.schemas.models import OrderCreate, OfflineSaleCreate
-from app.database.connection import orders_collection, products_collection, users_collection
+from app.database.connection import orders_collection, products_collection, users_collection, settings_collection
 from app.dependencies.auth_deps import get_current_user_email, get_admin_user
 
 router = APIRouter(tags=["Orders"])
@@ -52,6 +53,12 @@ async def place_order(order_data: OrderCreate, current_user_email: Optional[str]
     order_dict = order_data.dict()
     order_dict["created_at"] = datetime.utcnow()
     order_dict["user_email"] = email_to_use
+    if order_data.paymentMethod in ["cod", "offline"]:
+        order_dict["status"] = "confirmed"
+        order_dict["payment_status"] = "COD"
+    else:
+        order_dict["status"] = "pending_payment"
+        order_dict["payment_status"] = "PENDING"
     
     await orders_collection.insert_one(order_dict)
     order_dict["_id"] = str(order_dict["_id"])
@@ -192,3 +199,134 @@ async def get_recent_public_orders():
         return recent
     except Exception as e:
         return []
+
+@router.post("/api/orders/cashfree-session")
+async def create_cashfree_session(order_payload: dict):
+    settings = await settings_collection.find_one({"key": "site_settings"})
+    if not settings or "cashfree" not in settings:
+        raise HTTPException(status_code=400, detail="Cashfree payment gateway is not configured.")
+        
+    cf_config = settings["cashfree"]
+    if not cf_config.get("active"):
+        raise HTTPException(status_code=400, detail="Cashfree payment gateway is currently disabled.")
+        
+    mode = cf_config.get("mode", "test")
+    if mode == "live":
+        app_id = cf_config.get("app_id_live")
+        secret_key = cf_config.get("secret_key_live")
+        cf_url = "https://api.cashfree.com/pg/orders"
+    else:
+        app_id = cf_config.get("app_id_test")
+        secret_key = cf_config.get("secret_key_test")
+        cf_url = "https://sandbox.cashfree.com/pg/orders"
+        
+    if not app_id or not secret_key:
+        raise HTTPException(status_code=400, detail=f"Cashfree credentials for {mode} mode are missing.")
+        
+    headers = {
+        "x-client-id": app_id,
+        "x-client-secret": secret_key,
+        "x-api-version": "2023-08-01",
+        "Content-Type": "application/json"
+    }
+    
+    order_id = order_payload.get("orderId") or f"HM-{int(datetime.utcnow().timestamp())}"
+    customer_name = order_payload.get("customerName") or "Guest Customer"
+    customer_phone = order_payload.get("customerPhone") or "9999999999"
+    customer_email = order_payload.get("customerEmail") or "guest@hausmade.in"
+    if not customer_email or "@" not in customer_email:
+        customer_email = "guest@hausmade.in"
+        
+    customer_phone = "".join(filter(str.isdigit, customer_phone))
+    if len(customer_phone) > 10:
+        customer_phone = customer_phone[-10:]
+    elif len(customer_phone) < 10:
+        customer_phone = customer_phone.zfill(10)
+        
+    cf_payload = {
+        "order_id": order_id,
+        "order_amount": float(order_payload.get("grandTotal", 0)),
+        "order_currency": "INR",
+        "customer_details": {
+            "customer_id": f"cust_{int(datetime.utcnow().timestamp())}",
+            "customer_name": customer_name,
+            "customer_phone": customer_phone,
+            "customer_email": customer_email
+        },
+        "order_meta": {
+            "return_url": order_payload.get("returnUrl") or "http://localhost:5173/?payment=success&order_id={order_id}"
+        }
+    }
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.post(cf_url, json=cf_payload, headers=headers, timeout=10.0)
+            if resp.status_code != 200:
+                raise HTTPException(status_code=400, detail=f"Cashfree API Error: {resp.text}")
+            cf_data = resp.json()
+            return {
+                "payment_session_id": cf_data.get("payment_session_id"),
+                "order_id": order_id,
+                "cf_order_id": cf_data.get("cf_order_id"),
+                "mode": mode
+            }
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to communicate with Cashfree: {str(e)}")
+
+@router.post("/api/orders/verify-payment")
+async def verify_payment(payload: dict):
+    order_id = payload.get("orderId")
+    if not order_id:
+        raise HTTPException(status_code=400, detail="orderId is required")
+        
+    settings = await settings_collection.find_one({"key": "site_settings"})
+    if not settings or "cashfree" not in settings:
+        raise HTTPException(status_code=400, detail="Cashfree is not configured")
+        
+    cf_config = settings["cashfree"]
+    mode = cf_config.get("mode", "test")
+    if mode == "live":
+        app_id = cf_config.get("app_id_live")
+        secret_key = cf_config.get("secret_key_live")
+        cf_url = f"https://api.cashfree.com/pg/orders/{order_id}"
+    else:
+        app_id = cf_config.get("app_id_test")
+        secret_key = cf_config.get("secret_key_test")
+        cf_url = f"https://sandbox.cashfree.com/pg/orders/{order_id}"
+        
+    headers = {
+        "x-client-id": app_id,
+        "x-client-secret": secret_key,
+        "x-api-version": "2023-08-01",
+        "Content-Type": "application/json"
+    }
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.get(cf_url, headers=headers, timeout=10.0)
+            if resp.status_code != 200:
+                raise HTTPException(status_code=400, detail=f"Cashfree verification error: {resp.text}")
+            cf_data = resp.json()
+            order_status = cf_data.get("order_status")
+            
+            db_order = await orders_collection.find_one({"orderId": order_id})
+            if db_order:
+                await orders_collection.update_one(
+                    {"orderId": order_id},
+                    {"$set": {
+                        "payment_status": order_status, 
+                        "status": "confirmed" if order_status == "PAID" else "failed"
+                    }}
+                )
+            
+            return {
+                "order_status": order_status,
+                "cf_order_id": cf_data.get("cf_order_id"),
+                "order_amount": cf_data.get("order_amount"),
+                "payment_status": "success" if order_status == "PAID" else "failed"
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+

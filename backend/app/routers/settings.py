@@ -52,11 +52,19 @@ async def get_site_settings():
                     "phone": "+91 76000 81431",
                     "address": "305 Muktidham Society, Near Sitanagar Chowk, Surat - 395 010 (Guj.)"
                 },
+                "cashfree": {
+                    "app_id_test": "TEST104445831599a05b38d35677ad854445831599",
+                    "secret_key_test": "cfsk_ma_test_3062828b8cf4b3f3ea4d6a695123d456789",
+                    "app_id_live": "",
+                    "secret_key_live": "",
+                    "mode": "test",
+                    "active": False
+                },
                 "subscription": default_subscription,
                 "faqs": [
                     {
                         "q": "How long does one soap bar typically last?",
-                        "a": "When kept dry on a draining soap dish between uses, one PureBotanica bar lasts approximately 3 to 4 weeks for daily shower use by a single person. Because we cure our soap for 6 full weeks, our bars are firmer and last longer than high-water commercial bars."
+                        "a": "When kept dry on a draining soap dish between uses, one Hausmade bar lasts approximately 3 to 4 weeks for daily shower use by a single person. Because we cure our soap for 6 full weeks, our bars are firmer and last longer than high-water commercial bars."
                     },
                     {
                         "q": "Is this soap safe for sensitive skin and eczema?",
@@ -99,7 +107,7 @@ async def get_site_settings():
                 default_faqs = [
                     {
                         "q": "How long does one soap bar typically last?",
-                        "a": "When kept dry on a draining soap dish between uses, one PureBotanica bar lasts approximately 3 to 4 weeks for daily shower use by a single person. Because we cure our soap for 6 full weeks, our bars are firmer and last longer than high-water commercial bars."
+                        "a": "When kept dry on a draining soap dish between uses, one Hausmade bar lasts approximately 3 to 4 weeks for daily shower use by a single person. Because we cure our soap for 6 full weeks, our bars are firmer and last longer than high-water commercial bars."
                     },
                     {
                         "q": "Is this soap safe for sensitive skin and eczema?",
@@ -178,6 +186,29 @@ async def get_site_settings():
                 ]
                 settings["subscription_offers"] = default_offers
                 await settings_collection.update_one({"key": "site_settings"}, {"$set": {"subscription_offers": default_offers}})
+            if "cashfree" not in settings:
+                default_cashfree = {
+                    "app_id_test": "TEST104445831599a05b38d35677ad854445831599",
+                    "secret_key_test": "cfsk_ma_test_3062828b8cf4b3f3ea4d6a695123d456789",
+                    "app_id_live": "",
+                    "secret_key_live": "",
+                    "mode": "test",
+                    "active": False
+                }
+                settings["cashfree"] = default_cashfree
+                await settings_collection.update_one({"key": "site_settings"}, {"$set": {"cashfree": default_cashfree}})
+            if "policies_terms" not in settings:
+                settings["policies_terms"] = ""
+                await settings_collection.update_one({"key": "site_settings"}, {"$set": {"policies_terms": ""}})
+            if "policies_privacy" not in settings:
+                settings["policies_privacy"] = ""
+                await settings_collection.update_one({"key": "site_settings"}, {"$set": {"policies_privacy": ""}})
+            if "policies_shipping" not in settings:
+                settings["policies_shipping"] = ""
+                await settings_collection.update_one({"key": "site_settings"}, {"$set": {"policies_shipping": ""}})
+            if "policies_refund" not in settings:
+                settings["policies_refund"] = ""
+                await settings_collection.update_one({"key": "site_settings"}, {"$set": {"policies_refund": ""}})
             
         if "_id" in settings:
             settings["_id"] = str(settings["_id"])

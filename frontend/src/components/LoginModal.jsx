@@ -154,6 +154,22 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotifi
   const [otpCode, setOtpCode] = useState('');
   const [otpLoading, setOtpLoading] = useState(false);
 
+  // Reset form states when modal is opened
+  React.useEffect(() => {
+    if (isOpen) {
+      setEmail('');
+      setPassword('');
+      setName('');
+      setShowPassword(false);
+      setLoading(false);
+      setError('');
+      setOtpSent(false);
+      setOtpCode('');
+      setOtpLoading(false);
+      setLoginMethod(isAdminOnly ? 'password' : 'otp');
+    }
+  }, [isOpen, isAdminOnly]);
+
   if (!isOpen) return null;
 
   const isLogin = isAdminOnly ? true : isLoginTab;

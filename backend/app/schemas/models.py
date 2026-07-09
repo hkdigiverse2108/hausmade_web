@@ -155,6 +155,14 @@ class SubscriptionOffer(BaseModel):
     discountPct: float
     active: bool = True
 
+class CashfreeSettings(BaseModel):
+    app_id_test: str = ""
+    secret_key_test: str = ""
+    app_id_live: str = ""
+    secret_key_live: str = ""
+    mode: str = "test"  # "test" or "live"
+    active: bool = False
+
 class SiteSettingsModel(BaseModel):
     logo_url: str = ""
     announcement: AnnouncementSettings
@@ -163,6 +171,7 @@ class SiteSettingsModel(BaseModel):
     contact: ContactSettings
     subscription: SubscriptionSettings
     social_links: SocialLinksSettings = SocialLinksSettings()
+    cashfree: Optional[CashfreeSettings] = CashfreeSettings()
     faqs: List[FAQItem] = []
     ingredients: List[IngredientItem] = []
     trust_badges: List[TrustBadgeItem] = []
@@ -173,6 +182,10 @@ class SiteSettingsModel(BaseModel):
     subscription_frequencies: List[str] = ["monthly", "every_3_months"]
     subscription_discount_pct: float = 15.0
     subscription_offers: List[SubscriptionOffer] = []
+    policies_terms: Optional[str] = ""
+    policies_privacy: Optional[str] = ""
+    policies_shipping: Optional[str] = ""
+    policies_refund: Optional[str] = ""
 
 class ReviewSubmitModel(BaseModel):
     productId: str

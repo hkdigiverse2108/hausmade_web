@@ -7,7 +7,7 @@ export default function FAQ({ settings }) {
   const fallbackFaqs = [
     {
       q: 'How long does one soap bar typically last?',
-      a: 'When kept dry on a draining soap dish between uses, one PureBotanica bar lasts approximately 3 to 4 weeks for daily shower use by a single person. Because we cure our soap for 6 full weeks, our bars are firmer and last longer than high-water commercial bars.'
+      a: 'When kept dry on a draining soap dish between uses, one Hausmade bar lasts approximately 3 to 4 weeks for daily shower use by a single person. Because we cure our soap for 6 full weeks, our bars are firmer and last longer than high-water commercial bars.'
     },
     {
       q: 'Is this soap safe for sensitive skin and eczema?',

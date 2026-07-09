@@ -1,13 +1,10 @@
 const getApiUrl = () => {
-  const envUrl = import.meta.env.VITE_API_URL;
-  if (envUrl && !envUrl.includes('127.0.0.1') && !envUrl.includes('localhost')) {
-    return envUrl;
-  }
-  if (window.location.port && window.location.port !== '8005' && window.location.port !== '80' && window.location.port !== '443') {
-    return `${window.location.protocol}//${window.location.hostname}:8005`;
-  }
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     return `${window.location.protocol}//${window.location.hostname}:8005`;
+  }
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (envUrl) {
+    return envUrl;
   }
   return window.location.origin;
 };
@@ -706,6 +703,36 @@ export async function adminGetActiveCarts(token) {
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.detail || 'Failed to fetch active carts');
+  }
+  return response.json();
+}
+
+export async function createCashfreeSession(orderPayload) {
+  const response = await fetch(`${API_URL}/api/orders/cashfree-session`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(orderPayload)
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || 'Failed to create Cashfree payment session');
+  }
+  return response.json();
+}
+
+export async function verifyCashfreePayment(orderId) {
+  const response = await fetch(`${API_URL}/api/orders/verify-payment`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ orderId })
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || 'Failed to verify Cashfree payment');
   }
   return response.json();
 }

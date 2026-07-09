@@ -258,10 +258,15 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     subscription_frequencies: ["monthly", "every_3_months"],
     subscription_offers: [],
     social_links: { instagram: '', facebook: '', whatsapp: '', twitter: '', youtube: '' },
+    cashfree: { app_id_test: '', secret_key_test: '', app_id_live: '', secret_key_live: '', mode: 'test', active: false },
     faqs: [],
     ingredients: [],
     trust_badges: [],
-    ingredients_active: true
+    ingredients_active: true,
+    policies_terms: '',
+    policies_privacy: '',
+    policies_shipping: '',
+    policies_refund: ''
   });
   const [settingsSubTab, setSettingsSubTab] = useState(() => {
     return localStorage.getItem('hausmade_admin_settings_subtab') || 'identity';
@@ -290,6 +295,8 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       const newSub = settings.subscription || {};
       const currentSocial = settingsForm.social_links || { instagram: '', facebook: '', whatsapp: '', twitter: '', youtube: '' };
       const newSocial = settings.social_links || { instagram: '', facebook: '', whatsapp: '', twitter: '', youtube: '' };
+      const currentCashfree = settingsForm.cashfree || { app_id_test: '', secret_key_test: '', app_id_live: '', secret_key_live: '', mode: 'test', active: false };
+      const newCashfree = settings.cashfree || { app_id_test: '', secret_key_test: '', app_id_live: '', secret_key_live: '', mode: 'test', active: false };
 
       const hasChanged = 
         settingsForm.logo_url !== (settings.logo_url || '') ||
@@ -300,6 +307,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
         JSON.stringify(currentContact) !== JSON.stringify(newContact) ||
         JSON.stringify(currentSub) !== JSON.stringify(newSub) ||
         JSON.stringify(currentSocial) !== JSON.stringify(newSocial) ||
+        JSON.stringify(currentCashfree) !== JSON.stringify(newCashfree) ||
         settingsForm.subscription_discount_pct !== (settings.subscription_discount_pct !== undefined ? settings.subscription_discount_pct : 15.0) ||
         settingsForm.subscription_active !== (settings.subscription_active !== undefined ? settings.subscription_active : true) ||
         JSON.stringify(settingsForm.subscription_durations || []) !== JSON.stringify(settings.subscription_durations || []) ||
@@ -309,6 +317,10 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
         JSON.stringify(settingsForm.ingredients || []) !== JSON.stringify(settings.ingredients || []) ||
         JSON.stringify(settingsForm.trust_badges || []) !== JSON.stringify(settings.trust_badges || []) ||
         JSON.stringify(settingsForm.subscription_offers || []) !== JSON.stringify(settings.subscription_offers || []) ||
+        settingsForm.policies_terms !== (settings.policies_terms || '') ||
+        settingsForm.policies_privacy !== (settings.policies_privacy || '') ||
+        settingsForm.policies_shipping !== (settings.policies_shipping || '') ||
+        settingsForm.policies_refund !== (settings.policies_refund || '') ||
         settingsForm.ingredients_active !== (settings.ingredients_active !== undefined ? settings.ingredients_active : true);
         
       if (hasChanged) {
@@ -322,9 +334,14 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
           subscription_frequencies: settings.subscription_frequencies || ["monthly", "every_3_months"],
           subscription_offers: settings.subscription_offers || [],
           social_links: settings.social_links || { instagram: '', facebook: '', whatsapp: '', twitter: '', youtube: '' },
+          cashfree: settings.cashfree || { app_id_test: '', secret_key_test: '', app_id_live: '', secret_key_live: '', mode: 'test', active: false },
           faqs: settings.faqs || [],
           ingredients: settings.ingredients || [],
           trust_badges: settings.trust_badges || [],
+          policies_terms: settings.policies_terms || '',
+          policies_privacy: settings.policies_privacy || '',
+          policies_shipping: settings.policies_shipping || '',
+          policies_refund: settings.policies_refund || '',
           ingredients_active: settings.ingredients_active !== undefined ? settings.ingredients_active : true
         });
       }
@@ -1660,6 +1677,21 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
           </button>
 
 
+          <button
+            onClick={() => setActiveTab('payment_gateway')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+              sidebarCollapsed ? 'justify-center px-0' : ''
+            } ${
+              activeTab === 'payment_gateway'
+                ? 'bg-[#3A2E26] text-white shadow-lg shadow-[#3A2E26]/10 translate-x-1'
+                : 'hover:bg-[#3A2E26]/5 text-[#3A2E26]/75 hover:text-[#3A2E26]'
+            }`}
+            title="Payment Gateway"
+          >
+            <CreditCard className="w-4 h-4" />
+            {!sidebarCollapsed && <span>Payment Gateway</span>}
+          </button>
+
           <div className="flex flex-col w-full">
             <button
               onClick={() => {
@@ -1691,7 +1723,8 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                   { id: 'subscription', label: 'Subscription Sys', num: '5' },
                   { id: 'ingredients', label: 'Ingredients List', num: '6' },
                   { id: 'faqs', label: 'FAQs Accordion', num: '7' },
-                  { id: 'contact', label: 'Footer & Socials', num: '8' }
+                  { id: 'contact', label: 'Footer & Socials', num: '8' },
+                  { id: 'policies', label: 'Store Policies', num: '9' }
                 ].map((sub) => {
                   const isActive = settingsSubTab === sub.id;
                   return (
@@ -3497,6 +3530,74 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                 </>
               )}
 
+              {settingsSubTab === 'policies' && (
+                <>
+                  {/* Store Policies Editing Section */}
+                  <div className="bg-white rounded-3xl p-6 border border-[#3A2E26]/10 shadow-sm space-y-4">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70 border-b border-[#3A2E26]/10 pb-2">Store Policies</h3>
+                    <p className="text-[10px] text-gray-500 font-sans -mt-2">Customize the policies linked in your footer. Empty fields will automatically fall back to the default standard templates.</p>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Terms & Conditions</label>
+                        <AutoResizeTextarea
+                          value={settingsForm.policies_terms || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            policies_terms: e.target.value
+                          })}
+                          placeholder="Enter customized Terms & Conditions..."
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-medium"
+                          rows={6}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Privacy Policy</label>
+                        <AutoResizeTextarea
+                          value={settingsForm.policies_privacy || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            policies_privacy: e.target.value
+                          })}
+                          placeholder="Enter customized Privacy Policy..."
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-medium"
+                          rows={6}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Shipping & Delivery Policy</label>
+                        <AutoResizeTextarea
+                          value={settingsForm.policies_shipping || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            policies_shipping: e.target.value
+                          })}
+                          placeholder="Enter customized Shipping & Delivery Policy..."
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-medium"
+                          rows={6}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Return & Refund Policy</label>
+                        <AutoResizeTextarea
+                          value={settingsForm.policies_refund || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            policies_refund: e.target.value
+                          })}
+                          placeholder="Enter customized Return & Refund Policy..."
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-medium"
+                          rows={6}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
               {settingsSubTab === 'subscription' && (
                 <>
                   {/* Subscribe & Save Section Settings */}
@@ -3879,6 +3980,163 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                 {renderStorefrontPreview(settingsSubTab, true)}
               </div>
             )}
+
+              {activeTab === 'payment_gateway' && (
+                <div className="w-full max-w-4xl mx-auto space-y-6 animate-fadeIn">
+                  <div className="flex flex-col gap-1 border-b border-[#3A2E26]/10 pb-4">
+                    <h2 className="text-xl font-bold tracking-tight uppercase text-[#3A2E26] font-sans">Payment Gateway Configuration</h2>
+                    <p className="text-xs text-[#3A2E26]/60">Manage your Cashfree merchant accounts, credentials, and transaction modes.</p>
+                  </div>
+
+                  <form onSubmit={handleSaveSettings} className="space-y-6">
+                    {/* Cashfree Payment Gateway Panel */}
+                    <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#3A2E26]/10 shadow-sm space-y-6">
+                      <div className="flex justify-between items-center border-b border-[#3A2E26]/10 pb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-[#7A8B6F]/10 text-[#7A8B6F] flex items-center justify-center font-bold font-serif text-lg">
+                            CF
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-bold uppercase tracking-wider text-[#3A2E26]">Cashfree Payment Gateway</h3>
+                            <p className="text-[10px] text-gray-500 font-sans">Accept UPI, Credit/Debit Cards, Net Banking, and Wallet payments instantly.</p>
+                          </div>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={settingsForm.cashfree?.active || false}
+                            onChange={(e) => setSettingsForm({
+                              ...settingsForm,
+                              cashfree: { ...settingsForm.cashfree, active: e.target.checked }
+                            })}
+                            className="sr-only peer"
+                          />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7A8B6F]"></div>
+                          <span className="ml-2.5 text-xs font-bold uppercase tracking-wider text-[#3A2E26]">
+                            {settingsForm.cashfree?.active ? "Active" : "Disabled"}
+                          </span>
+                        </label>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Sandbox credentials */}
+                        <div className="p-5 bg-gray-50/50 rounded-2xl border border-[#3A2E26]/5 space-y-4">
+                          <div className="flex items-center justify-between border-b pb-2">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Test Environment (Sandbox)</span>
+                            <span className="px-2 py-0.5 rounded-full text-[9px] bg-gray-200 text-gray-600 font-bold uppercase">Sandbox</span>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">App ID (Test)</label>
+                            <input
+                              type="text"
+                              value={settingsForm.cashfree?.app_id_test || ''}
+                              onChange={(e) => setSettingsForm({
+                                ...settingsForm,
+                                cashfree: { ...settingsForm.cashfree, app_id_test: e.target.value }
+                              })}
+                              placeholder="TEST104445831599a0..."
+                              className="w-full px-4 py-2.5 bg-white border border-[#E6D5C3]/40 rounded-2xl text-xs focus:outline-none focus:border-[#3A2E26] font-mono"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Secret Key (Test)</label>
+                            <input
+                              type="password"
+                              value={settingsForm.cashfree?.secret_key_test || ''}
+                              onChange={(e) => setSettingsForm({
+                                ...settingsForm,
+                                cashfree: { ...settingsForm.cashfree, secret_key_test: e.target.value }
+                              })}
+                              placeholder="cfsk_ma_test_..."
+                              className="w-full px-4 py-2.5 bg-white border border-[#E6D5C3]/40 rounded-2xl text-xs focus:outline-none focus:border-[#3A2E26] font-mono"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Live credentials */}
+                        <div className="p-5 bg-yellow-50/10 rounded-2xl border border-yellow-100/30 space-y-4">
+                          <div className="flex items-center justify-between border-b pb-2">
+                            <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Live Environment (Production)</span>
+                            <span className="px-2 py-0.5 rounded-full text-[9px] bg-amber-100 text-amber-800 font-bold uppercase">Live</span>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">App ID (Live)</label>
+                            <input
+                              type="text"
+                              value={settingsForm.cashfree?.app_id_live || ''}
+                              onChange={(e) => setSettingsForm({
+                                ...settingsForm,
+                                cashfree: { ...settingsForm.cashfree, app_id_live: e.target.value }
+                              })}
+                              placeholder="Enter Live App ID..."
+                              className="w-full px-4 py-2.5 bg-white border border-[#E6D5C3]/40 rounded-2xl text-xs focus:outline-none focus:border-[#3A2E26] font-mono"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Secret Key (Live)</label>
+                            <input
+                              type="password"
+                              value={settingsForm.cashfree?.secret_key_live || ''}
+                              onChange={(e) => setSettingsForm({
+                                ...settingsForm,
+                                cashfree: { ...settingsForm.cashfree, secret_key_live: e.target.value }
+                              })}
+                              placeholder="Enter Live Secret Key..."
+                              className="w-full px-4 py-2.5 bg-white border border-[#E6D5C3]/40 rounded-2xl text-xs focus:outline-none focus:border-[#3A2E26] font-mono"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Mode selection */}
+                      <div className="pt-2 border-t border-[#3A2E26]/5">
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-2">Environment Mode</label>
+                        <div className="flex gap-6">
+                          <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-[#3A2E26] select-none">
+                            <input
+                              type="radio"
+                              name="cashfree_mode_page"
+                              value="test"
+                              checked={settingsForm.cashfree?.mode === 'test'}
+                              onChange={() => setSettingsForm({
+                                ...settingsForm,
+                                cashfree: { ...settingsForm.cashfree, mode: 'test' }
+                              })}
+                              className="text-[#7A8B6F] focus:ring-[#7A8B6F]"
+                            />
+                            Test / Sandbox Mode
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-amber-700 select-none">
+                            <input
+                              type="radio"
+                              name="cashfree_mode_page"
+                              value="live"
+                              checked={settingsForm.cashfree?.mode === 'live'}
+                              onChange={() => setSettingsForm({
+                                ...settingsForm,
+                                cashfree: { ...settingsForm.cashfree, mode: 'live' }
+                              })}
+                              className="text-[#C97C5D] focus:ring-[#C97C5D]"
+                            />
+                            Live / Production Mode
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-2">
+                      <button
+                        type="submit"
+                        disabled={saving}
+                        className="px-8 py-3 bg-[#3A2E26] hover:bg-[#2A201A] text-white font-bold text-sm rounded-2xl shadow-md transition-colors cursor-pointer flex items-center justify-center min-w-[8rem]"
+                      >
+                        {saving ? 'Saving...' : 'Save Gateway Credentials'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
 
               {activeTab === 'reviews' && (
                 <div className="flex flex-col md:flex-row gap-6 animate-fadeIn items-start w-full">

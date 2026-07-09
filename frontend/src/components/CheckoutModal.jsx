@@ -1,16 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { X, CheckCircle2, ShieldCheck, CreditCard, Truck, Smartphone, Banknote, ArrowRight, Sparkles, Loader2, Compass, Navigation } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { placeOrder, updateUserProfile, validateCoupon, getActiveCoupons, createSubscription } from '../utils/api';
+import { placeOrder, updateUserProfile, validateCoupon, getActiveCoupons, createSubscription, createCashfreeSession, verifyCashfreePayment } from '../utils/api';
 
-export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderComplete, token, user }) {
+export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderComplete, token, user, settings }) {
   const [step, setStep] = useState('shipping'); // 'shipping', 'payment', 'success'
-  const [paymentMethod, setPaymentMethod] = useState('upi'); // 'upi', 'cod', 'card'
+  const [paymentMethod, setPaymentMethod] = useState('online'); // 'online', 'cod'
   const [coupon, setCoupon] = useState('');
   const [discount, setDiscount] = useState(0);
   const [couponApplied, setCouponApplied] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [activeCoupons, setActiveCoupons] = useState([]);
+
+  // Load Cashfree SDK dynamically
+  const loadCashfree = () => {
+    return new Promise((resolve) => {
+      if (window.Cashfree) {
+        resolve(true);
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -38,6 +53,10 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
 
   useEffect(() => {
     if (isOpen) {
+      setStep('shipping');
+      setLoading(false);
+      setError('');
+      setPaymentMethod(settings?.cashfree?.active ? 'online' : 'cod');
       // Reset coupon states on open
       setCoupon('');
       setDiscount(0);
@@ -255,6 +274,62 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
       }
 
       const subItem = cartItems.find(item => item.isSubscription);
+      const isCashfreeActive = settings?.cashfree?.active && paymentMethod !== 'cod';
+
+      if (isCashfreeActive) {
+        let createdOrderId = generatedId;
+        if (subItem) {
+          const subPayload = {
+            durationMonths: subItem.subscriptionDetails.durationMonths,
+            soapsPerMonth: subItem.subscriptionDetails.soapsPerMonth,
+            deliveryFrequency: subItem.subscriptionDetails.deliveryFrequency,
+            customerName: formData.fullName,
+            customerPhone: formData.phone,
+            customerEmail: formData.email,
+            shippingAddress: {
+              fullName: formData.fullName,
+              email: formData.email,
+              phone: formData.phone,
+              address: formData.address,
+              city: formData.city,
+              pincode: formData.pincode,
+              state: formData.state
+            },
+            paymentMethod: paymentMethod.toUpperCase()
+          };
+          const res = await createSubscription(subPayload, token);
+          createdOrderId = res.subscription.subscriptionId;
+        } else {
+          await placeOrder(orderData, token);
+        }
+
+        const isLoaded = await loadCashfree();
+        if (!isLoaded) {
+          throw new Error("Failed to load Cashfree payment SDK.");
+        }
+
+        const sessionPayload = {
+          orderId: createdOrderId,
+          grandTotal: parseFloat(grandTotal),
+          customerName: formData.fullName,
+          customerPhone: formData.phone,
+          customerEmail: formData.email,
+          returnUrl: `${window.location.origin}/?payment=verify&order_id=${createdOrderId}`
+        };
+
+        const sessionResponse = await createCashfreeSession(sessionPayload);
+        
+        const cashfree = window.Cashfree({
+          mode: settings.cashfree.mode === 'live' ? 'production' : 'sandbox'
+        });
+
+        await cashfree.checkout({
+          paymentSessionId: sessionResponse.payment_session_id,
+          redirectTarget: "_self"
+        });
+        return;
+      }
+
       if (subItem) {
         const subPayload = {
           durationMonths: subItem.subscriptionDetails.durationMonths,
@@ -553,16 +628,18 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
                   </div>
 
                   <div className="space-y-3.5">
-                    <label className={`p-4 rounded-2xl border-2 flex items-center justify-between cursor-pointer transition-all ${paymentMethod === 'upi' ? 'border-[#C97C5D] bg-[#C97C5D]/5' : 'border-[#3A2E26]/10 bg-white'}`}>
-                      <div className="flex items-center gap-3">
-                        <Smartphone className="w-5 h-5 text-[#C97C5D]" />
-                        <div>
-                          <p className="font-bold text-sm text-[#3A2E26]">UPI Instant Payment (GPay / PhonePe / Paytm)</p>
-                          <p className="text-[10px] text-gray-500">Instant verification, prompt dispatch</p>
+                    {settings?.cashfree?.active && (
+                      <label className={`p-4 rounded-2xl border-2 flex items-center justify-between cursor-pointer transition-all ${paymentMethod === 'online' ? 'border-[#C97C5D] bg-[#C97C5D]/5' : 'border-[#3A2E26]/10 bg-white'}`}>
+                        <div className="flex items-center gap-3">
+                          <CreditCard className="w-5 h-5 text-[#C97C5D]" />
+                          <div>
+                            <p className="font-bold text-sm text-[#3A2E26]">Pay Online (UPI / Card / Net Banking)</p>
+                            <p className="text-[10px] text-gray-500">Secure instant payment via Cashfree</p>
+                          </div>
                         </div>
-                      </div>
-                      <input type="radio" name="payment" checked={paymentMethod === 'upi'} onChange={() => setPaymentMethod('upi')} className="text-[#C97C5D]" />
-                    </label>
+                        <input type="radio" name="payment" checked={paymentMethod === 'online'} onChange={() => setPaymentMethod('online')} className="text-[#C97C5D]" />
+                      </label>
+                    )}
 
                     <label className={`p-4 rounded-2xl border-2 flex items-center justify-between cursor-pointer transition-all ${paymentMethod === 'cod' ? 'border-[#7A8B6F] bg-[#7A8B6F]/5' : 'border-[#3A2E26]/10 bg-white'}`}>
                       <div className="flex items-center gap-3">
@@ -573,17 +650,6 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
                         </div>
                       </div>
                       <input type="radio" name="payment" checked={paymentMethod === 'cod'} onChange={() => setPaymentMethod('cod')} />
-                    </label>
-
-                    <label className={`p-4 rounded-2xl border-2 flex items-center justify-between cursor-pointer transition-all ${paymentMethod === 'card' ? 'border-purple-600 bg-purple-50/30' : 'border-[#3A2E26]/10 bg-white'}`}>
-                      <div className="flex items-center gap-3">
-                        <CreditCard className="w-5 h-5 text-purple-600" />
-                        <div>
-                          <p className="font-bold text-sm text-[#3A2E26]">Credit / Debit Card / Net Banking</p>
-                          <p className="text-[10px] text-gray-500">Visa, Mastercard, RuPay, Maestro</p>
-                        </div>
-                      </div>
-                      <input type="radio" name="payment" checked={paymentMethod === 'card'} onChange={() => setPaymentMethod('card')} />
                     </label>
                   </div>
 

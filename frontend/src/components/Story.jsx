@@ -4,7 +4,7 @@ import { Heart, Sparkles, Sprout } from 'lucide-react';
 export default function Story({ settings }) {
   const title = settings?.title || "From our kitchen counter to your daily sanctuary.";
   const subtitle = settings?.subtitle || "Our Heritage";
-  const paragraph1 = settings?.paragraph1 || "PureBotanica began in the autumn of 2018 when our founder Elena could not find a commercial soap that didn’t leave her skin dry, itchy, and irritated by synthetic dyes and fake fragrances.";
+  const paragraph1 = settings?.paragraph1 || "Hausmade began in the autumn of 2018 when our founder Elena could not find a commercial soap that didn’t leave her skin dry, itchy, and irritated by synthetic dyes and fake fragrances.";
   const paragraph2 = settings?.paragraph2 || "We went back to ancient cold-process saponification roots: slowly combining raw organic butter, wildflower honey, and steam-distilled essential oils. Every single bar is poured by hand, cut with guitar wire, and cured for 6 full weeks to ensure a long-lasting, ultra-creamy bar.";
   const imageUrl = settings?.image_url || "/images/founder-workshop.png";
   const authorName = settings?.author_name || "Elena Vance — Master Artisan";

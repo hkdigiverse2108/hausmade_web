@@ -35,7 +35,7 @@ export default function Ingredients({ settings }) {
   }));
 
   const comparison = [
-    { feature: 'Dense Shaving Cushion Lather', commercial: false, pure: true, detail: 'Commercial foams collapse quickly; PureBotanica holds dense foam' },
+    { feature: 'Dense Shaving Cushion Lather', commercial: false, pure: true, detail: 'Commercial foams collapse quickly; Hausmade holds dense foam' },
     { feature: 'Pure Kashmiri Kesar Infusion', commercial: false, pure: true, detail: 'Infused with real saffron strands to brighten skin tone' },
     { feature: 'Zero Synthetic Propellants', commercial: false, pure: true, detail: 'Canned foams use chemical butane gas that dries out skin' },
     { feature: '6-Week Cold Cured Puck', commercial: false, pure: true, detail: 'Hand-cured for max longevity in a shaving bowl' },
@@ -182,7 +182,7 @@ export default function Ingredients({ settings }) {
                 <span className="text-[#C97C5D] font-bold text-[10px] uppercase tracking-widest">The Difference</span>
               </div>
               <h3 className="font-serif-brand text-2xl sm:text-3xl lg:text-4xl font-normal text-[#3A2E26]">
-                Why PureBotanica is <span className="italic text-[#7A8B6F]">Different</span>
+                Why Hausmade is <span className="italic text-[#7A8B6F]">Different</span>
               </h3>
               <p className="text-sm sm:text-base text-[#3A2E26]/55 mt-2 max-w-lg mx-auto">
                 Mass-market soaps are technically synthetic detergent bars. Here is how we compare:
