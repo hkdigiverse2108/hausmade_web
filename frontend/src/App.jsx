@@ -18,6 +18,7 @@ import ProfileModal from './components/ProfileModal';
 import WishlistModal from './components/WishlistModal';
 import AdminPanel from './components/AdminPanel';
 import ReviewModal from './components/ReviewModal';
+import OrderTracking from './components/OrderTracking';
 import { getUserProfile, getProducts, getSiteSettings, socialLogin, updateUserCart, verifyCashfreePayment } from './utils/api';
 
 
@@ -520,7 +521,9 @@ export default function App() {
         </div>
       )}
 
-      {!isAdminView && !isProfileOpen && (() => {
+      {activeHash === '#track' ? (
+        <OrderTracking />
+      ) : !isAdminView && !isProfileOpen && (() => {
         const isPreviewMode = window.location.search.includes('preview=true');
         const getSectionClass = (sectionId) => isPreviewMode 
           ? `cursor-pointer transition-all duration-300 hover:outline hover:outline-2 hover:outline-dashed hover:outline-amber-500/50 hover:bg-amber-500/[0.01] relative after:absolute after:top-2 after:right-2 after:bg-amber-500 after:text-white after:text-[8px] after:font-bold after:px-1.5 after:py-0.5 after:rounded-md after:content-['Click_to_Edit'] after:opacity-0 hover:after:opacity-100 after:transition-opacity after:z-[99] after:pointer-events-none` 

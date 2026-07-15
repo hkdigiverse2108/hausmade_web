@@ -163,6 +163,18 @@ class CashfreeSettings(BaseModel):
     mode: str = "test"  # "test" or "live"
     active: bool = False
 
+class DelhiverySettings(BaseModel):
+    api_token: str = ""
+    mode: str = "test"  # "test" or "live"
+    active: bool = False
+    pickup_name: str = ""
+    pickup_phone: str = ""
+    pickup_email: str = ""
+    pickup_pincode: str = ""
+    pickup_state: str = ""
+    pickup_city: str = ""
+    pickup_address: str = ""
+
 class SiteSettingsModel(BaseModel):
     logo_url: str = ""
     announcement: AnnouncementSettings
@@ -172,6 +184,7 @@ class SiteSettingsModel(BaseModel):
     subscription: SubscriptionSettings
     social_links: SocialLinksSettings = SocialLinksSettings()
     cashfree: Optional[CashfreeSettings] = CashfreeSettings()
+    delhivery: Optional[DelhiverySettings] = DelhiverySettings()
     faqs: List[FAQItem] = []
     ingredients: List[IngredientItem] = []
     trust_badges: List[TrustBadgeItem] = []

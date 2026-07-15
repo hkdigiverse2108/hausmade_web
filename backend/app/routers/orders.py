@@ -330,3 +330,426 @@ async def verify_payment(payload: dict):
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
+# Helper to get settings
+async def get_delhivery_config_internal():
+    settings = await settings_collection.find_one({"key": "site_settings"})
+    if not settings or "delhivery" not in settings:
+        return None
+    return settings["delhivery"]
+
+@router.get("/api/admin/orders/{order_id}/delhivery/serviceability")
+async def check_delhivery_serviceability(order_id: str, admin: dict = Depends(get_admin_user)):
+    order = await orders_collection.find_one({"orderId": order_id})
+    if not order:
+        order = await orders_collection.find_one({"_id": order_id})
+        if not order:
+            raise HTTPException(status_code=404, detail="Order not found")
+            
+    pincode = order.get("shippingAddress", {}).get("pincode")
+    if not pincode:
+        raise HTTPException(status_code=400, detail="Pincode is missing in shipping address")
+        
+    config = await get_delhivery_config_internal()
+    if not config or not config.get("active") or not config.get("api_token"):
+        return {
+            "status": "mock",
+            "serviceable": True,
+            "pincode": pincode,
+            "cod_available": True,
+            "prepaid_available": True,
+            "provider": "Delhivery (Demo Mode)",
+            "estimated_days": 3,
+            "cost_estimate": 45.0
+        }
+        
+    token = config["api_token"]
+    mode = config.get("mode", "test")
+    base_url = "https://staging-express.delhivery.com" if mode == "test" else "https://track.delhivery.com"
+    
+    url = f"{base_url}/api/kbc/v1/pin-codes/json/?filter_codes={pincode}"
+    headers = {
+        "Authorization": f"Token {token}",
+        "Content-Type": "application/json"
+    }
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.get(url, headers=headers, timeout=10.0)
+            if resp.status_code == 200:
+                data = resp.json()
+                codes = data.get("delivery_codes", [])
+                if codes:
+                    code_info = codes[0].get("postal_code", {})
+                    is_serviceable = code_info.get("pin") is not None
+                    cod = code_info.get("cod") == "Y"
+                    prepaid = code_info.get("prepaid") == "Y"
+                    return {
+                        "status": "success",
+                        "serviceable": is_serviceable,
+                        "pincode": pincode,
+                        "cod_available": cod,
+                        "prepaid_available": prepaid,
+                        "provider": "Delhivery",
+                        "estimated_days": 4,
+                        "cost_estimate": 60.0
+                    }
+                else:
+                    return {
+                        "status": "success",
+                        "serviceable": False,
+                        "pincode": pincode,
+                        "cod_available": False,
+                        "prepaid_available": False,
+                        "provider": "Delhivery"
+                    }
+            else:
+                return {
+                    "status": "error_fallback",
+                    "detail": f"Delhivery API returned status code {resp.status_code}",
+                    "serviceable": True,
+                    "pincode": pincode,
+                    "cod_available": True,
+                    "prepaid_available": True,
+                    "provider": "Delhivery (Staging Fallback)"
+                }
+        except Exception as e:
+            return {
+                "status": "error_fallback",
+                "detail": str(e),
+                "serviceable": True,
+                "pincode": pincode,
+                "cod_available": True,
+                "prepaid_available": True,
+                "provider": "Delhivery (Error Fallback)"
+            }
+
+@router.post("/api/admin/orders/{order_id}/delhivery/ship")
+async def create_delhivery_shipment(order_id: str, payload: dict, admin: dict = Depends(get_admin_user)):
+    import json
+    order = await orders_collection.find_one({"orderId": order_id})
+    if not order:
+        order = await orders_collection.find_one({"_id": order_id})
+        if not order:
+            raise HTTPException(status_code=404, detail="Order not found")
+            
+    weight = payload.get("weight", 500)
+    length = payload.get("length", 15)
+    width = payload.get("width", 15)
+    height = payload.get("height", 10)
+    
+    config = await get_delhivery_config_internal()
+    if not config or not config.get("active") or not config.get("api_token"):
+        mock_awb = f"DELHIVERY{str(uuid.uuid4().int)[:10]}"
+        fulfillment = {
+            "awb": mock_awb,
+            "provider": "Delhivery (Demo Mode)",
+            "weight": weight,
+            "dimensions": f"{length}x{width}x{height} cm",
+            "shipped_at": datetime.utcnow().isoformat(),
+            "status": "In Transit",
+            "pickup_scheduled": False,
+            "label_url": f"/api/orders/track/{mock_awb}/mock-label"
+        }
+        await orders_collection.update_one(
+            {"_id": order["_id"]},
+            {"$set": {"fulfillment": fulfillment, "status": "shipped"}}
+        )
+        return {"status": "success", "fulfillment": fulfillment}
+        
+    token = config["api_token"]
+    mode = config.get("mode", "test")
+    base_url = "https://staging-express.delhivery.com" if mode == "test" else "https://express.delhivery.com"
+    
+    pmode = "COD" if order.get("paymentMethod") in ["cod", "COD"] else "Prepaid"
+    cod_amt = float(order.get("grandTotal", 0.0)) if pmode == "COD" else 0.0
+    
+    shipment_data = {
+        "shipments": [
+            {
+                "name": order["shippingAddress"]["fullName"],
+                "add": order["shippingAddress"]["address"],
+                "pin": order["shippingAddress"]["pincode"],
+                "phone": order["shippingAddress"]["phone"],
+                "payment_mode": pmode,
+                "cod_amount": cod_amt,
+                "order": order.get("orderId", order_id),
+                "client": "HAUSMADE",
+                "weight": weight,
+                "length": length,
+                "width": width,
+                "height": height,
+                "products_desc": "Botanical Cleanse Bars",
+                "quantity": sum(item.get("quantity", 1) for item in order.get("cartItems", []))
+            }
+        ],
+        "pickup_location": {
+            "name": config.get("pickup_name") or "Hausmade Soap Shop",
+            "add": config.get("pickup_address") or "305 Muktidham Society",
+            "pin": config.get("pickup_pincode") or "395010",
+            "phone": config.get("pickup_phone") or "7600081431",
+            "city": config.get("pickup_city") or "Surat",
+            "state": config.get("pickup_state") or "Gujarat"
+        }
+    }
+    
+    url = f"{base_url}/api/cbn/create/json/"
+    headers = {
+        "Authorization": f"Token {token}",
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
+    
+    body_data = {
+        "format": "json",
+        "data": json.dumps(shipment_data)
+    }
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.post(url, data=body_data, headers=headers, timeout=15.0)
+            if resp.status_code == 200:
+                resp_json = resp.json()
+                success = resp_json.get("success", False)
+                packages = resp_json.get("packages", [])
+                if packages:
+                    pkg = packages[0]
+                    waybill = pkg.get("waybill")
+                    if waybill:
+                        fulfillment = {
+                            "awb": waybill,
+                            "provider": "Delhivery",
+                            "weight": weight,
+                            "dimensions": f"{length}x{width}x{height} cm",
+                            "shipped_at": datetime.utcnow().isoformat(),
+                            "status": "Manifested",
+                            "pickup_scheduled": False,
+                            "label_url": f"https://staging-express.delhivery.com/api/p/packaging/status/?wbns={waybill}" if mode == "test" else f"https://express.delhivery.com/api/p/packaging/status/?wbns={waybill}"
+                        }
+                        await orders_collection.update_one(
+                            {"_id": order["_id"]},
+                            {"$set": {"fulfillment": fulfillment, "status": "shipped"}}
+                        )
+                        return {"status": "success", "fulfillment": fulfillment}
+                
+                raise HTTPException(status_code=400, detail=f"Delhivery shipment booking failed: {resp.text}")
+            else:
+                raise HTTPException(status_code=400, detail=f"Delhivery API Error ({resp.status_code}): {resp.text}")
+        except Exception as e:
+            if isinstance(e, HTTPException):
+                raise e
+            raise HTTPException(status_code=500, detail=f"Failed to communicate with Delhivery: {str(e)}")
+
+@router.post("/api/admin/orders/{order_id}/delhivery/pickup")
+async def schedule_delhivery_pickup(order_id: str, admin: dict = Depends(get_admin_user)):
+    order = await orders_collection.find_one({"orderId": order_id})
+    if not order:
+        order = await orders_collection.find_one({"_id": order_id})
+        if not order:
+            raise HTTPException(status_code=404, detail="Order not found")
+            
+    fulfillment = order.get("fulfillment", {})
+    awb = fulfillment.get("awb")
+    if not awb:
+        raise HTTPException(status_code=400, detail="Order has not been shipped with Delhivery yet")
+        
+    config = await get_delhivery_config_internal()
+    if not config or not config.get("active") or not config.get("api_token"):
+        fulfillment["pickup_scheduled"] = True
+        fulfillment["status"] = "In Transit"
+        await orders_collection.update_one(
+            {"_id": order["_id"]},
+            {"$set": {"fulfillment": fulfillment}}
+        )
+        return {"status": "success", "detail": "Demo pickup scheduled successfully"}
+        
+    token = config["api_token"]
+    mode = config.get("mode", "test")
+    base_url = "https://staging-express.delhivery.com" if mode == "test" else "https://express.delhivery.com"
+    
+    url = f"{base_url}/fm/request/pickup/"
+    headers = {
+        "Authorization": f"Token {token}",
+        "Content-Type": "application/json"
+    }
+    
+    pickup_payload = {
+        "pickup_time": datetime.utcnow().strftime("%H:%M:%S"),
+        "pickup_date": datetime.utcnow().strftime("%Y-%m-%d"),
+        "pickup_location": config.get("pickup_name") or "Hausmade Soap Shop",
+        "expected_package_count": 1
+    }
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.post(url, json=pickup_payload, headers=headers, timeout=10.0)
+            fulfillment["pickup_scheduled"] = True
+            await orders_collection.update_one(
+                {"_id": order["_id"]},
+                {"$set": {"fulfillment": fulfillment}}
+            )
+            return {"status": "success", "detail": "Pickup scheduled successfully"}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to schedule pickup: {str(e)}")
+
+@router.post("/api/admin/orders/{order_id}/delhivery/cancel")
+async def cancel_delhivery_shipment(order_id: str, admin: dict = Depends(get_admin_user)):
+    order = await orders_collection.find_one({"orderId": order_id})
+    if not order:
+        order = await orders_collection.find_one({"_id": order_id})
+        if not order:
+            raise HTTPException(status_code=404, detail="Order not found")
+            
+    fulfillment = order.get("fulfillment", {})
+    awb = fulfillment.get("awb")
+    if not awb:
+        raise HTTPException(status_code=400, detail="Order has no waybill generated")
+        
+    config = await get_delhivery_config_internal()
+    if not config or not config.get("active") or not config.get("api_token"):
+        await orders_collection.update_one(
+            {"_id": order["_id"]},
+            {"$unset": {"fulfillment": ""}, "$set": {"status": "confirmed"}}
+        )
+        return {"status": "success", "detail": "Demo shipment cancelled successfully"}
+        
+    token = config["api_token"]
+    mode = config.get("mode", "test")
+    base_url = "https://staging-express.delhivery.com" if mode == "test" else "https://express.delhivery.com"
+    
+    url = f"{base_url}/api/p/edit/"
+    headers = {
+        "Authorization": f"Token {token}",
+        "Content-Type": "application/json"
+    }
+    
+    cancel_payload = {
+        "waybill": awb,
+        "cancellation": True
+    }
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.post(url, json=cancel_payload, headers=headers, timeout=10.0)
+            await orders_collection.update_one(
+                {"_id": order["_id"]},
+                {"$unset": {"fulfillment": ""}, "$set": {"status": "confirmed"}}
+            )
+            return {"status": "success", "detail": "Shipment cancelled successfully"}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/api/orders/track/{tracking_id}")
+async def track_order_shipment(tracking_id: str):
+    order = await orders_collection.find_one({
+        "$or": [
+            {"orderId": tracking_id},
+            {"fulfillment.awb": tracking_id}
+        ]
+    })
+    
+    if not order:
+        if tracking_id.startswith("DELHIVERY"):
+            return {
+                "status": "success",
+                "waybill": tracking_id,
+                "order_id": "ORDER-DEMO-1234",
+                "status_name": "In Transit",
+                "status_time": datetime.utcnow().isoformat(),
+                "scans": [
+                    {"time": datetime.utcnow().isoformat(), "activity": "In transit to delivery center", "location": "Surat Warehouse"},
+                    {"time": datetime.utcnow().isoformat(), "activity": "Shipment picked up by partner", "location": "Hausmade Soap Shop"}
+                ],
+                "expected_date": "3 days from now"
+            }
+        raise HTTPException(status_code=404, detail="Tracking details not found for this identifier")
+        
+    fulfillment = order.get("fulfillment", {})
+    awb = fulfillment.get("awb")
+    
+    if not awb:
+        return {
+            "status": "success",
+            "order_id": order.get("orderId"),
+            "status_name": "Order Placed",
+            "status_time": order.get("created_at"),
+            "scans": [
+                {"time": order.get("created_at"), "activity": "Order Confirmed. Preparing shipment.", "location": "Hausmade Soap Shop"}
+            ]
+        }
+        
+    config = await get_delhivery_config_internal()
+    if not config or not config.get("active") or not config.get("api_token"):
+        status_time = fulfillment.get("shipped_at") or datetime.utcnow().isoformat()
+        return {
+            "status": "success",
+            "waybill": awb,
+            "order_id": order.get("orderId"),
+            "status_name": "In Transit" if fulfillment.get("pickup_scheduled") else "Manifested",
+            "status_time": status_time,
+            "scans": [
+                {"time": status_time, "activity": "Dispatched via Delhivery Express", "location": "Surat Hub"},
+                {"time": order.get("created_at"), "activity": "Order Confirmed by Store", "location": "Hausmade Soap Shop"}
+            ],
+            "expected_date": "Within 3-4 Business Days"
+        }
+        
+    token = config["api_token"]
+    mode = config.get("mode", "test")
+    url = f"https://track.delhivery.com/api/v1/packages/json/?waybill={awb}"
+    headers = {
+        "Authorization": f"Token {token}"
+    }
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.get(url, headers=headers, timeout=10.0)
+            if resp.status_code == 200:
+                data = resp.json()
+                scans = []
+                scan_list = data.get("ScanHistory", [])
+                for s in scan_list:
+                    scans.append({
+                        "time": s.get("ScanDateTime"),
+                        "activity": s.get("Instructions") or s.get("Status"),
+                        "location": s.get("ScannedLocation")
+                    })
+                
+                if not scans:
+                    scans.append({
+                        "time": fulfillment.get("shipped_at"),
+                        "activity": "Shipment Manifested. Awaiting pickup.",
+                        "location": "Origin Warehouse"
+                    })
+                    
+                return {
+                    "status": "success",
+                    "waybill": awb,
+                    "order_id": order.get("orderId"),
+                    "status_name": data.get("Status", {}).get("Status") or "In Transit",
+                    "status_time": data.get("Status", {}).get("StatusDateTime") or fulfillment.get("shipped_at"),
+                    "scans": scans,
+                    "expected_date": data.get("ExpectedDeliveryDate") or "3-4 Business Days"
+                }
+            else:
+                return {
+                    "status": "fallback",
+                    "waybill": awb,
+                    "order_id": order.get("orderId"),
+                    "status_name": "Manifested",
+                    "status_time": fulfillment.get("shipped_at"),
+                    "scans": [
+                        {"time": fulfillment.get("shipped_at"), "activity": "Shipment registered. Label printed.", "location": "Origin Warehouse"}
+                    ],
+                    "expected_date": "Awaiting pickup"
+                }
+        except Exception as e:
+            return {
+                "status": "fallback",
+                "waybill": awb,
+                "order_id": order.get("orderId"),
+                "status_name": "In Transit (Local Estimate)",
+                "status_time": fulfillment.get("shipped_at"),
+                "scans": [
+                    {"time": fulfillment.get("shipped_at"), "activity": "Dispatched via Delhivery Express (Error reading real-time tracking)", "location": "Origin"}
+                ],
+                "expected_date": "3-4 Business Days"
+            }

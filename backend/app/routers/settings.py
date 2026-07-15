@@ -197,6 +197,21 @@ async def get_site_settings():
                 }
                 settings["cashfree"] = default_cashfree
                 await settings_collection.update_one({"key": "site_settings"}, {"$set": {"cashfree": default_cashfree}})
+            if "delhivery" not in settings:
+                default_delhivery = {
+                    "api_token": "",
+                    "mode": "test",
+                    "active": False,
+                    "pickup_name": "",
+                    "pickup_phone": "",
+                    "pickup_email": "",
+                    "pickup_pincode": "",
+                    "pickup_state": "",
+                    "pickup_city": "",
+                    "pickup_address": ""
+                }
+                settings["delhivery"] = default_delhivery
+                await settings_collection.update_one({"key": "site_settings"}, {"$set": {"delhivery": default_delhivery}})
             if "policies_terms" not in settings:
                 settings["policies_terms"] = ""
                 await settings_collection.update_one({"key": "site_settings"}, {"$set": {"policies_terms": ""}})
@@ -225,3 +240,38 @@ async def update_site_settings(settings_data: SiteSettingsModel, admin: dict = D
         return {"status": "success", "settings": doc}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+import httpx
+from pydantic import BaseModel
+
+class DelhiveryTestModel(BaseModel):
+    api_token: str
+    mode: str = "test"
+
+@router.post("/api/admin/delhivery/test")
+async def test_delhivery_connection(test_data: DelhiveryTestModel, admin: dict = Depends(get_admin_user)):
+    token = test_data.api_token.strip()
+    if not token:
+        raise HTTPException(status_code=400, detail="API Token is required")
+    
+    base_url = "https://staging-express.delhivery.com" if test_data.mode == "test" else "https://track.delhivery.com"
+    url = f"{base_url}/api/kbc/v1/pin-codes/json/?filter_codes=110001"
+    headers = {
+        "Authorization": f"Token {token}",
+        "Content-Type": "application/json"
+    }
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.get(url, headers=headers, timeout=10.0)
+            if resp.status_code == 200:
+                return {"status": "success", "message": "Successfully connected to Delhivery!"}
+            elif resp.status_code in [401, 403]:
+                raise HTTPException(status_code=401, detail="Authentication failed: Invalid API Token")
+            else:
+                raise HTTPException(status_code=400, detail=f"Delhivery API returned status {resp.status_code}")
+        except httpx.RequestError as e:
+            raise HTTPException(status_code=500, detail=f"Network error: {str(e)}")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+

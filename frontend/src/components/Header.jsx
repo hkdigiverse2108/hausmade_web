@@ -44,6 +44,7 @@ export default function Header({ cartCount, onOpenCart, wishlistCount, onOpenWis
     { name: 'Ingredients', href: '#ingredients' },
     { name: 'Reviews', href: '#reviews' },
     { name: 'FAQ', href: '#faq' },
+    { name: 'Track Order', href: '#track' },
   ];
 
   const [logoClicks, setLogoClicks] = useState(0);

@@ -275,6 +275,15 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   useEffect(() => {
     localStorage.setItem('hausmade_admin_settings_subtab', settingsSubTab);
   }, [settingsSubTab]);
+
+  const [selectedOrderForShipping, setSelectedOrderForShipping] = useState(null);
+  const [shippingWeight, setShippingWeight] = useState(500); // grams
+  const [shippingLength, setShippingLength] = useState(15); // cm
+  const [shippingWidth, setShippingWidth] = useState(15); // cm
+  const [shippingHeight, setShippingHeight] = useState(10); // cm
+  const [serviceabilityResult, setServiceabilityResult] = useState(null);
+  const [checkingServiceability, setCheckingServiceability] = useState(false);
+
   const [previewDevice, setPreviewDevice] = useState('pc'); // 'pc', 'tablet', 'mobile'
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [customDuration, setCustomDuration] = useState('');
@@ -1005,6 +1014,114 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     }
   };
 
+  const handleCheckServiceability = async (orderId) => {
+    setCheckingServiceability(true);
+    setServiceabilityResult(null);
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}/delhivery/serviceability`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      setServiceabilityResult(data);
+      if (data.serviceable) {
+        showNotification('Pincode ' + data.pincode + ' is serviceable by Delhivery!', 'success');
+      } else {
+        showNotification('Warning: Pincode ' + data.pincode + ' is NOT serviceable!', 'error');
+      }
+    } catch (err) {
+      showNotification('Failed to check pincode serviceability', 'error');
+    } finally {
+      setCheckingServiceability(false);
+    }
+  };
+
+  const handleBookShipment = async (orderId) => {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}/delhivery/ship`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          weight: shippingWeight,
+          length: shippingLength,
+          width: shippingWidth,
+          height: shippingHeight
+        })
+      });
+      const data = await res.json();
+      if (data.status === 'success') {
+        showNotification('Consignment successfully booked with Delhivery! AWB: ' + data.fulfillment.awb, 'success');
+        setSelectedOrderForShipping(null);
+        fetchAdminData(true);
+      } else {
+        showNotification(data.detail || 'Shipment booking failed', 'error');
+      }
+    } catch (err) {
+      showNotification('Failed to book shipment', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSchedulePickup = async (orderId) => {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}/delhivery/pickup`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      if (data.status === 'success') {
+        showNotification('Pickup scheduled successfully with Delhivery!', 'success');
+        fetchAdminData(true);
+      } else {
+        showNotification(data.detail || 'Failed to schedule pickup', 'error');
+      }
+    } catch (err) {
+      showNotification('Failed to schedule pickup', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancelShipment = async (orderId) => {
+    setConfirmConfig({
+      title: 'Cancel Delhivery Shipment',
+      message: 'Are you sure you want to cancel the Delhivery shipment consignment and void the AWB?',
+      type: 'danger',
+      onConfirm: async () => {
+        setConfirmConfig(null);
+        setSaving(true);
+        try {
+          const res = await fetch(`/api/admin/orders/${orderId}/delhivery/cancel`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          const data = await res.json();
+          if (data.status === 'success') {
+            showNotification('Delhivery shipment successfully cancelled.', 'success');
+            fetchAdminData(true);
+          } else {
+            showNotification(data.detail || 'Failed to cancel shipment', 'error');
+          }
+        } catch (err) {
+          showNotification('Failed to cancel shipment', 'error');
+        } finally {
+          setSaving(false);
+        }
+      }
+    });
+  };
+
   const handleProductImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -1724,7 +1841,8 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                   { id: 'ingredients', label: 'Ingredients List', num: '6' },
                   { id: 'faqs', label: 'FAQs Accordion', num: '7' },
                   { id: 'contact', label: 'Footer & Socials', num: '8' },
-                  { id: 'policies', label: 'Store Policies', num: '9' }
+                  { id: 'policies', label: 'Store Policies', num: '9' },
+                  { id: 'delhivery', label: 'Delhivery Shipping', num: '10' }
                 ].map((sub) => {
                   const isActive = settingsSubTab === sub.id;
                   return (
@@ -2182,13 +2300,14 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                             <th className="p-4">Items Summary</th>
                             <th className="p-4">Payment Method</th>
                             <th className="p-4">Order Date</th>
-                            <th className="p-4 pr-6 text-right">Total Amount</th>
+                            <th className="p-4 text-right">Total Amount</th>
+                            <th className="p-4 pr-6 text-right">Fulfillment</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-[#3A2E26]/10 text-xs">
                           {filteredOrders.length === 0 ? (
                             <tr>
-                              <td colSpan="6" className="p-8 text-center text-[#3A2E26]/50">
+                              <td colSpan="7" className="p-8 text-center text-[#3A2E26]/50">
                                 No matching order records located.
                               </td>
                             </tr>
@@ -2242,8 +2361,64 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                   </span>
                                 </td>
                                 <td className="p-4 align-top text-[10px] font-semibold text-[#3A2E26]/75">{formatDate(order.created_at)}</td>
-                                <td className="p-4 pr-6 align-top text-right font-bold text-sm text-[#3A2E26]">
+                                <td className="p-4 align-top text-right font-bold text-sm text-[#3A2E26]">
                                   {formatCurrency(order.grandTotal)}
+                                </td>
+                                <td className="p-4 pr-6 align-top text-right">
+                                  {order.isOffline ? (
+                                    <span className="text-[10px] text-gray-400 font-bold italic">N/A (Offline)</span>
+                                  ) : order.fulfillment ? (
+                                    <div className="flex flex-col items-end gap-1.5 font-sans">
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="px-2 py-0.5 bg-[#7A8B6F]/10 text-[#7A8B6F] border border-[#7A8B6F]/20 rounded-md text-[9px] font-bold uppercase tracking-wider">
+                                          Delhivery
+                                        </span>
+                                        <span className="text-[10px] font-mono font-bold text-gray-700 bg-gray-100 px-1.5 py-0.5 rounded">
+                                          {order.fulfillment.awb}
+                                        </span>
+                                      </div>
+                                      <div className="text-[10px] font-bold text-[#3A2E26]/60">
+                                        Status: <span className="text-[#3A2E26] font-semibold">{order.fulfillment.status}</span>
+                                      </div>
+                                      <div className="flex gap-2 justify-end mt-1 flex-wrap">
+                                        {!order.fulfillment.pickup_scheduled && (
+                                          <button
+                                            onClick={() => handleSchedulePickup(order.orderId)}
+                                            className="px-2 py-1 bg-[#7A8B6F] hover:bg-[#68785c] text-white text-[9px] font-bold rounded-lg uppercase tracking-wider transition-colors cursor-pointer border-none"
+                                          >
+                                            Pickup
+                                          </button>
+                                        )}
+                                        {order.fulfillment.label_url && (
+                                          <a
+                                            href={order.fulfillment.label_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="px-2 py-1 bg-white border border-[#E6D5C3] hover:bg-gray-50 text-[#3A2E26] text-[9px] font-bold rounded-lg uppercase tracking-wider transition-colors no-underline"
+                                          >
+                                            Label
+                                          </a>
+                                        )}
+                                        <button
+                                          onClick={() => handleCancelShipment(order.orderId)}
+                                          className="px-2 py-1 bg-red-50 hover:bg-red-100 text-red-600 text-[9px] font-bold rounded-lg uppercase tracking-wider transition-colors cursor-pointer border-none"
+                                        >
+                                          Cancel
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      onClick={() => {
+                                        setSelectedOrderForShipping(order);
+                                        setServiceabilityResult(null);
+                                      }}
+                                      className="px-3.5 py-1.5 bg-[#3A2E26] hover:bg-[#2A201A] text-white rounded-xl text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1.5 ml-auto border-none"
+                                    >
+                                      <Truck className="w-3.5 h-3.5" />
+                                      <span>Ship Order</span>
+                                    </button>
+                                  )}
                                 </td>
                               </tr>
                             ))
@@ -3592,6 +3767,182 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                           className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-medium"
                           rows={6}
                         />
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {settingsSubTab === 'delhivery' && (
+                <>
+                  {/* Delhivery Settings Section */}
+                  <div className="bg-white rounded-3xl p-6 border border-[#3A2E26]/10 shadow-sm space-y-4">
+                    <div className="flex justify-between items-center border-b border-[#3A2E26]/10 pb-2">
+                      <div>
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70">Delhivery Shipping Integration</h3>
+                        <p className="text-[10px] text-gray-500 font-sans mt-1">Configure Delhivery credentials and pickup warehouse coordinates.</p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={settingsForm.delhivery?.active || false}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            delhivery: { ...settingsForm.delhivery, active: e.target.checked }
+                          })}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7A8B6F]"></div>
+                        <span className="ml-2.5 text-xs font-bold uppercase tracking-wider text-[#3A2E26]">
+                          {settingsForm.delhivery?.active ? "Active" : "Disabled"}
+                        </span>
+                      </label>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">API Auth Token</label>
+                        <input
+                          type="password"
+                          value={settingsForm.delhivery?.api_token || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            delhivery: { ...settingsForm.delhivery, api_token: e.target.value }
+                          })}
+                          placeholder="Enter Delhivery API Token..."
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-mono"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-2">API Environment Mode</label>
+                        <div className="flex gap-6">
+                          <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-[#3A2E26] select-none">
+                            <input
+                              type="radio"
+                              name="delhivery_mode"
+                              value="test"
+                              checked={settingsForm.delhivery?.mode === 'test'}
+                              onChange={() => setSettingsForm({
+                                ...settingsForm,
+                                delhivery: { ...settingsForm.delhivery, mode: 'test' }
+                              })}
+                              className="text-[#7A8B6F] focus:ring-[#7A8B6F]"
+                            />
+                            Staging (Sandbox)
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-amber-700 select-none">
+                            <input
+                              type="radio"
+                              name="delhivery_mode"
+                              value="live"
+                              checked={settingsForm.delhivery?.mode === 'live'}
+                              onChange={() => setSettingsForm({
+                                ...settingsForm,
+                                delhivery: { ...settingsForm.delhivery, mode: 'live' }
+                              })}
+                              className="text-[#C97C5D] focus:ring-[#C97C5D]"
+                            />
+                            Live (Production)
+                          </label>
+                        </div>
+                      </div>
+
+                      <div className="border-t border-[#3A2E26]/5 pt-4">
+                        <h4 className="text-xs font-bold uppercase text-[#3A2E26] mb-3">Default Pickup Warehouse Location</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1">Warehouse / Contact Name</label>
+                            <input
+                              type="text"
+                              value={settingsForm.delhivery?.pickup_name || ''}
+                              onChange={(e) => setSettingsForm({
+                                ...settingsForm,
+                                delhivery: { ...settingsForm.delhivery, pickup_name: e.target.value }
+                              })}
+                              placeholder="e.g. Hausmade Soap Shop"
+                              className="w-full px-3 py-2 bg-white border border-[#E6D5C3]/40 rounded-xl text-xs font-semibold text-[#3A2E26]"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1">Contact Phone</label>
+                            <input
+                              type="text"
+                              value={settingsForm.delhivery?.pickup_phone || ''}
+                              onChange={(e) => setSettingsForm({
+                                ...settingsForm,
+                                delhivery: { ...settingsForm.delhivery, pickup_phone: e.target.value }
+                              })}
+                              placeholder="e.g. 7600081431"
+                              className="w-full px-3 py-2 bg-white border border-[#E6D5C3]/40 rounded-xl text-xs font-semibold text-[#3A2E26]"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1">Contact Email</label>
+                            <input
+                              type="email"
+                              value={settingsForm.delhivery?.pickup_email || ''}
+                              onChange={(e) => setSettingsForm({
+                                ...settingsForm,
+                                delhivery: { ...settingsForm.delhivery, pickup_email: e.target.value }
+                              })}
+                              placeholder="e.g. shipping@hausmade.in"
+                              className="w-full px-3 py-2 bg-white border border-[#E6D5C3]/40 rounded-xl text-xs font-semibold text-[#3A2E26]"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1">Pin Code</label>
+                            <input
+                              type="text"
+                              value={settingsForm.delhivery?.pickup_pincode || ''}
+                              onChange={(e) => setSettingsForm({
+                                ...settingsForm,
+                                delhivery: { ...settingsForm.delhivery, pickup_pincode: e.target.value }
+                              })}
+                              placeholder="e.g. 395010"
+                              className="w-full px-3 py-2 bg-white border border-[#E6D5C3]/40 rounded-xl text-xs font-semibold text-[#3A2E26]"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1">City</label>
+                            <input
+                              type="text"
+                              value={settingsForm.delhivery?.pickup_city || ''}
+                              onChange={(e) => setSettingsForm({
+                                ...settingsForm,
+                                delhivery: { ...settingsForm.delhivery, pickup_city: e.target.value }
+                              })}
+                              placeholder="e.g. Surat"
+                              className="w-full px-3 py-2 bg-white border border-[#E6D5C3]/40 rounded-xl text-xs font-semibold text-[#3A2E26]"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1">State</label>
+                            <input
+                              type="text"
+                              value={settingsForm.delhivery?.pickup_state || ''}
+                              onChange={(e) => setSettingsForm({
+                                ...settingsForm,
+                                delhivery: { ...settingsForm.delhivery, pickup_state: e.target.value }
+                              })}
+                              placeholder="e.g. Gujarat"
+                              className="w-full px-3 py-2 bg-white border border-[#E6D5C3]/40 rounded-xl text-xs font-semibold text-[#3A2E26]"
+                            />
+                          </div>
+                          <div className="sm:col-span-2">
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1">Complete Address</label>
+                            <input
+                              type="text"
+                              value={settingsForm.delhivery?.pickup_address || ''}
+                              onChange={(e) => setSettingsForm({
+                                ...settingsForm,
+                                delhivery: { ...settingsForm.delhivery, pickup_address: e.target.value }
+                              })}
+                              placeholder="e.g. 305 Muktidham Society, Near Sitanagar Chowk"
+                              className="w-full px-3 py-2 bg-white border border-[#E6D5C3]/40 rounded-xl text-xs font-semibold text-[#3A2E26]"
+                            />
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -5516,6 +5867,115 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delhivery Order Booking Modal */}
+      {selectedOrderForShipping && (
+        <div className="fixed inset-0 bg-[#3A2E26]/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 border border-[#E6D5C3]/40 shadow-2xl relative animate-scaleUp">
+            <h3 className="text-xl font-bold mb-1 text-[#3A2E26]">Ship with Delhivery Express</h3>
+            <p className="text-xs text-[#3A2E26]/60 mb-6">Create shipment consignment for order {selectedOrderForShipping.orderId}.</p>
+
+            <div className="p-4 bg-[#FDFBF7] border border-[#E6D5C3]/30 rounded-2xl mb-4 text-xs space-y-2">
+              <div className="font-bold text-[#8C7A5B] uppercase tracking-wider text-[10px]">Customer & Destination</div>
+              <div>Name: <span className="font-bold text-[#3A2E26]">{selectedOrderForShipping.shippingAddress?.fullName}</span></div>
+              <div>Phone: <span className="font-semibold text-gray-700">{selectedOrderForShipping.shippingAddress?.phone}</span></div>
+              <div>Address: <span className="text-gray-600">{selectedOrderForShipping.shippingAddress?.address}, {selectedOrderForShipping.shippingAddress?.city} - {selectedOrderForShipping.shippingAddress?.pincode} ({selectedOrderForShipping.shippingAddress?.state})</span></div>
+              <div>Order Total: <span className="font-bold text-[#7A8B6F]">{formatCurrency(selectedOrderForShipping.grandTotal)}</span> ({selectedOrderForShipping.paymentMethod?.toUpperCase()})</div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex gap-4">
+                <button
+                  type="button"
+                  onClick={() => handleCheckServiceability(selectedOrderForShipping.orderId)}
+                  disabled={checkingServiceability}
+                  className="px-4 py-2 bg-[#7A8B6F] hover:bg-[#68785c] text-white text-xs font-bold rounded-xl transition-all cursor-pointer border-none"
+                >
+                  {checkingServiceability ? 'Checking Pincode...' : 'Verify Pincode Serviceability'}
+                </button>
+              </div>
+
+              {serviceabilityResult && (
+                <div className={`p-3 rounded-xl border text-xs font-semibold ${serviceabilityResult.serviceable ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
+                  <div>Serviceability Status: {serviceabilityResult.serviceable ? 'Serviceable' : 'Pincode not serviceable'}</div>
+                  {serviceabilityResult.serviceable && (
+                    <div className="font-normal mt-1 text-[11px]">
+                      COD: {serviceabilityResult.cod_available ? 'Available' : 'Prepaid Only'} | Est. Transit: {serviceabilityResult.estimated_days} Days | Charge Estimate: ₹{serviceabilityResult.cost_estimate || '45'}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="border-t border-[#3A2E26]/5 pt-4">
+                <h4 className="text-xs font-bold uppercase text-[#3A2E26] mb-3">Package Weight & Dimensions</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1">Package Weight (grams)</label>
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      value={shippingWeight}
+                      onChange={(e) => setShippingWeight(Math.max(1, parseInt(e.target.value) || 0))}
+                      className="w-full px-3 py-2 bg-[#FDFBF7] border border-[#E6D5C3]/40 rounded-xl text-xs font-semibold text-[#3A2E26]"
+                    />
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <label className="block text-[8px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1">L (cm)</label>
+                      <input
+                        type="number"
+                        required
+                        value={shippingLength}
+                        onChange={(e) => setShippingLength(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="w-full px-2 py-2 bg-[#FDFBF7] border border-[#E6D5C3]/40 rounded-xl text-xs font-semibold text-[#3A2E26]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[8px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1">W (cm)</label>
+                      <input
+                        type="number"
+                        required
+                        value={shippingWidth}
+                        onChange={(e) => setShippingWidth(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="w-full px-2 py-2 bg-[#FDFBF7] border border-[#E6D5C3]/40 rounded-xl text-xs font-semibold text-[#3A2E26]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[8px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1">H (cm)</label>
+                      <input
+                        type="number"
+                        required
+                        value={shippingHeight}
+                        onChange={(e) => setShippingHeight(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="w-full px-2 py-2 bg-[#FDFBF7] border border-[#E6D5C3]/40 rounded-xl text-xs font-semibold text-[#3A2E26]"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-[#3A2E26]/5">
+                <button
+                  type="button"
+                  onClick={() => setSelectedOrderForShipping(null)}
+                  className="px-5 py-2.5 border border-[#E6D5C3] hover:bg-gray-50 text-[#3A2E26] font-bold text-sm rounded-2xl transition-colors cursor-pointer bg-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleBookShipment(selectedOrderForShipping.orderId)}
+                  disabled={saving}
+                  className="px-5 py-2.5 bg-[#3A2E26] hover:bg-[#2A201A] text-white font-bold text-sm rounded-2xl shadow-sm transition-colors cursor-pointer flex items-center justify-center min-w-[5rem] border-none"
+                >
+                  {saving ? 'Creating Consignment...' : 'Book Shipment'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

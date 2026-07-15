@@ -45,6 +45,7 @@ export default function Footer({ settings, onOpenPolicy }) {
                 <li><a href="#ingredients" className="hover:text-[#C97C5D] transition-colors">Ingredients</a></li>
                 <li><a href="#reviews" className="hover:text-[#C97C5D] transition-colors">Reviews</a></li>
                 <li><a href="#faq" className="hover:text-[#C97C5D] transition-colors">FAQ</a></li>
+                <li><a href="#track" className="hover:text-[#C97C5D] transition-colors font-semibold">Track Order</a></li>
               </ul>
             </div>
             <div>
