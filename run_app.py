@@ -66,11 +66,9 @@ def main():
 
         # Keep parent process alive while children run
         while True:
-            # Check if any process died
-            for p in processes:
-                if p.poll() is not None:
-                    print(f"\n[SYSTEM] One of the processes terminated with exit code: {p.poll()}")
-                    raise KeyboardInterrupt
+            if backend_proc.poll() is not None:
+                print(f"\n[SYSTEM] Backend process terminated with exit code: {backend_proc.poll()}")
+                raise KeyboardInterrupt
             time.sleep(1)
 
     except KeyboardInterrupt:

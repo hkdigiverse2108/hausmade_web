@@ -1,14 +1,44 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Sparkles, Flower2, Droplets, HeartHandshake, CheckCircle2, XCircle, Leaf } from 'lucide-react';
+import { Sparkles, Flower2, Droplets, HeartHandshake, CheckCircle2, XCircle, Leaf, Award, ShieldCheck } from 'lucide-react';
 
 export default function Ingredients({ settings }) {
-  const [visibleCards, setVisibleCards] = useState([]);
-  const [tableVisible, setTableVisible] = useState(false);
+  const [visibleCards, setVisibleCards] = useState([0, 1, 2, 3, 4, 5, 6, 7]);
+  const [tableVisible, setTableVisible] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.location.search.includes('preview=true') || window.location.hash === '#difference';
+    }
+    return false;
+  });
   const sectionRef = useRef(null);
   const tableRef = useRef(null);
 
+  useEffect(() => {
+    const checkHash = () => {
+      if (window.location.hash === '#difference' || window.location.search.includes('preview=true')) {
+        setTableVisible(true);
+        const el = document.getElementById('difference');
+        if (el) {
+          setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
+        }
+      }
+    };
+    window.addEventListener('hashchange', checkHash);
+    checkHash();
+    return () => window.removeEventListener('hashchange', checkHash);
+  }, []);
+
   // Icon mapping for dynamic ingredients from admin
-  const iconMap = { Sparkles, Flower2, Droplets, HeartHandshake, Leaf, CheckCircle2 };
+  const iconMap = { Sparkles, Flower2, Droplets, HeartHandshake, Leaf, CheckCircle2, Award, ShieldCheck };
+
+  const header = settings?.ingredients_header || {
+    badge: "Pure & Honest",
+    badge_icon: "Leaf",
+    title_normal: "Ingredients You Can",
+    title_highlight: "Pronounce",
+    description: "Every bar is crafted with intention. No fillers, no mysterious chemicals, just whole plant remedies sourced from nature's finest botanicals."
+  };
+
+  const HeaderIcon = iconMap[header.badge_icon] || Leaf;
 
   // Visual style presets that cycle through for each ingredient
   const stylePresets = [
@@ -34,7 +64,32 @@ export default function Ingredients({ settings }) {
     ...stylePresets[idx % stylePresets.length]
   }));
 
-  const comparison = [
+  const diffSettings = settings?.difference || {
+    badge: "The Difference",
+    badge_icon: "Sparkles",
+    title_normal: "Why Hausmade is",
+    title_italic: "Different",
+    description: "Mass-market soaps are technically synthetic detergent bars. Here is how we compare:",
+    col1_title: "Botanical Quality",
+    col2_title: "Mass-Market",
+    col2_subtitle: "Synthetic bars",
+    col3_title: "Hausmade™",
+    col3_badge: "Best Choice",
+    items: [
+      { feature: 'Dense Shaving Cushion Lather', commercial: false, pure: true, detail: 'Commercial foams collapse quickly; Hausmade holds dense foam' },
+      { feature: 'Pure Kashmiri Kesar Infusion', commercial: false, pure: true, detail: 'Infused with real saffron strands to brighten skin tone' },
+      { feature: 'Zero Synthetic Propellants', commercial: false, pure: true, detail: 'Canned foams use chemical butane gas that dries out skin' },
+      { feature: '6-Week Cold Cured Puck', commercial: false, pure: true, detail: 'Hand-cured for max longevity in a shaving bowl' },
+      { feature: 'Zero Plastic Packaging', commercial: false, pure: true, detail: 'Wrapped in 100% biodegradable recycled paper' }
+    ],
+    footer_icon: "Leaf",
+    footer_text: "100% Verified Botanical Ingredients"
+  };
+
+  const DiffBadgeIcon = iconMap[diffSettings.badge_icon] || Sparkles;
+  const DiffFooterIcon = iconMap[diffSettings.footer_icon] || Leaf;
+
+  const comparison = diffSettings.items && diffSettings.items.length > 0 ? diffSettings.items : [
     { feature: 'Dense Shaving Cushion Lather', commercial: false, pure: true, detail: 'Commercial foams collapse quickly; Hausmade holds dense foam' },
     { feature: 'Pure Kashmiri Kesar Infusion', commercial: false, pure: true, detail: 'Infused with real saffron strands to brighten skin tone' },
     { feature: 'Zero Synthetic Propellants', commercial: false, pure: true, detail: 'Canned foams use chemical butane gas that dries out skin' },
@@ -91,22 +146,28 @@ export default function Ingredients({ settings }) {
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 relative z-10">
         
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#7A8B6F]/10 border border-[#7A8B6F]/20 mb-4">
-            <Leaf className="w-3.5 h-3.5 text-[#7A8B6F]" />
-            <span className="text-[#7A8B6F] font-bold text-xs uppercase tracking-widest">Pure & Honest</span>
-          </div>
+          {header.badge && (
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#7A8B6F]/10 border border-[#7A8B6F]/20 mb-4">
+              <HeaderIcon className="w-3.5 h-3.5 text-[#7A8B6F]" />
+              <span className="text-[#7A8B6F] font-bold text-xs uppercase tracking-widest">{header.badge}</span>
+            </div>
+          )}
           <h2 className="font-serif-brand text-3xl sm:text-4xl lg:text-5xl font-normal text-[#3A2E26] mt-2 leading-tight">
-            Ingredients You Can{' '}
-            <span className="relative inline-block">
-              Pronounce
-              <svg className="absolute -bottom-1 left-0 w-full" viewBox="0 0 200 8" fill="none">
-                <path d="M2 6C50 2 150 2 198 6" stroke="#C97C5D" strokeWidth="3" strokeLinecap="round" opacity="0.4"/>
-              </svg>
-            </span>
+            {header.title_normal || "Ingredients You Can"}{' '}
+            {header.title_highlight && (
+              <span className="relative inline-block">
+                {header.title_highlight}
+                <svg className="absolute -bottom-1 left-0 w-full" viewBox="0 0 200 8" fill="none">
+                  <path d="M2 6C50 2 150 2 198 6" stroke="#C97C5D" strokeWidth="3" strokeLinecap="round" opacity="0.4"/>
+                </svg>
+              </span>
+            )}
           </h2>
-          <p className="text-[#3A2E26]/60 mt-4 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
-            Every bar is crafted with intention. No fillers, no mysterious chemicals, just whole plant remedies sourced from nature's finest botanicals.
-          </p>
+          {header.description && (
+            <p className="text-[#3A2E26]/60 mt-4 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
+              {header.description}
+            </p>
+          )}
         </div>
 
         {/* Premium Ingredients Grid */}
@@ -166,8 +227,9 @@ export default function Ingredients({ settings }) {
 
         {/* Premium Comparison Chart */}
         <div 
+          id="difference"
           ref={tableRef}
-          className={`relative max-w-4xl mx-auto transition-all duration-1000 ease-out ${
+          className={`relative max-w-4xl mx-auto transition-all duration-1000 ease-out scroll-mt-24 ${
             tableVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
           }`}
         >
@@ -177,35 +239,44 @@ export default function Ingredients({ settings }) {
           <div className="relative max-w-full overflow-hidden bg-gradient-to-br from-[#EFECE6] to-[#F5F1E8] p-4 sm:p-10 md:p-12 rounded-3xl border border-[#3A2E26]/8 transform transition-all duration-500 hover:shadow-[0_25px_60px_-12px_rgba(58,46,38,0.15)]">
             
             <div className="text-center mb-8 sm:mb-10">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#C97C5D]/10 border border-[#C97C5D]/20 mb-3">
-                <Sparkles className="w-3.5 h-3.5 text-[#C97C5D]" />
-                <span className="text-[#C97C5D] font-bold text-[10px] uppercase tracking-widest">The Difference</span>
-              </div>
+              {diffSettings.badge && (
+                <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#C97C5D]/10 border border-[#C97C5D]/20 mb-3">
+                  <DiffBadgeIcon className="w-3.5 h-3.5 text-[#C97C5D]" />
+                  <span className="text-[#C97C5D] font-bold text-[10px] uppercase tracking-widest">{diffSettings.badge}</span>
+                </div>
+              )}
               <h3 className="font-serif-brand text-2xl sm:text-3xl lg:text-4xl font-normal text-[#3A2E26]">
-                Why Hausmade is <span className="italic text-[#7A8B6F]">Different</span>
+                {diffSettings.title_normal}{' '}
+                {diffSettings.title_italic && <span className="italic text-[#7A8B6F]">{diffSettings.title_italic}</span>}
               </h3>
-              <p className="text-sm sm:text-base text-[#3A2E26]/55 mt-2 max-w-lg mx-auto">
-                Mass-market soaps are technically synthetic detergent bars. Here is how we compare:
-              </p>
+              {diffSettings.description && (
+                <p className="text-sm sm:text-base text-[#3A2E26]/55 mt-2 max-w-lg mx-auto">
+                  {diffSettings.description}
+                </p>
+              )}
             </div>
 
             <div className="overflow-x-auto w-full rounded-2xl border border-[#3A2E26]/8 shadow-inner bg-white/60 backdrop-blur-sm scrollbar-thin">
               <table className="w-full min-w-[520px] text-left border-collapse">
                 <thead>
                   <tr className="border-b border-[#3A2E26]/10">
-                    <th className="py-5 px-4 sm:px-6 font-bold text-xs sm:text-sm text-[#3A2E26] uppercase tracking-wider">Botanical Quality</th>
+                    <th className="py-5 px-4 sm:px-6 font-bold text-xs sm:text-sm text-[#3A2E26] uppercase tracking-wider">
+                      {diffSettings.col1_title || "Botanical Quality"}
+                    </th>
                     <th className="py-5 px-4 sm:px-6 font-bold text-xs sm:text-sm text-center text-[#3A2E26]/40 uppercase tracking-wider">
                       <span className="inline-flex flex-col items-center">
-                        <span className="text-xs">Mass-Market</span>
-                        <span className="text-[10px] text-[#3A2E26]/30 font-normal normal-case">Synthetic bars</span>
+                        <span className="text-xs">{diffSettings.col2_title || "Mass-Market"}</span>
+                        {diffSettings.col2_subtitle && <span className="text-[10px] text-[#3A2E26]/30 font-normal normal-case">{diffSettings.col2_subtitle}</span>}
                       </span>
                     </th>
                     <th className="py-5 px-4 sm:px-6 font-bold text-xs sm:text-sm text-center text-[#7A8B6F] bg-gradient-to-b from-[#7A8B6F]/8 to-[#7A8B6F]/3 relative uppercase tracking-wider">
                       <span className="relative z-10 flex flex-col items-center">
-                        <span className="text-xs">Hausmade™</span>
-                        <span className="text-[10px] text-white bg-[#7A8B6F] px-2.5 py-0.5 rounded-full mt-1 font-bold tracking-wider shadow-sm">
-                          Best Choice
-                        </span>
+                        <span className="text-xs">{diffSettings.col3_title || "Hausmade™"}</span>
+                        {diffSettings.col3_badge && (
+                          <span className="text-[10px] text-white bg-[#7A8B6F] px-2.5 py-0.5 rounded-full mt-1 font-bold tracking-wider shadow-sm">
+                            {diffSettings.col3_badge}
+                          </span>
+                        )}
                       </span>
                     </th>
                   </tr>
@@ -221,20 +292,32 @@ export default function Ingredients({ settings }) {
                     >
                       <td className="py-4 sm:py-5 px-4 sm:px-6 transition-all duration-300 group-hover:pl-7">
                         <p className="font-semibold text-[#3A2E26] text-sm sm:text-base group-hover:text-[#7A8B6F] transition-colors">{row.feature}</p>
-                        <p className="text-[11px] sm:text-xs text-[#3A2E26]/45 mt-0.5 leading-relaxed">{row.detail}</p>
+                        {row.detail && <p className="text-[11px] sm:text-xs text-[#3A2E26]/45 mt-0.5 leading-relaxed">{row.detail}</p>}
                       </td>
                       <td className="py-4 sm:py-5 px-4 sm:px-6 text-center">
                         <div className="flex items-center justify-center">
-                          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-red-50 border border-red-200/50 flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:bg-red-100">
-                            <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-400" />
-                          </div>
+                          {row.commercial ? (
+                            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#7A8B6F]/15 border border-[#7A8B6F]/20 flex items-center justify-center">
+                              <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-[#7A8B6F]" />
+                            </div>
+                          ) : (
+                            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-red-50 border border-red-200/50 flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:bg-red-100">
+                              <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-400" />
+                            </div>
+                          )}
                         </div>
                       </td>
                       <td className="py-4 sm:py-5 px-4 sm:px-6 text-center bg-[#7A8B6F]/3 group-hover:bg-[#7A8B6F]/8 transition-colors">
                         <div className="flex items-center justify-center">
-                          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#7A8B6F]/15 border border-[#7A8B6F]/20 flex items-center justify-center transition-all duration-300 group-hover:scale-125 group-hover:bg-[#7A8B6F]/25 group-hover:shadow-md group-hover:shadow-[#7A8B6F]/20">
-                            <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-[#7A8B6F]" />
-                          </div>
+                          {row.pure ? (
+                            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#7A8B6F]/15 border border-[#7A8B6F]/20 flex items-center justify-center transition-all duration-300 group-hover:scale-125 group-hover:bg-[#7A8B6F]/25 group-hover:shadow-md group-hover:shadow-[#7A8B6F]/20">
+                              <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-[#7A8B6F]" />
+                            </div>
+                          ) : (
+                            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-red-50 border border-red-200/50 flex items-center justify-center">
+                              <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-400" />
+                            </div>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -244,12 +327,14 @@ export default function Ingredients({ settings }) {
             </div>
 
             {/* Bottom trust badge */}
-            <div className="flex items-center justify-center gap-2 mt-6 sm:mt-8">
-              <div className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/70 border border-[#7A8B6F]/15 shadow-sm">
-                <Leaf className="w-3.5 h-3.5 text-[#7A8B6F]" />
-                <span className="text-[11px] sm:text-xs font-bold text-[#3A2E26]/60 uppercase tracking-wider">100% Verified Botanical Ingredients</span>
+            {diffSettings.footer_text && (
+              <div className="flex items-center justify-center gap-2 mt-6 sm:mt-8">
+                <div className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/70 border border-[#7A8B6F]/15 shadow-sm">
+                  <DiffFooterIcon className="w-3.5 h-3.5 text-[#7A8B6F]" />
+                  <span className="text-[11px] sm:text-xs font-bold text-[#3A2E26]/60 uppercase tracking-wider">{diffSettings.footer_text}</span>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 

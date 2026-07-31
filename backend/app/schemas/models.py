@@ -1,5 +1,5 @@
 from typing import List, Optional
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 class ProductModel(BaseModel):
     id: str
@@ -97,16 +97,34 @@ class HeroSettings(BaseModel):
     title_italic: str
     title_normal_2: str
     description: str
+    primary_button_text: Optional[str] = "Select Your Pack"
+    primary_button_link: Optional[str] = "#product-selector"
+    secondary_button_text: Optional[str] = "Discover Our Craft"
+    secondary_button_link: Optional[str] = "#story"
+    rating_score: Optional[str] = "4.8 / 5.0 rating"
+    rating_subtext: Optional[str] = "Over 2,400+ happy bathers"
+    rating_stars: Optional[int] = 5
+    card_subtitle: Optional[str] = "Royal Saffron Formula"
+    card_title: Optional[str] = "Pure Kesar Artisanal Shaving Puck"
+    card_badge: Optional[str] = "100% Pure"
     image_url: Optional[str] = "/images/soap-hero.png"
 
+
+class StoryPillarItem(BaseModel):
+    title: str = ""
+    subtitle: str = ""
+    icon: str = "Sprout"
+
+
 class StorySettings(BaseModel):
-    title: str
-    subtitle: str
-    paragraph1: str
-    paragraph2: str
-    image_url: str = ""
-    author_name: str = ""
-    author_title: str = ""
+    title: str = "From our kitchen counter to your daily sanctuary."
+    subtitle: str = "Our Heritage"
+    paragraph1: str = "Hausmade began in the autumn of 2018 when our founder Elena could not find a commercial soap that didn’t leave her skin dry, itchy, and irritated by synthetic dyes and fake fragrances."
+    paragraph2: str = "We went back to ancient cold-process saponification roots: slowly combining raw organic butter, wildflower honey, and steam-distilled essential oils. Every single bar is poured by hand, cut with guitar wire, and cured for 6 full weeks to ensure a long-lasting, ultra-creamy bar."
+    image_url: str = "/images/founder-workshop.png"
+    author_name: str = "Elena Vance — Master Artisan"
+    author_title: str = "Hand-pouring batches in Vermont"
+    pillars: List[StoryPillarItem] = Field(default_factory=list)
 
 class SocialLinksSettings(BaseModel):
     instagram: str = ""
@@ -147,6 +165,36 @@ class IngredientItem(BaseModel):
     benefit: str
     icon: str = "Sparkles"
 
+class IngredientsHeaderSettings(BaseModel):
+    badge: str = "Pure & Honest"
+    badge_icon: str = "Leaf"
+    title_normal: str = "Ingredients You Can"
+    title_highlight: str = "Pronounce"
+    description: str = "Every bar is crafted with intention. No fillers, no mysterious chemicals, just whole plant remedies sourced from nature's finest botanicals."
+
+class DifferenceItem(BaseModel):
+    feature: str
+    detail: Optional[str] = ""
+    commercial: bool = False
+    pure: bool = True
+
+class DifferenceSettings(BaseModel):
+    badge: str = "The Difference"
+    badge_icon: str = "Sparkles"
+    title_normal: str = "Why Hausmade is"
+    title_italic: str = "Different"
+    description: str = "Mass-market soaps are technically synthetic detergent bars. Here is how we compare:"
+    col1_title: str = "Botanical Quality"
+    col2_title: str = "Mass-Market"
+    col2_subtitle: str = "Synthetic bars"
+    col3_title: str = "Hausmade™"
+    col3_badge: str = "Best Choice"
+    items: List[DifferenceItem] = []
+    footer_icon: str = "Leaf"
+    footer_text: str = "100% Verified Botanical Ingredients"
+
+
+
 class SubscriptionOffer(BaseModel):
     id: str
     name: str
@@ -175,6 +223,23 @@ class DelhiverySettings(BaseModel):
     pickup_city: str = ""
     pickup_address: str = ""
 
+class ReviewsHeaderSettings(BaseModel):
+    badge: str = "Reviews"
+    title: str = "What Our Customers Say"
+    rating_subtext: str = "4.9 / 5 · Verified by Google · 2,400+ reviews"
+
+class FAQHeaderSettings(BaseModel):
+    badge: str = "Got Questions?"
+    title: str = "Frequently Asked Questions"
+    description: str = "Everything you need to know about our handcrafted soaps and ordering process."
+
+class FooterSettings(BaseModel):
+    tagline: str = "Reveal Your Artisanal Beauty"
+    description: str = "Purely handmade luxury bath elements infused with real saffron, camphor, and 100% pure coconut oil. Product of India."
+    marketing_by: str = "HAUSMADE"
+    social_subtext: str = "Stay connected for new launches, wellness tips, and exclusive offers."
+    copyright_text: str = "© 2026 Hausmade. All rights reserved."
+
 class SiteSettingsModel(BaseModel):
     logo_url: str = ""
     announcement: AnnouncementSettings
@@ -187,6 +252,11 @@ class SiteSettingsModel(BaseModel):
     delhivery: Optional[DelhiverySettings] = DelhiverySettings()
     faqs: List[FAQItem] = []
     ingredients: List[IngredientItem] = []
+    ingredients_header: Optional[IngredientsHeaderSettings] = IngredientsHeaderSettings()
+    difference: Optional[DifferenceSettings] = DifferenceSettings()
+    reviews_header: Optional[ReviewsHeaderSettings] = ReviewsHeaderSettings()
+    faq_header: Optional[FAQHeaderSettings] = FAQHeaderSettings()
+    footer: Optional[FooterSettings] = FooterSettings()
     trust_badges: List[TrustBadgeItem] = []
     ingredients_active: bool = True
     subscription_active: bool = True

@@ -22,6 +22,24 @@ async def get_site_settings():
             "card_description": "Select subscription on any soap pack below to lock in your 15% discount.",
             "button_text": "Configure Your Subscription"
         }
+        default_hero = {
+            "badge": "Hausmade™ Luxury Bath Element",
+            "title_normal_1": "Reveal your",
+            "title_italic": "artisanal beauty",
+            "title_normal_2": "with Kesar.",
+            "description": "Purely handmade cleansing bar infused with real saffron extract, camphor, and 100% coconut oil. Naturally removes sun tan, fades dark spots, and brightens your daily complexing glow.",
+            "primary_button_text": "Select Your Pack",
+            "primary_button_link": "#product-selector",
+            "secondary_button_text": "Discover Our Craft",
+            "secondary_button_link": "#story",
+            "rating_score": "4.8 / 5.0 rating",
+            "rating_subtext": "Over 2,400+ happy bathers",
+            "rating_stars": 5,
+            "card_subtitle": "Royal Saffron Formula",
+            "card_title": "Pure Kesar Artisanal Shaving Puck",
+            "card_badge": "100% Pure",
+            "image_url": "/images/soap-hero.png"
+        }
         if not settings:
             settings = {
                 "key": "site_settings",
@@ -30,22 +48,27 @@ async def get_site_settings():
                     "text": "Use promo code HAUS10 for extra 10% OFF at checkout!",
                     "active": True
                 },
-                "hero": {
-                    "badge": "Hausmade™ Luxury Bath Element",
-                    "title_normal_1": "Reveal your",
-                    "title_italic": "artisanal beauty",
-                    "title_normal_2": "with Kesar.",
-                    "description": "Purely handmade cleansing bar infused with real saffron extract, camphor, and 100% coconut oil. Naturally removes sun tan, fades dark spots, and brightens your daily complexing glow.",
-                    "image_url": "/images/soap-hero.png"
-                },
+                "hero": default_hero,
                 "story": {
                     "title": "From our kitchen counter to your daily sanctuary.",
                     "subtitle": "Our Heritage",
                     "paragraph1": "Elena started Hausmade Soap after years of battling dry, itchy skin from synthetic ingredients.",
-                    "paragraph2": "Elena started Hausmade Soap after years of battling dry, itchy skin from synthetic ingredients.",
+                    "paragraph2": "We went back to ancient cold-process saponification roots: slowly combining raw organic butter, wildflower honey, and steam-distilled essential oils. Every single bar is poured by hand, cut with guitar wire, and cured for 6 full weeks to ensure a long-lasting, ultra-creamy bar.",
                     "image_url": "/images/founder-workshop.png",
                     "author_name": "Elena Vance — Master Artisan",
-                    "author_title": "Hand-pouring batches in Vermont"
+                    "author_title": "Hand-pouring batches in Vermont",
+                    "pillars": [
+                        {
+                            "title": "Sustainable Farming",
+                            "subtitle": "Ethically sourced non-GMO herbs",
+                            "icon": "Sprout"
+                        },
+                        {
+                            "title": "Zero Chemicals",
+                            "subtitle": "Free from parabens & sulfates",
+                            "icon": "Sparkles"
+                        }
+                    ]
                 },
                 "contact": {
                     "email": "info@hausmade.in",
@@ -90,11 +113,46 @@ async def get_site_settings():
             }
             await settings_collection.insert_one(settings)
         else:
-            if "image_url" not in settings.get("story", {}):
-                story = settings.get("story", {})
-                story["image_url"] = story.get("image_url", "/images/founder-workshop.png")
-                story["author_name"] = story.get("author_name", "Elena Vance — Master Artisan")
-                story["author_title"] = story.get("author_title", "Hand-pouring batches in Vermont")
+            hero = settings.get("hero", {})
+            hero_updated = False
+            for k, v in default_hero.items():
+                if k not in hero:
+                    hero[k] = v
+                    hero_updated = True
+            if hero_updated:
+                settings["hero"] = hero
+                await settings_collection.update_one({"key": "site_settings"}, {"$set": {"hero": hero}})
+
+            story = settings.get("story", {})
+            story_updated = False
+            if not story.get("image_url"):
+                story["image_url"] = "/images/founder-workshop.png"
+                story_updated = True
+            if not story.get("author_name"):
+                story["author_name"] = "Elena Vance — Master Artisan"
+                story_updated = True
+            if not story.get("author_title"):
+                story["author_title"] = "Hand-pouring batches in Vermont"
+                story_updated = True
+            if not story.get("title"):
+                story["title"] = "From our kitchen counter to your daily sanctuary."
+                story_updated = True
+            if not story.get("subtitle"):
+                story["subtitle"] = "Our Heritage"
+                story_updated = True
+            if not story.get("paragraph1"):
+                story["paragraph1"] = "Hausmade began in the autumn of 2018 when our founder Elena could not find a commercial soap that didn’t leave her skin dry, itchy, and irritated by synthetic dyes and fake fragrances."
+                story_updated = True
+            if not story.get("paragraph2"):
+                story["paragraph2"] = "We went back to ancient cold-process saponification roots: slowly combining raw organic butter, wildflower honey, and steam-distilled essential oils. Every single bar is poured by hand, cut with guitar wire, and cured for 6 full weeks to ensure a long-lasting, ultra-creamy bar."
+                story_updated = True
+            if "pillars" not in story or not story["pillars"]:
+                story["pillars"] = [
+                    { "title": "Sustainable Farming", "subtitle": "Ethically sourced non-GMO herbs", "icon": "Sprout" },
+                    { "title": "Zero Chemicals", "subtitle": "Free from parabens & sulfates", "icon": "Sparkles" }
+                ]
+                story_updated = True
+            if story_updated:
                 settings["story"] = story
                 await settings_collection.update_one({"key": "site_settings"}, {"$set": {"story": story}})
             if "logo_url" not in settings:
@@ -141,6 +199,40 @@ async def get_site_settings():
                 ]
                 settings["ingredients"] = default_ingredients
                 await settings_collection.update_one({"key": "site_settings"}, {"$set": {"ingredients": default_ingredients}})
+            if "ingredients_header" not in settings:
+                default_ingredients_header = {
+                    "badge": "Pure & Honest",
+                    "badge_icon": "Leaf",
+                    "title_normal": "Ingredients You Can",
+                    "title_highlight": "Pronounce",
+                    "description": "Every bar is crafted with intention. No fillers, no mysterious chemicals, just whole plant remedies sourced from nature's finest botanicals."
+                }
+                settings["ingredients_header"] = default_ingredients_header
+                await settings_collection.update_one({"key": "site_settings"}, {"$set": {"ingredients_header": default_ingredients_header}})
+            if "difference" not in settings:
+                default_difference = {
+                    "badge": "The Difference",
+                    "badge_icon": "Sparkles",
+                    "title_normal": "Why Hausmade is",
+                    "title_italic": "Different",
+                    "description": "Mass-market soaps are technically synthetic detergent bars. Here is how we compare:",
+                    "col1_title": "Botanical Quality",
+                    "col2_title": "Mass-Market",
+                    "col2_subtitle": "Synthetic bars",
+                    "col3_title": "Hausmade™",
+                    "col3_badge": "Best Choice",
+                    "items": [
+                        {"feature": "Dense Shaving Cushion Lather", "commercial": False, "pure": True, "detail": "Commercial foams collapse quickly; Hausmade holds dense foam"},
+                        {"feature": "Pure Kashmiri Kesar Infusion", "commercial": False, "pure": True, "detail": "Infused with real saffron strands to brighten skin tone"},
+                        {"feature": "Zero Synthetic Propellants", "commercial": False, "pure": True, "detail": "Canned foams use chemical butane gas that dries out skin"},
+                        {"feature": "6-Week Cold Cured Puck", "commercial": False, "pure": True, "detail": "Hand-cured for max longevity in a shaving bowl"},
+                        {"feature": "Zero Plastic Packaging", "commercial": False, "pure": True, "detail": "Wrapped in 100% biodegradable recycled paper"}
+                    ],
+                    "footer_icon": "Leaf",
+                    "footer_text": "100% Verified Botanical Ingredients"
+                }
+                settings["difference"] = default_difference
+                await settings_collection.update_one({"key": "site_settings"}, {"$set": {"difference": default_difference}})
             if "ingredients_active" not in settings:
                 settings["ingredients_active"] = True
                 await settings_collection.update_one({"key": "site_settings"}, {"$set": {"ingredients_active": True}})
@@ -169,7 +261,7 @@ async def get_site_settings():
                 await settings_collection.update_one({"key": "site_settings"}, {"$set": {"trust_badges": default_trust_badges}})
             if "social_links" not in settings:
                 default_social_links = {
-                    "instagram": "https://instagram.com/hausmade_soap",
+                    "instagram": "",
                     "facebook": "",
                     "whatsapp": "",
                     "twitter": "",
@@ -177,6 +269,32 @@ async def get_site_settings():
                 }
                 settings["social_links"] = default_social_links
                 await settings_collection.update_one({"key": "site_settings"}, {"$set": {"social_links": default_social_links}})
+            if "reviews_header" not in settings:
+                default_reviews_header = {
+                    "badge": "Reviews",
+                    "title": "What Our Customers Say",
+                    "rating_subtext": "4.9 / 5 · Verified by Google · 2,400+ reviews"
+                }
+                settings["reviews_header"] = default_reviews_header
+                await settings_collection.update_one({"key": "site_settings"}, {"$set": {"reviews_header": default_reviews_header}})
+            if "faq_header" not in settings:
+                default_faq_header = {
+                    "badge": "Got Questions?",
+                    "title": "Frequently Asked Questions",
+                    "description": "Everything you need to know about our handcrafted soaps and ordering process."
+                }
+                settings["faq_header"] = default_faq_header
+                await settings_collection.update_one({"key": "site_settings"}, {"$set": {"faq_header": default_faq_header}})
+            if "footer" not in settings:
+                default_footer = {
+                    "tagline": "Reveal Your Artisanal Beauty",
+                    "description": "Purely handmade luxury bath elements infused with real saffron, camphor, and 100% pure coconut oil. Product of India.",
+                    "marketing_by": "HAUSMADE",
+                    "social_subtext": "Stay connected for new launches, wellness tips, and exclusive offers.",
+                    "copyright_text": "© 2026 Hausmade. All rights reserved."
+                }
+                settings["footer"] = default_footer
+                await settings_collection.update_one({"key": "site_settings"}, {"$set": {"footer": default_footer}})
             if "subscription_offers" not in settings:
                 default_offers = [
                     {"id": "6_month_monthly", "name": "6 Month Starter Subscription", "durationMonths": 6, "deliveryFrequency": "monthly", "discountPct": 15.0, "active": True},

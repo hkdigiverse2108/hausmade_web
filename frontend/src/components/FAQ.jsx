@@ -33,20 +33,30 @@ export default function FAQ({ settings }) {
 
   const faqs = settings?.faqs && settings.faqs.length > 0 ? settings.faqs : fallbackFaqs;
 
+  const headerBadge = settings?.faq_header?.badge || settings?.faqs_header?.badge || "Got Questions?";
+  const headerTitle = settings?.faq_header?.title || settings?.faqs_header?.title || "Frequently Asked Questions";
+  const headerDescription = settings?.faq_header?.description || settings?.faqs_header?.description || "Everything you need to know about our handcrafted soaps and ordering process.";
+
   return (
     <section id="faq" className="py-16 lg:py-24 bg-[#F5F1E8] scroll-mt-20">
       <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8">
         
         <div className="text-center mb-12">
-          <span className="text-[#7A8B6F] font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-1.5">
-            <HelpCircle className="w-4 h-4" /> Got Questions?
-          </span>
-          <h2 className="font-serif-brand text-2xl sm:text-4xl font-normal text-[#3A2E26] mt-2">
-            Frequently Asked Questions
-          </h2>
-          <p className="text-[#3A2E26]/70 mt-2 text-sm sm:text-base">
-            Everything you need to know about our handcrafted soaps and ordering process.
-          </p>
+          {headerBadge && (
+            <span className="text-[#7A8B6F] font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-1.5">
+              <HelpCircle className="w-4 h-4" /> {headerBadge}
+            </span>
+          )}
+          {headerTitle && (
+            <h2 className="font-serif-brand text-2xl sm:text-4xl font-normal text-[#3A2E26] mt-2">
+              {headerTitle}
+            </h2>
+          )}
+          {headerDescription && (
+            <p className="text-[#3A2E26]/70 mt-2 text-sm sm:text-base">
+              {headerDescription}
+            </p>
+          )}
         </div>
 
         <div className="space-y-4">

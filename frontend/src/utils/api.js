@@ -384,6 +384,18 @@ export async function getSiteSettings() {
   return response.json();
 }
 
+export function formatApiError(errorData, defaultMsg = 'An error occurred') {
+  if (!errorData) return defaultMsg;
+  if (typeof errorData.detail === 'string') return errorData.detail;
+  if (Array.isArray(errorData.detail)) {
+    return errorData.detail
+      .map(err => `${err.loc ? err.loc.filter(l => l !== 'body').join(' -> ') + ': ' : ''}${err.msg || JSON.stringify(err)}`)
+      .join('; ');
+  }
+  if (typeof errorData.detail === 'object') return JSON.stringify(errorData.detail);
+  return errorData.message || defaultMsg;
+}
+
 export async function updateSiteSettings(settingsData, token) {
   const response = await fetch(`${API_URL}/api/admin/settings`, {
     method: 'PUT',
@@ -394,8 +406,8 @@ export async function updateSiteSettings(settingsData, token) {
     body: JSON.stringify(settingsData)
   });
   if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.detail || 'Failed to update site settings');
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(formatApiError(errorData, 'Failed to update site settings'));
   }
   return response.json();
 }

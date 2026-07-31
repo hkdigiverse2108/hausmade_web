@@ -34,7 +34,10 @@ import {
   Menu,
   Maximize2,
   Minimize2,
-  Target
+  Target,
+  ChevronDown,
+  FileText,
+  RotateCcw
 } from 'lucide-react';
 import { 
   getAdminStats, 
@@ -65,6 +68,7 @@ import {
   adminGetActiveCarts
 } from '../utils/api';
 import ConfirmModal from './ConfirmModal';
+import { defaultTerms, defaultPrivacy, defaultShipping, defaultRefund } from '../utils/policyDefaults';
 
 const AutoResizeTextarea = ({ value, onChange, placeholder, className, rows = 3, ...props }) => {
   const textareaRef = React.useRef(null);
@@ -235,8 +239,37 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   const [settingsForm, setSettingsForm] = useState({
     logo_url: '',
     announcement: { text: '', active: true },
-    hero: { badge: '', title_normal_1: '', title_italic: '', title_normal_2: '', description: '', image_url: '' },
-    story: { title: '', subtitle: '', paragraph1: '', paragraph2: '' },
+    hero: {
+      badge: '',
+      title_normal_1: '',
+      title_italic: '',
+      title_normal_2: '',
+      description: '',
+      primary_button_text: '',
+      primary_button_link: '',
+      secondary_button_text: '',
+      secondary_button_link: '',
+      rating_score: '',
+      rating_subtext: '',
+      rating_stars: 5,
+      card_subtitle: '',
+      card_title: '',
+      card_badge: '',
+      image_url: ''
+    },
+    story: {
+      title: "From our kitchen counter to your daily sanctuary.",
+      subtitle: "Our Heritage",
+      paragraph1: "Hausmade began in the autumn of 2018 when our founder Elena could not find a commercial soap that didn’t leave her skin dry, itchy, and irritated by synthetic dyes and fake fragrances.",
+      paragraph2: "We went back to ancient cold-process saponification roots: slowly combining raw organic butter, wildflower honey, and steam-distilled essential oils. Every single bar is poured by hand, cut with guitar wire, and cured for 6 full weeks to ensure a long-lasting, ultra-creamy bar.",
+      image_url: "/images/founder-workshop.png",
+      author_name: "Elena Vance — Master Artisan",
+      author_title: "Hand-pouring batches in Vermont",
+      pillars: [
+        { title: "Sustainable Farming", subtitle: "Ethically sourced non-GMO herbs", icon: "Sprout" },
+        { title: "Zero Chemicals", subtitle: "Free from parabens & sulfates", icon: "Sparkles" }
+      ]
+    },
     contact: { email: '', phone: '', address: '' },
     subscription: {
       badge: '',
@@ -261,6 +294,34 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     cashfree: { app_id_test: '', secret_key_test: '', app_id_live: '', secret_key_live: '', mode: 'test', active: false },
     faqs: [],
     ingredients: [],
+    ingredients_header: {
+      badge: 'Pure & Honest',
+      badge_icon: 'Leaf',
+      title_normal: 'Ingredients You Can',
+      title_highlight: 'Pronounce',
+      description: "Every bar is crafted with intention. No fillers, no mysterious chemicals, just whole plant remedies sourced from nature's finest botanicals."
+    },
+    difference: {
+      badge: 'The Difference',
+      badge_icon: 'Sparkles',
+      title_normal: 'Why Hausmade is',
+      title_italic: 'Different',
+      description: 'Mass-market soaps are technically synthetic detergent bars. Here is how we compare:',
+      col1_title: 'Botanical Quality',
+      col2_title: 'Mass-Market',
+      col2_subtitle: 'Synthetic bars',
+      col3_title: 'Hausmade™',
+      col3_badge: 'Best Choice',
+      items: [
+        { feature: 'Dense Shaving Cushion Lather', commercial: false, pure: true, detail: 'Commercial foams collapse quickly; Hausmade holds dense foam' },
+        { feature: 'Pure Kashmiri Kesar Infusion', commercial: false, pure: true, detail: 'Infused with real saffron strands to brighten skin tone' },
+        { feature: 'Zero Synthetic Propellants', commercial: false, pure: true, detail: 'Canned foams use chemical butane gas that dries out skin' },
+        { feature: '6-Week Cold Cured Puck', commercial: false, pure: true, detail: 'Hand-cured for max longevity in a shaving bowl' },
+        { feature: 'Zero Plastic Packaging', commercial: false, pure: true, detail: 'Wrapped in 100% biodegradable recycled paper' }
+      ],
+      footer_icon: 'Leaf',
+      footer_text: '100% Verified Botanical Ingredients'
+    },
     trust_badges: [],
     ingredients_active: true,
     policies_terms: '',
@@ -324,6 +385,11 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
         JSON.stringify(settingsForm.subscription_frequencies || []) !== JSON.stringify(settings.subscription_frequencies || []) ||
         JSON.stringify(settingsForm.faqs || []) !== JSON.stringify(settings.faqs || []) ||
         JSON.stringify(settingsForm.ingredients || []) !== JSON.stringify(settings.ingredients || []) ||
+        JSON.stringify(settingsForm.ingredients_header || {}) !== JSON.stringify(settings.ingredients_header || {}) ||
+        JSON.stringify(settingsForm.difference || {}) !== JSON.stringify(settings.difference || {}) ||
+        JSON.stringify(settingsForm.reviews_header || {}) !== JSON.stringify(settings.reviews_header || {}) ||
+        JSON.stringify(settingsForm.faq_header || {}) !== JSON.stringify(settings.faq_header || {}) ||
+        JSON.stringify(settingsForm.footer || {}) !== JSON.stringify(settings.footer || {}) ||
         JSON.stringify(settingsForm.trust_badges || []) !== JSON.stringify(settings.trust_badges || []) ||
         JSON.stringify(settingsForm.subscription_offers || []) !== JSON.stringify(settings.subscription_offers || []) ||
         settingsForm.policies_terms !== (settings.policies_terms || '') ||
@@ -335,6 +401,19 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       if (hasChanged) {
         setSettingsForm({
           ...settings,
+          story: {
+            title: settings.story?.title || "From our kitchen counter to your daily sanctuary.",
+            subtitle: settings.story?.subtitle || "Our Heritage",
+            paragraph1: settings.story?.paragraph1 || "Hausmade began in the autumn of 2018 when our founder Elena could not find a commercial soap that didn’t leave her skin dry, itchy, and irritated by synthetic dyes and fake fragrances.",
+            paragraph2: settings.story?.paragraph2 || "We went back to ancient cold-process saponification roots: slowly combining raw organic butter, wildflower honey, and steam-distilled essential oils. Every single bar is poured by hand, cut with guitar wire, and cured for 6 full weeks to ensure a long-lasting, ultra-creamy bar.",
+            image_url: settings.story?.image_url || "/images/founder-workshop.png",
+            author_name: settings.story?.author_name || "Elena Vance — Master Artisan",
+            author_title: settings.story?.author_title || "Hand-pouring batches in Vermont",
+            pillars: settings.story?.pillars && settings.story.pillars.length > 0 ? settings.story.pillars : [
+              { title: "Sustainable Farming", subtitle: "Ethically sourced non-GMO herbs", icon: "Sprout" },
+              { title: "Zero Chemicals", subtitle: "Free from parabens & sulfates", icon: "Sparkles" }
+            ]
+          },
           logo_url: settings.logo_url || '',
           subscription_discount_pct: settings.subscription_discount_pct !== undefined ? settings.subscription_discount_pct : 15.0,
           subscription_active: settings.subscription_active !== undefined ? settings.subscription_active : true,
@@ -346,11 +425,56 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
           cashfree: settings.cashfree || { app_id_test: '', secret_key_test: '', app_id_live: '', secret_key_live: '', mode: 'test', active: false },
           faqs: settings.faqs || [],
           ingredients: settings.ingredients || [],
+          ingredients_header: settings.ingredients_header || {
+            badge: 'Pure & Honest',
+            badge_icon: 'Leaf',
+            title_normal: 'Ingredients You Can',
+            title_highlight: 'Pronounce',
+            description: "Every bar is crafted with intention. No fillers, no mysterious chemicals, just whole plant remedies sourced from nature's finest botanicals."
+          },
+          difference: settings.difference || {
+            badge: 'The Difference',
+            badge_icon: 'Sparkles',
+            title_normal: 'Why Hausmade is',
+            title_italic: 'Different',
+            description: 'Mass-market soaps are technically synthetic detergent bars. Here is how we compare:',
+            col1_title: 'Botanical Quality',
+            col2_title: 'Mass-Market',
+            col2_subtitle: 'Synthetic bars',
+            col3_title: 'Hausmade™',
+            col3_badge: 'Best Choice',
+            items: [
+              { feature: 'Dense Shaving Cushion Lather', commercial: false, pure: true, detail: 'Commercial foams collapse quickly; Hausmade holds dense foam' },
+              { feature: 'Pure Kashmiri Kesar Infusion', commercial: false, pure: true, detail: 'Infused with real saffron strands to brighten skin tone' },
+              { feature: 'Zero Synthetic Propellants', commercial: false, pure: true, detail: 'Canned foams use chemical butane gas that dries out skin' },
+              { feature: '6-Week Cold Cured Puck', commercial: false, pure: true, detail: 'Hand-cured for max longevity in a shaving bowl' },
+              { feature: 'Zero Plastic Packaging', commercial: false, pure: true, detail: 'Wrapped in 100% biodegradable recycled paper' }
+            ],
+            footer_icon: 'Leaf',
+            footer_text: '100% Verified Botanical Ingredients'
+          },
+          reviews_header: settings.reviews_header || {
+            badge: 'Reviews',
+            title: 'What Our Customers Say',
+            rating_subtext: '4.9 / 5 · Verified by Google · 2,400+ reviews'
+          },
+          faq_header: settings.faq_header || {
+            badge: 'Got Questions?',
+            title: 'Frequently Asked Questions',
+            description: 'Everything you need to know about our handcrafted soaps and ordering process.'
+          },
+          footer: settings.footer || {
+            tagline: 'Reveal Your Artisanal Beauty',
+            description: 'Purely handmade luxury bath elements infused with real saffron, camphor, and 100% pure coconut oil. Product of India.',
+            marketing_by: 'HAUSMADE',
+            social_subtext: 'Stay connected for new launches, wellness tips, and exclusive offers.',
+            copyright_text: '© 2026 Hausmade. All rights reserved.'
+          },
           trust_badges: settings.trust_badges || [],
-          policies_terms: settings.policies_terms || '',
-          policies_privacy: settings.policies_privacy || '',
-          policies_shipping: settings.policies_shipping || '',
-          policies_refund: settings.policies_refund || '',
+          policies_terms: settings.policies_terms || defaultTerms,
+          policies_privacy: settings.policies_privacy || defaultPrivacy,
+          policies_shipping: settings.policies_shipping || defaultShipping,
+          policies_refund: settings.policies_refund || defaultRefund,
           ingredients_active: settings.ingredients_active !== undefined ? settings.ingredients_active : true
         });
       }
@@ -554,6 +678,8 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   });
 
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [showReviewsHeaderCard, setShowReviewsHeaderCard] = useState(true);
+  const [openPolicySection, setOpenPolicySection] = useState('terms');
   const [editingReview, setEditingReview] = useState(null);
   const [reviewForm, setReviewForm] = useState({
     rating: 5,
@@ -1839,10 +1965,11 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                   { id: 'story', label: 'Heritage Story', num: '4' },
                   { id: 'subscription', label: 'Subscription Sys', num: '5' },
                   { id: 'ingredients', label: 'Ingredients List', num: '6' },
-                  { id: 'faqs', label: 'FAQs Accordion', num: '7' },
-                  { id: 'contact', label: 'Footer & Socials', num: '8' },
-                  { id: 'policies', label: 'Store Policies', num: '9' },
-                  { id: 'delhivery', label: 'Delhivery Shipping', num: '10' }
+                  { id: 'difference', label: 'Comparison Chart', num: '7' },
+                  { id: 'faqs', label: 'FAQs Accordion', num: '8' },
+                  { id: 'contact', label: 'Footer & Socials', num: '9' },
+                  { id: 'policies', label: 'Store Policies', num: '10' },
+                  { id: 'delhivery', label: 'Delhivery Shipping', num: '11' }
                 ].map((sub) => {
                   const isActive = settingsSubTab === sub.id;
                   return (
@@ -3289,12 +3416,12 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
 
               {settingsSubTab === 'hero' && (
                 <>
-                  {/* Hero Section Settings */}
+                  {/* Main Headline & Text */}
                   <div className="bg-white rounded-3xl p-6 border border-[#3A2E26]/10 shadow-sm space-y-4">
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70 border-b border-[#3A2E26]/10 pb-2">Hero Section</h3>
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70 border-b border-[#3A2E26]/10 pb-2">Headline & Content</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="md:col-span-2">
-                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Top Badge Text</label>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Top Badge Pill Text</label>
                         <input
                           type="text"
                           required
@@ -3304,6 +3431,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                             hero: { ...settingsForm.hero, badge: e.target.value }
                           })}
                           className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          placeholder="e.g. Hausmade™ Luxury Bath Element"
                         />
                       </div>
                       <div>
@@ -3317,10 +3445,11 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                             hero: { ...settingsForm.hero, title_normal_1: e.target.value }
                           })}
                           className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          placeholder="e.g. Reveal your"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Headline Part 2 (Italicized)</label>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Headline Part 2 (Italicized Highlight)</label>
                         <input
                           type="text"
                           required
@@ -3330,6 +3459,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                             hero: { ...settingsForm.hero, title_italic: e.target.value }
                           })}
                           className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          placeholder="e.g. artisanal beauty"
                         />
                       </div>
                       <div className="md:col-span-2">
@@ -3343,6 +3473,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                             hero: { ...settingsForm.hero, title_normal_2: e.target.value }
                           })}
                           className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          placeholder="e.g. with Kesar."
                         />
                       </div>
                       <div className="md:col-span-2">
@@ -3356,11 +3487,129 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                             hero: { ...settingsForm.hero, description: e.target.value }
                           })}
                           className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
+                          placeholder="Main paragraph introducing product line"
                         />
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Buttons & Navigation Links */}
+                  <div className="bg-white rounded-3xl p-6 border border-[#3A2E26]/10 shadow-sm space-y-4 mt-6">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70 border-b border-[#3A2E26]/10 pb-2">Call to Action Buttons & Links</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Primary Button Text</label>
+                        <input
+                          type="text"
+                          value={settingsForm.hero.primary_button_text || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            hero: { ...settingsForm.hero, primary_button_text: e.target.value }
+                          })}
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          placeholder="e.g. Select Your Pack"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Primary Button Link / Anchor</label>
+                        <input
+                          type="text"
+                          value={settingsForm.hero.primary_button_link || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            hero: { ...settingsForm.hero, primary_button_link: e.target.value }
+                          })}
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          placeholder="e.g. #product-selector or /shop"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Secondary Button Text</label>
+                        <input
+                          type="text"
+                          value={settingsForm.hero.secondary_button_text || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            hero: { ...settingsForm.hero, secondary_button_text: e.target.value }
+                          })}
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          placeholder="e.g. Discover Our Craft"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Secondary Button Link / Anchor</label>
+                        <input
+                          type="text"
+                          value={settingsForm.hero.secondary_button_link || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            hero: { ...settingsForm.hero, secondary_button_link: e.target.value }
+                          })}
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          placeholder="e.g. #story or /about"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Rating & Social Proof */}
+                  <div className="bg-white rounded-3xl p-6 border border-[#3A2E26]/10 shadow-sm space-y-4 mt-6">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70 border-b border-[#3A2E26]/10 pb-2">Rating & Social Proof Bar</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Star Icons Count</label>
+                        <select
+                          value={settingsForm.hero.rating_stars ?? 5}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            hero: { ...settingsForm.hero, rating_stars: parseInt(e.target.value, 10) }
+                          })}
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                        >
+                          <option value={5}>5 Stars</option>
+                          <option value={4}>4 Stars</option>
+                          <option value={3}>3 Stars</option>
+                          <option value={2}>2 Stars</option>
+                          <option value={1}>1 Star</option>
+                          <option value={0}>Hide Stars</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Rating Score Label</label>
+                        <input
+                          type="text"
+                          value={settingsForm.hero.rating_score || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            hero: { ...settingsForm.hero, rating_score: e.target.value }
+                          })}
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          placeholder="e.g. 4.8 / 5.0 rating"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Happy Customers Counter / Subtext</label>
+                        <input
+                          type="text"
+                          value={settingsForm.hero.rating_subtext || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            hero: { ...settingsForm.hero, rating_subtext: e.target.value }
+                          })}
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          placeholder="e.g. Over 2,400+ happy bathers"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Image & Card Overlay */}
+                  <div className="bg-white rounded-3xl p-6 border border-[#3A2E26]/10 shadow-sm space-y-4 mt-6">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70 border-b border-[#3A2E26]/10 pb-2">Hero Image & Right Overlay Card</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="md:col-span-2">
                         <ImageUploader
-                          label="Hero Image"
+                          label="Hero Main Image"
                           value={settingsForm.hero.image_url || ''}
                           onChange={(url) => setSettingsForm({
                             ...settingsForm,
@@ -3369,6 +3618,45 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                           showNotification={showNotification}
                           isSaving={saving}
                           setIsSaving={setSaving}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Overlay Card Subtitle / Category Tag</label>
+                        <input
+                          type="text"
+                          value={settingsForm.hero.card_subtitle || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            hero: { ...settingsForm.hero, card_subtitle: e.target.value }
+                          })}
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          placeholder="e.g. Royal Saffron Formula"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Overlay Card Badge Tag</label>
+                        <input
+                          type="text"
+                          value={settingsForm.hero.card_badge || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            hero: { ...settingsForm.hero, card_badge: e.target.value }
+                          })}
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          placeholder="e.g. 100% Pure"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Overlay Card Main Title</label>
+                        <input
+                          type="text"
+                          value={settingsForm.hero.card_title || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            hero: { ...settingsForm.hero, card_title: e.target.value }
+                          })}
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          placeholder="e.g. Pure Kesar Artisanal Shaving Puck"
                         />
                       </div>
                     </div>
@@ -3580,11 +3868,204 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                       </div>
                     </div>
                   </div>
+
+                  {/* Story Micro Pillars / Feature Badges Editor */}
+                  <div className="bg-white rounded-3xl p-6 border border-[#3A2E26]/10 shadow-sm space-y-4 mt-6">
+                    <div className="flex items-center justify-between border-b border-[#3A2E26]/10 pb-2 flex-wrap gap-2">
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70">Story Micro Pillars / Key Features</h3>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const currentPillars = settingsForm.story?.pillars || [];
+                          setSettingsForm({
+                            ...settingsForm,
+                            story: {
+                              ...settingsForm.story,
+                              pillars: [...currentPillars, { title: '', subtitle: '', icon: 'Sprout' }]
+                            }
+                          });
+                        }}
+                        className="px-3.5 py-1.5 bg-[#7A8B6F] hover:bg-[#68785c] text-white text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1 shrink-0"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Add Micro Pillar
+                      </button>
+                    </div>
+
+                    <div className="space-y-4">
+                      {(!settingsForm.story?.pillars || settingsForm.story.pillars.length === 0) ? (
+                        <p className="text-xs text-[#3A2E26]/60 italic py-2">No micro pillars defined. Default features will be shown on storefront.</p>
+                      ) : (
+                        settingsForm.story.pillars.map((pillar, idx) => (
+                          <div key={idx} className="p-4 bg-[#FDFBF7] border border-[#E6D5C3]/30 rounded-2xl space-y-3 relative group">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold uppercase tracking-wider text-[#3A2E26]/60">Pillar #{idx + 1}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = settingsForm.story.pillars.filter((_, i) => i !== idx);
+                                  setSettingsForm({
+                                    ...settingsForm,
+                                    story: { ...settingsForm.story, pillars: updated }
+                                  });
+                                }}
+                                className="p-1 text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                                title="Remove pillar"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                              <div>
+                                <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/50 mb-1">Feature Title</label>
+                                <input
+                                  type="text"
+                                  placeholder="e.g. Sustainable Farming"
+                                  required
+                                  value={pillar.title}
+                                  onChange={(e) => {
+                                    const updated = [...settingsForm.story.pillars];
+                                    updated[idx] = { ...updated[idx], title: e.target.value };
+                                    setSettingsForm({
+                                      ...settingsForm,
+                                      story: { ...settingsForm.story, pillars: updated }
+                                    });
+                                  }}
+                                  className="w-full px-4 py-2 bg-white border border-[#E6D5C3]/40 rounded-xl text-sm focus:outline-none focus:border-[#3A2E26] font-bold text-[#3A2E26]"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/50 mb-1">Feature Subtitle / Description</label>
+                                <input
+                                  type="text"
+                                  placeholder="e.g. Ethically sourced non-GMO herbs"
+                                  value={pillar.subtitle}
+                                  onChange={(e) => {
+                                    const updated = [...settingsForm.story.pillars];
+                                    updated[idx] = { ...updated[idx], subtitle: e.target.value };
+                                    setSettingsForm({
+                                      ...settingsForm,
+                                      story: { ...settingsForm.story, pillars: updated }
+                                    });
+                                  }}
+                                  className="w-full px-4 py-2 bg-white border border-[#E6D5C3]/40 rounded-xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/50 mb-1">Icon</label>
+                                <select
+                                  value={pillar.icon || 'Sprout'}
+                                  onChange={(e) => {
+                                    const updated = [...settingsForm.story.pillars];
+                                    updated[idx] = { ...updated[idx], icon: e.target.value };
+                                    setSettingsForm({
+                                      ...settingsForm,
+                                      story: { ...settingsForm.story, pillars: updated }
+                                    });
+                                  }}
+                                  className="w-full px-4 py-2 bg-white border border-[#E6D5C3]/40 rounded-xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                                >
+                                  <option value="Sprout">🌱 Sprout / Plant</option>
+                                  <option value="Sparkles">✨ Sparkles</option>
+                                  <option value="Leaf">🍃 Leaf</option>
+                                  <option value="Award">🏆 Award</option>
+                                  <option value="ShieldCheck">🛡️ Shield Check</option>
+                                  <option value="Flower2">🌸 Flower</option>
+                                  <option value="Droplets">💧 Droplets</option>
+                                  <option value="HeartHandshake">🤝 Heart Handshake</option>
+                                  <option value="CheckCircle2">✅ Check Circle</option>
+                                </select>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
                 </>
               )}
 
               {settingsSubTab === 'contact' && (
                 <>
+                  {/* Footer Branding & Content Settings */}
+                  <div className="bg-white rounded-3xl p-6 border border-[#3A2E26]/10 shadow-sm space-y-4">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70 border-b border-[#3A2E26]/10 pb-2">Footer Branding & Custom Content</h3>
+
+                    <div className="space-y-4 pt-1">
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Footer Brand Tagline</label>
+                        <input
+                          type="text"
+                          value={settingsForm.footer?.tagline || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            footer: { ...settingsForm.footer, tagline: e.target.value }
+                          })}
+                          placeholder="Reveal Your Artisanal Beauty"
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Footer About / Description Text</label>
+                        <AutoResizeTextarea
+                          value={settingsForm.footer?.description || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            footer: { ...settingsForm.footer, description: e.target.value }
+                          })}
+                          placeholder="Purely handmade luxury bath elements..."
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          rows={3}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Marketing By (Company Name)</label>
+                          <input
+                            type="text"
+                            value={settingsForm.footer?.marketing_by || ''}
+                            onChange={(e) => setSettingsForm({
+                              ...settingsForm,
+                              footer: { ...settingsForm.footer, marketing_by: e.target.value }
+                            })}
+                            placeholder="HAUSMADE"
+                            className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Social Media Subtext</label>
+                          <input
+                            type="text"
+                            value={settingsForm.footer?.social_subtext || ''}
+                            onChange={(e) => setSettingsForm({
+                              ...settingsForm,
+                              footer: { ...settingsForm.footer, social_subtext: e.target.value }
+                            })}
+                            placeholder="Stay connected for new launches..."
+                            className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Copyright / Bottom Bar Text</label>
+                        <input
+                          type="text"
+                          value={settingsForm.footer?.copyright_text || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            footer: { ...settingsForm.footer, copyright_text: e.target.value }
+                          })}
+                          placeholder="© 2026 Hausmade. All rights reserved."
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Contact / Footer Details */}
                   <div className="bg-white rounded-3xl p-6 border border-[#3A2E26]/10 shadow-sm space-y-4">
                     <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70 border-b border-[#3A2E26]/10 pb-2">Customer Care & Footer Contact</h3>
@@ -3709,65 +4190,105 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                 <>
                   {/* Store Policies Editing Section */}
                   <div className="bg-white rounded-3xl p-6 border border-[#3A2E26]/10 shadow-sm space-y-4">
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70 border-b border-[#3A2E26]/10 pb-2">Store Policies</h3>
-                    <p className="text-[10px] text-gray-500 font-sans -mt-2">Customize the policies linked in your footer. Empty fields will automatically fall back to the default standard templates.</p>
+                    <div className="flex justify-between items-center border-b border-[#3A2E26]/10 pb-3">
+                      <div>
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70">Store Legal Policies (Collapsible CRUD)</h3>
+                        <p className="text-[11px] text-[#3A2E26]/60 mt-0.5">Click any policy title to expand and edit its content.</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setOpenPolicySection(prev => prev ? null : 'terms')}
+                        className="text-[11px] font-bold text-[#7A8B6F] hover:underline cursor-pointer"
+                      >
+                        {openPolicySection ? 'Collapse All' : 'Expand Terms'}
+                      </button>
+                    </div>
                     
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Terms & Conditions</label>
-                        <AutoResizeTextarea
-                          value={settingsForm.policies_terms || ''}
-                          onChange={(e) => setSettingsForm({
-                            ...settingsForm,
-                            policies_terms: e.target.value
-                          })}
-                          placeholder="Enter customized Terms & Conditions..."
-                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-medium"
-                          rows={6}
-                        />
-                      </div>
+                    <div className="space-y-3 pt-1">
+                      {[
+                        {
+                          id: 'terms',
+                          title: 'Terms & Conditions',
+                          icon: FileText,
+                          field: 'policies_terms',
+                          defaultValue: defaultTerms
+                        },
+                        {
+                          id: 'privacy',
+                          title: 'Privacy Policy',
+                          icon: ShieldCheck,
+                          field: 'policies_privacy',
+                          defaultValue: defaultPrivacy
+                        },
+                        {
+                          id: 'shipping',
+                          title: 'Shipping & Delivery Policy',
+                          icon: Truck,
+                          field: 'policies_shipping',
+                          defaultValue: defaultShipping
+                        },
+                        {
+                          id: 'refund',
+                          title: 'Return & Refund Policy',
+                          icon: RotateCcw,
+                          field: 'policies_refund',
+                          defaultValue: defaultRefund
+                        }
+                      ].map((policy) => {
+                        const Icon = policy.icon;
+                        const isOpen = openPolicySection === policy.id;
+                        const textVal = settingsForm[policy.field] || policy.defaultValue;
 
-                      <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Privacy Policy</label>
-                        <AutoResizeTextarea
-                          value={settingsForm.policies_privacy || ''}
-                          onChange={(e) => setSettingsForm({
-                            ...settingsForm,
-                            policies_privacy: e.target.value
-                          })}
-                          placeholder="Enter customized Privacy Policy..."
-                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-medium"
-                          rows={6}
-                        />
-                      </div>
+                        return (
+                          <div key={policy.id} className="border border-[#E6D5C3]/50 rounded-2xl overflow-hidden bg-[#FDFBF7] transition-all duration-200">
+                            <button
+                              type="button"
+                              onClick={() => setOpenPolicySection(isOpen ? null : policy.id)}
+                              className="w-full px-5 py-4 flex items-center justify-between hover:bg-[#F5EFE6]/50 transition-colors text-left cursor-pointer select-none"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${isOpen ? 'bg-[#3A2E26] text-white' : 'bg-[#3A2E26]/5 text-[#3A2E26]'}`}>
+                                  <Icon className="w-4 h-4" />
+                                </div>
+                                <div>
+                                  <h4 className="text-xs font-bold uppercase tracking-wider text-[#3A2E26]">{policy.title}</h4>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <ChevronDown className={`w-4 h-4 text-[#3A2E26]/60 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+                              </div>
+                            </button>
 
-                      <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Shipping & Delivery Policy</label>
-                        <AutoResizeTextarea
-                          value={settingsForm.policies_shipping || ''}
-                          onChange={(e) => setSettingsForm({
-                            ...settingsForm,
-                            policies_shipping: e.target.value
-                          })}
-                          placeholder="Enter customized Shipping & Delivery Policy..."
-                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-medium"
-                          rows={6}
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Return & Refund Policy</label>
-                        <AutoResizeTextarea
-                          value={settingsForm.policies_refund || ''}
-                          onChange={(e) => setSettingsForm({
-                            ...settingsForm,
-                            policies_refund: e.target.value
-                          })}
-                          placeholder="Enter customized Return & Refund Policy..."
-                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-medium"
-                          rows={6}
-                        />
-                      </div>
+                            {isOpen && (
+                              <div className="p-5 border-t border-[#E6D5C3]/40 bg-white space-y-3 animate-fadeIn">
+                                <div className="flex justify-between items-center border-b border-[#3A2E26]/5 pb-2">
+                                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#3A2E26]/60">Policy Document Content</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSettingsForm(prev => ({ ...prev, [policy.field]: policy.defaultValue }));
+                                      showNotification(`Loaded standard ${policy.title} template`, 'info');
+                                    }}
+                                    className="text-[10px] font-bold text-[#8C7A5B] hover:underline cursor-pointer"
+                                  >
+                                    Load Standard Template
+                                  </button>
+                                </div>
+                                <AutoResizeTextarea
+                                  value={textVal}
+                                  onChange={(e) => setSettingsForm({
+                                    ...settingsForm,
+                                    [policy.field]: e.target.value
+                                  })}
+                                  placeholder={`Enter customized ${policy.title}...`}
+                                  className="w-full px-4 py-3 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-xs sm:text-sm focus:outline-none focus:border-[#3A2E26] font-mono leading-relaxed"
+                                  rows={10}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </>
@@ -4121,10 +4642,70 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
 
               {settingsSubTab === 'faqs' && (
                 <>
+                  {/* Storefront FAQ Section Header CRUD Card */}
+                  <div className="bg-white rounded-3xl p-6 border border-[#3A2E26]/10 shadow-sm space-y-4 mb-6">
+                    <div className="flex justify-between items-center border-b border-[#3A2E26]/10 pb-3">
+                      <div>
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70">FAQ Section Header</h3>
+                        <p className="text-[11px] text-[#3A2E26]/60 mt-0.5">Customize the subtitle badge, main title, and description text displayed on the storefront FAQ section.</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">
+                          Subtitle / Badge (Top Line)
+                        </label>
+                        <input
+                          type="text"
+                          value={settingsForm.faq_header?.badge || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            faq_header: { ...(settingsForm.faq_header || {}), badge: e.target.value }
+                          })}
+                          placeholder="e.g. Got Questions?"
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">
+                          Main Heading Title
+                        </label>
+                        <input
+                          type="text"
+                          value={settingsForm.faq_header?.title || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            faq_header: { ...(settingsForm.faq_header || {}), title: e.target.value }
+                          })}
+                          placeholder="e.g. Frequently Asked Questions"
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
+                        />
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">
+                          Section Subtitle / Description
+                        </label>
+                        <AutoResizeTextarea
+                          rows="2"
+                          value={settingsForm.faq_header?.description || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            faq_header: { ...(settingsForm.faq_header || {}), description: e.target.value }
+                          })}
+                          placeholder="e.g. Everything you need to know about our handcrafted soaps and ordering process."
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Frequently Asked Questions (FAQ) Settings */}
                   <div className="bg-white rounded-3xl p-6 border border-[#3A2E26]/10 shadow-sm space-y-4">
                     <div className="flex items-center justify-between border-b border-[#3A2E26]/10 pb-2 flex-wrap gap-2">
-                      <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70">Frequently Asked Questions (FAQ)</h3>
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70">FAQ Items List</h3>
                       <button
                         type="button"
                         onClick={() => {
@@ -4206,7 +4787,85 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
 
               {settingsSubTab === 'ingredients' && (
                 <>
-                  {/* Ingredients Editor */}
+                  {/* Ingredients Section Header Settings */}
+                  <div className="bg-white rounded-3xl p-6 border border-[#3A2E26]/10 shadow-sm space-y-4 mb-6">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70 border-b border-[#3A2E26]/10 pb-2">Ingredients Section Header</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Top Pill Badge Text</label>
+                        <input
+                          type="text"
+                          value={settingsForm.ingredients_header?.badge || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            ingredients_header: { ...settingsForm.ingredients_header, badge: e.target.value }
+                          })}
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          placeholder="e.g. Pure & Honest"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Badge Icon</label>
+                        <select
+                          value={settingsForm.ingredients_header?.badge_icon || 'Leaf'}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            ingredients_header: { ...settingsForm.ingredients_header, badge_icon: e.target.value }
+                          })}
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                        >
+                          <option value="Leaf">Leaf Icon</option>
+                          <option value="Sparkles">Sparkles Icon</option>
+                          <option value="Flower2">Flower Icon</option>
+                          <option value="Droplets">Droplets Icon</option>
+                          <option value="HeartHandshake">Heart Handshake Icon</option>
+                          <option value="Award">Award Icon</option>
+                          <option value="ShieldCheck">Shield Check Icon</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Headline Part 1 (Normal)</label>
+                        <input
+                          type="text"
+                          value={settingsForm.ingredients_header?.title_normal || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            ingredients_header: { ...settingsForm.ingredients_header, title_normal: e.target.value }
+                          })}
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          placeholder="e.g. Ingredients You Can"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Headline Part 2 (Underlined Highlight)</label>
+                        <input
+                          type="text"
+                          value={settingsForm.ingredients_header?.title_highlight || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            ingredients_header: { ...settingsForm.ingredients_header, title_highlight: e.target.value }
+                          })}
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          placeholder="e.g. Pronounce"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Section Subtitle / Description</label>
+                        <AutoResizeTextarea
+                          rows="3"
+                          value={settingsForm.ingredients_header?.description || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            ingredients_header: { ...settingsForm.ingredients_header, description: e.target.value }
+                          })}
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
+                          placeholder="Section description text..."
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Ingredients List Editor */}
                   <div className="bg-white rounded-3xl p-6 border border-[#3A2E26]/10 shadow-sm space-y-4">
                     <div className="flex items-center justify-between border-b border-[#3A2E26]/10 pb-2 flex-wrap gap-2">
                       <div className="flex items-center gap-4">
@@ -4313,6 +4972,315 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                           </div>
                         ))
                       )}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {settingsSubTab === 'difference' && (
+                <>
+                  {/* Comparison Section Header & Table Labels */}
+                  <div className="bg-white rounded-3xl p-6 border border-[#3A2E26]/10 shadow-sm space-y-4 mb-6">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70 border-b border-[#3A2E26]/10 pb-2">Comparison Section Header & Table Labels</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Top Badge Pill Text</label>
+                        <input
+                          type="text"
+                          value={settingsForm.difference?.badge || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            difference: { ...settingsForm.difference, badge: e.target.value }
+                          })}
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          placeholder="e.g. The Difference"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Badge Icon</label>
+                        <select
+                          value={settingsForm.difference?.badge_icon || 'Sparkles'}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            difference: { ...settingsForm.difference, badge_icon: e.target.value }
+                          })}
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                        >
+                          <option value="Sparkles">Sparkles Icon</option>
+                          <option value="Leaf">Leaf Icon</option>
+                          <option value="Award">Award Icon</option>
+                          <option value="ShieldCheck">Shield Check Icon</option>
+                          <option value="Flower2">Flower Icon</option>
+                          <option value="Droplets">Droplets Icon</option>
+                          <option value="HeartHandshake">Heart Handshake Icon</option>
+                          <option value="CheckCircle2">Check Circle Icon</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Headline Part 1 (Normal)</label>
+                        <input
+                          type="text"
+                          value={settingsForm.difference?.title_normal || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            difference: { ...settingsForm.difference, title_normal: e.target.value }
+                          })}
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          placeholder="e.g. Why Hausmade is"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Headline Part 2 (Italic Highlight)</label>
+                        <input
+                          type="text"
+                          value={settingsForm.difference?.title_italic || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            difference: { ...settingsForm.difference, title_italic: e.target.value }
+                          })}
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          placeholder="e.g. Different"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Section Subtitle / Description</label>
+                        <AutoResizeTextarea
+                          rows="2"
+                          value={settingsForm.difference?.description || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            difference: { ...settingsForm.difference, description: e.target.value }
+                          })}
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
+                          placeholder="Subtitle description text..."
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Column 1 Header (Feature Title)</label>
+                        <input
+                          type="text"
+                          value={settingsForm.difference?.col1_title || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            difference: { ...settingsForm.difference, col1_title: e.target.value }
+                          })}
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          placeholder="e.g. Botanical Quality"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Column 2 Header (Competitor / Mass Market)</label>
+                        <input
+                          type="text"
+                          value={settingsForm.difference?.col2_title || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            difference: { ...settingsForm.difference, col2_title: e.target.value }
+                          })}
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          placeholder="e.g. Mass-Market"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Column 2 Subtitle</label>
+                        <input
+                          type="text"
+                          value={settingsForm.difference?.col2_subtitle || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            difference: { ...settingsForm.difference, col2_subtitle: e.target.value }
+                          })}
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          placeholder="e.g. Synthetic bars"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Column 3 Header (Your Brand)</label>
+                        <input
+                          type="text"
+                          value={settingsForm.difference?.col3_title || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            difference: { ...settingsForm.difference, col3_title: e.target.value }
+                          })}
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          placeholder="e.g. Hausmade™"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Column 3 Highlight Badge</label>
+                        <input
+                          type="text"
+                          value={settingsForm.difference?.col3_badge || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            difference: { ...settingsForm.difference, col3_badge: e.target.value }
+                          })}
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          placeholder="e.g. Best Choice"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Comparison Rows List Editor */}
+                  <div className="bg-white rounded-3xl p-6 border border-[#3A2E26]/10 shadow-sm space-y-4 mb-6">
+                    <div className="flex items-center justify-between border-b border-[#3A2E26]/10 pb-2 flex-wrap gap-2">
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70">Comparison Criteria Rows</h3>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const currentItems = settingsForm.difference?.items || [];
+                          setSettingsForm({
+                            ...settingsForm,
+                            difference: {
+                              ...settingsForm.difference,
+                              items: [...currentItems, { feature: '', detail: '', commercial: false, pure: true }]
+                            }
+                          });
+                        }}
+                        className="px-3.5 py-1.5 bg-[#7A8B6F] hover:bg-[#68785c] text-white text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1 shrink-0"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Add Comparison Row
+                      </button>
+                    </div>
+
+                    <div className="space-y-4">
+                      {(!settingsForm.difference?.items || settingsForm.difference.items.length === 0) ? (
+                        <p className="text-xs text-[#3A2E26]/60 italic py-2">No comparison rows defined. Default rows will be shown on storefront.</p>
+                      ) : (
+                        settingsForm.difference.items.map((rowItem, idx) => (
+                          <div key={idx} className="p-4 bg-[#FDFBF7] border border-[#E6D5C3]/30 rounded-2xl space-y-3 relative group">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold uppercase tracking-wider text-[#3A2E26]/60">Row #{idx + 1}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = settingsForm.difference.items.filter((_, i) => i !== idx);
+                                  setSettingsForm({
+                                    ...settingsForm,
+                                    difference: { ...settingsForm.difference, items: updated }
+                                  });
+                                }}
+                                className="p-1 text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                                title="Remove row"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/50 mb-1">Feature / Criteria Name</label>
+                                <input
+                                  type="text"
+                                  placeholder="e.g. Dense Shaving Cushion Lather"
+                                  required
+                                  value={rowItem.feature}
+                                  onChange={(e) => {
+                                    const updated = [...settingsForm.difference.items];
+                                    updated[idx] = { ...updated[idx], feature: e.target.value };
+                                    setSettingsForm({
+                                      ...settingsForm,
+                                      difference: { ...settingsForm.difference, items: updated }
+                                    });
+                                  }}
+                                  className="w-full px-4 py-2 bg-white border border-[#E6D5C3]/40 rounded-xl text-sm focus:outline-none focus:border-[#3A2E26] font-bold text-[#3A2E26]"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/50 mb-1">Detail Explanation</label>
+                                <input
+                                  type="text"
+                                  placeholder="e.g. Commercial foams collapse quickly; Hausmade holds dense foam"
+                                  value={rowItem.detail || ''}
+                                  onChange={(e) => {
+                                    const updated = [...settingsForm.difference.items];
+                                    updated[idx] = { ...updated[idx], detail: e.target.value };
+                                    setSettingsForm({
+                                      ...settingsForm,
+                                      difference: { ...settingsForm.difference, items: updated }
+                                    });
+                                  }}
+                                  className="w-full px-4 py-2 bg-white border border-[#E6D5C3]/40 rounded-xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                                />
+                              </div>
+                              <div className="flex items-center gap-6 pt-1 md:col-span-2">
+                                <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-[#3A2E26]">
+                                  <input
+                                    type="checkbox"
+                                    checked={rowItem.commercial}
+                                    onChange={(e) => {
+                                      const updated = [...settingsForm.difference.items];
+                                      updated[idx] = { ...updated[idx], commercial: e.target.checked };
+                                      setSettingsForm({
+                                        ...settingsForm,
+                                        difference: { ...settingsForm.difference, items: updated }
+                                      });
+                                    }}
+                                    className="w-4 h-4 rounded text-[#7A8B6F] focus:ring-[#7A8B6F] cursor-pointer"
+                                  />
+                                  <span>{settingsForm.difference?.col2_title || 'Mass-Market'}: Checkmark (True)</span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-[#7A8B6F]">
+                                  <input
+                                    type="checkbox"
+                                    checked={rowItem.pure}
+                                    onChange={(e) => {
+                                      const updated = [...settingsForm.difference.items];
+                                      updated[idx] = { ...updated[idx], pure: e.target.checked };
+                                      setSettingsForm({
+                                        ...settingsForm,
+                                        difference: { ...settingsForm.difference, items: updated }
+                                      });
+                                    }}
+                                    className="w-4 h-4 rounded text-[#7A8B6F] focus:ring-[#7A8B6F] cursor-pointer"
+                                  />
+                                  <span>{settingsForm.difference?.col3_title || 'Hausmade™'}: Checkmark (True)</span>
+                                </label>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Footer Trust Badge Settings */}
+                  <div className="bg-white rounded-3xl p-6 border border-[#3A2E26]/10 shadow-sm space-y-4">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70 border-b border-[#3A2E26]/10 pb-2">Bottom Trust Badge Tag</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Footer Badge Icon</label>
+                        <select
+                          value={settingsForm.difference?.footer_icon || 'Leaf'}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            difference: { ...settingsForm.difference, footer_icon: e.target.value }
+                          })}
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                        >
+                          <option value="Leaf">Leaf Icon</option>
+                          <option value="Sparkles">Sparkles Icon</option>
+                          <option value="Award">Award Icon</option>
+                          <option value="ShieldCheck">Shield Check Icon</option>
+                          <option value="Flower2">Flower Icon</option>
+                          <option value="Droplets">Droplets Icon</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Footer Badge Text</label>
+                        <input
+                          type="text"
+                          value={settingsForm.difference?.footer_text || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            difference: { ...settingsForm.difference, footer_text: e.target.value }
+                          })}
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          placeholder="e.g. 100% Verified Botanical Ingredients"
+                        />
+                      </div>
                     </div>
                   </div>
                 </>
@@ -4644,9 +5612,9 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[#3A2E26]/10 pb-4">
                         <div>
                           <h2 className="text-xl font-bold tracking-tight uppercase text-[#3A2E26] font-sans">Reviews Moderation</h2>
-                          <p className="text-xs text-[#3A2E26]/60">Approve or reject customer-submitted reviews for the storefront</p>
+                          <p className="text-xs text-[#3A2E26]/60">Approve or reject customer reviews & manage storefront section header</p>
                         </div>
-                        <div className="flex items-center gap-3 w-full sm:w-auto">
+                        <div className="flex items-center gap-3 w-full sm:w-auto flex-wrap sm:flex-nowrap">
                           <div className="relative w-full sm:w-64">
                             <Search className="w-4 h-4 text-[#3A2E26]/40 absolute left-3.5 top-1/2 -translate-y-1/2" />
                             <input 
@@ -4658,6 +5626,13 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                             />
                           </div>
                           <button
+                            onClick={() => setShowReviewsHeaderCard(!showReviewsHeaderCard)}
+                            className="px-4 py-2 bg-[#7A8B6F] hover:bg-[#68785C] text-white rounded-2xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
+                          >
+                            <Sliders className="w-3.5 h-3.5" />
+                            <span>{showReviewsHeaderCard ? 'Hide Header Edit' : 'Edit Section Header'}</span>
+                          </button>
+                          <button
                             onClick={handleOpenCreateReview}
                             className="px-4 py-2 bg-[#3A2E26] hover:bg-[#2A201A] text-white rounded-2xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
                           >
@@ -4666,6 +5641,82 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                           </button>
                         </div>
                       </div>
+
+                      {/* Storefront Review Section Header CRUD Card */}
+                      {showReviewsHeaderCard && (
+                        <div className="bg-white rounded-3xl p-5 sm:p-6 border border-[#3A2E26]/10 shadow-sm space-y-4 animate-fadeIn">
+                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-[#3A2E26]/10 pb-3">
+                            <div>
+                              <h3 className="text-sm font-bold uppercase tracking-wider text-[#3A2E26] font-sans flex items-center gap-2">
+                                <MessageSquare className="w-4 h-4 text-[#8C7A5B]" />
+                                Storefront Reviews Header Settings
+                              </h3>
+                              <p className="text-[11px] text-[#3A2E26]/60 mt-0.5">Customize the subtitle badge, main title, and rating text displayed on the storefront reviews section.</p>
+                            </div>
+                            <div className="flex items-center gap-2 self-end sm:self-auto">
+                              <button
+                                type="button"
+                                onClick={handleSaveSettings}
+                                disabled={saving}
+                                className="px-4 py-1.5 bg-[#3A2E26] hover:bg-[#2A201A] text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
+                              >
+                                {saving ? 'Saving...' : 'Save Header Settings'}
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                              <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">
+                                Subtitle / Badge (Top Line)
+                              </label>
+                              <input
+                                type="text"
+                                value={settingsForm.reviews_header?.badge || ''}
+                                onChange={(e) => setSettingsForm({
+                                  ...settingsForm,
+                                  reviews_header: { ...(settingsForm.reviews_header || {}), badge: e.target.value }
+                                })}
+                                placeholder="e.g. Reviews"
+                                className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
+                              />
+                              <p className="text-[10px] text-gray-400 mt-1">Shows as: — {settingsForm.reviews_header?.badge || 'Reviews'} —</p>
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">
+                                Main Heading Title
+                              </label>
+                              <input
+                                type="text"
+                                value={settingsForm.reviews_header?.title || ''}
+                                onChange={(e) => setSettingsForm({
+                                  ...settingsForm,
+                                  reviews_header: { ...(settingsForm.reviews_header || {}), title: e.target.value }
+                                })}
+                                placeholder="e.g. What Our Customers Say"
+                                className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">
+                                Rating & Trust Subtext
+                              </label>
+                              <input
+                                type="text"
+                                value={settingsForm.reviews_header?.rating_subtext || ''}
+                                onChange={(e) => setSettingsForm({
+                                  ...settingsForm,
+                                  reviews_header: { ...(settingsForm.reviews_header || {}), rating_subtext: e.target.value }
+                                })}
+                                placeholder="e.g. 4.9 / 5 · Verified by Google · 2,400+ reviews"
+                                className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
 
                       <div className="bg-white rounded-3xl border border-[#3A2E26]/10 shadow-sm overflow-hidden">
                         <div className="overflow-x-auto">

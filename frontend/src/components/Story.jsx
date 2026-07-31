@@ -1,5 +1,5 @@
 import React from 'react';
-import { Heart, Sparkles, Sprout } from 'lucide-react';
+import { Heart, Sparkles, Sprout, Leaf, Award, ShieldCheck, Flower2, Droplets, HeartHandshake, CheckCircle2 } from 'lucide-react';
 
 export default function Story({ settings }) {
   const title = settings?.title || "From our kitchen counter to your daily sanctuary.";
@@ -9,6 +9,17 @@ export default function Story({ settings }) {
   const imageUrl = settings?.image_url || "/images/founder-workshop.png";
   const authorName = settings?.author_name || "Elena Vance — Master Artisan";
   const authorTitle = settings?.author_title || "Hand-pouring batches in Vermont";
+
+  const iconMap = {
+    Sprout, Sparkles, Leaf, Award, ShieldCheck, Flower2, Droplets, HeartHandshake, CheckCircle2
+  };
+
+  const defaultPillars = [
+    { title: "Sustainable Farming", subtitle: "Ethically sourced non-GMO herbs", icon: "Sprout" },
+    { title: "Zero Chemicals", subtitle: "Free from parabens & sulfates", icon: "Sparkles" }
+  ];
+
+  const rawPillars = settings?.pillars && settings.pillars.length > 0 ? settings.pillars : defaultPillars;
 
   return (
     <section id="story" className="py-16 lg:py-24 bg-[#7A8B6F]/10 scroll-mt-20 relative overflow-hidden">
@@ -53,27 +64,25 @@ export default function Story({ settings }) {
             </p>
 
             {/* Micro Pillars */}
-            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-[#3A2E26]/10">
-              <div className="flex items-start gap-3">
-                <div className="p-2 rounded-xl bg-white text-[#7A8B6F] shadow-sm mt-1">
-                  <Sprout className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-serif-brand font-bold text-sm text-[#3A2E26]">Sustainable Farming</h4>
-                  <p className="text-xs text-[#3A2E26]/70 mt-0.5">Ethically sourced non-GMO herbs</p>
-                </div>
+            {rawPillars.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-[#3A2E26]/10">
+                {rawPillars.map((pillar, idx) => {
+                  const Icon = iconMap[pillar.icon] || Sprout;
+                  const iconColorClass = idx % 2 === 0 ? "text-[#7A8B6F]" : "text-[#C97C5D]";
+                  return (
+                    <div key={idx} className="flex items-start gap-3">
+                      <div className={`p-2 rounded-xl bg-white ${iconColorClass} shadow-sm mt-1 shrink-0`}>
+                        <Icon className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="font-serif-brand font-bold text-sm text-[#3A2E26]">{pillar.title}</h4>
+                        <p className="text-xs text-[#3A2E26]/70 mt-0.5">{pillar.subtitle}</p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-
-              <div className="flex items-start gap-3">
-                <div className="p-2 rounded-xl bg-white text-[#C97C5D] shadow-sm mt-1">
-                  <Sparkles className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-serif-brand font-bold text-sm text-[#3A2E26]">Zero Chemicals</h4>
-                  <p className="text-xs text-[#3A2E26]/70 mt-0.5">Free from parabens & sulfates</p>
-                </div>
-              </div>
-            </div>
+            )}
 
           </div>
 

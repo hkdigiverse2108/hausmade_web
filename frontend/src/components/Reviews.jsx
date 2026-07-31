@@ -2,7 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Star, ChevronLeft, ChevronRight, ShieldCheck } from 'lucide-react';
 import { getReviews } from '../utils/api';
 
-export default function Reviews() {
+export default function Reviews({ settings }) {
+  const headerBadge = settings?.reviews_header?.badge || settings?.reviews?.badge || "Reviews";
+  const headerTitle = settings?.reviews_header?.title || settings?.reviews?.title || "What Our Customers Say";
+  const ratingSubtext = settings?.reviews_header?.rating_subtext || settings?.reviews?.rating_subtext || "4.9 / 5 · Verified by Google · 2,400+ reviews";
+
   const staticReviews = [
     {
       id: 'static-1',
@@ -42,14 +46,20 @@ export default function Reviews() {
       try {
         const fetched = await getReviews();
         if (fetched && fetched.length > 0) {
-          const formatted = fetched.map(r => ({
-            id: r.id || r._id,
-            name: r.userName,
-            initial: r.userName ? r.userName.charAt(0).toUpperCase() : 'V',
-            rating: r.rating,
-            verified: 'Verified Buyer',
-            comment: `"${r.comment}"`
-          }));
+          const formatted = fetched.map(r => {
+            const rawComment = r.comment || '';
+            const cleanComment = (rawComment.startsWith('"') && rawComment.endsWith('"'))
+              ? rawComment
+              : `"${rawComment}"`;
+            return {
+              id: r.id || r._id,
+              name: r.userName,
+              initial: r.userName ? r.userName.charAt(0).toUpperCase() : 'V',
+              rating: r.rating,
+              verified: 'Verified Buyer',
+              comment: cleanComment
+            };
+          });
           setReviewsList(formatted);
         } else {
           setReviewsList(staticReviews);
@@ -151,17 +161,17 @@ export default function Reviews() {
         <div className="text-center max-w-3xl mx-auto mb-12">
           <div className="flex items-center justify-center gap-4 mb-2">
             <span className="h-[1px] w-12 bg-[#3A2E26]/20"></span>
-            <span className="text-[#8C7A5B] font-bold text-xs uppercase tracking-widest">Reviews</span>
+            <span className="text-[#8C7A5B] font-bold text-xs uppercase tracking-widest">{headerBadge}</span>
             <span className="h-[1px] w-12 bg-[#3A2E26]/20"></span>
           </div>
           
           <h2 className="font-serif-brand text-2xl sm:text-4xl lg:text-5xl font-normal text-[#3A2E26] mt-2">
-            What Our Customers Say
+            {headerTitle}
           </h2>
 
           <div className="flex items-center justify-center gap-2 text-xs sm:text-sm text-[#3A2E26]/70 mt-3 font-medium">
             <ShieldCheck className="w-4 h-4 text-[#8C7A5B]" />
-            <span>4.9 / 5 · Verified by Google · 2,400+ reviews</span>
+            <span>{ratingSubtext}</span>
           </div>
         </div>
 

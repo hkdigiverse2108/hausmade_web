@@ -102,6 +102,7 @@ app.add_middleware(
         "https://www.hausmade.in",
         "https://api.hausmade.in"
     ],
+    allow_origin_regex=r"https?://.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -58,9 +58,55 @@ async def submit_review(review: ReviewSubmitModel, current_user_email: str = Dep
         
     return {"status": "success", "review": review_doc}
 
+DEFAULT_INITIAL_REVIEWS = [
+    {
+        "id": "static-1",
+        "productId": "single",
+        "productTitle": "Pure Kesar Artisanal Shaving Puck",
+        "userName": "Roselin Mogaria",
+        "userEmail": "roselin.m@example.com",
+        "rating": 5,
+        "comment": "Nice design. Must visit here . Good staff service",
+        "approved": True,
+        "created_at": datetime.utcnow()
+    },
+    {
+        "id": "static-2",
+        "productId": "pack-3",
+        "productTitle": "Artisanal Soap Bar - 3 Pack",
+        "userName": "Sarah M.",
+        "userEmail": "sarah.m@example.com",
+        "rating": 5,
+        "comment": "Saved my sensitive winter skin! Switching to the 3-pack of lavender oat soap transformed my shower routine. Creamy lather!",
+        "approved": True,
+        "created_at": datetime.utcnow()
+    },
+    {
+        "id": "static-3",
+        "productId": "single",
+        "productTitle": "Pure Kesar Artisanal Shaving Puck",
+        "userName": "David K.",
+        "userEmail": "david.k@example.com",
+        "rating": 5,
+        "comment": "Lasts twice as long as store soap. One bar lasted me nearly 4 weeks in the shower. The Subscribe & Save option is great.",
+        "approved": True,
+        "created_at": datetime.utcnow()
+    }
+]
+
+async def seed_default_reviews_if_empty():
+    try:
+        count = await reviews_collection.count_documents({})
+        if count == 0:
+            docs = [dict(item) for item in DEFAULT_INITIAL_REVIEWS]
+            await reviews_collection.insert_many(docs)
+    except Exception as e:
+        print("Error seeding default reviews:", e)
+
 @router.get("/api/reviews")
 async def get_approved_reviews():
     try:
+        await seed_default_reviews_if_empty()
         reviews = await reviews_collection.find({"approved": True}).to_list(length=None)
         for r in reviews:
             if "_id" in r:
@@ -74,6 +120,7 @@ async def get_approved_reviews():
 @router.get("/api/admin/reviews")
 async def get_all_reviews_admin(admin: dict = Depends(get_admin_user)):
     try:
+        await seed_default_reviews_if_empty()
         reviews = await reviews_collection.find({}).to_list(length=None)
         for r in reviews:
             if "_id" in r:

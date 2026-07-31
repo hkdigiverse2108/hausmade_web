@@ -9,11 +9,28 @@ export default function Hero({ settings }) {
   const title_normal_2 = settings?.title_normal_2 || "with Kesar.";
   const description = settings?.description || "Purely handmade cleansing bar infused with real saffron extract, camphor, and 100% coconut oil. Naturally removes sun tan, fades dark spots, and brightens your daily complexing glow.";
 
-  const trustBadges = settings?.trust_badges || [
-    { title: "100% Natural Ingredients", description: "Pure essential oils & plant extracts", icon: "Leaf" },
-    { title: "Small-Batch Cold Processed", description: "Cured slowly for 6 weeks", icon: "Award" },
-    { title: "Cruelty-Free & Plastic-Free", description: "Zero synthetic chemicals or packaging waste", icon: "ShieldCheck" }
-  ];
+  const primary_button_text = settings?.primary_button_text || "Select Your Pack";
+  const primary_button_link = settings?.primary_button_link || "#product-selector";
+  const secondary_button_text = settings?.secondary_button_text || "Discover Our Craft";
+  const secondary_button_link = settings?.secondary_button_link || "#story";
+
+  const rating_score = settings?.rating_score || "4.8 / 5.0 rating";
+  const rating_subtext = settings?.rating_subtext || "Over 2,400+ happy bathers";
+  const rating_stars = Number(settings?.rating_stars) || 5;
+
+  const card_subtitle = settings?.card_subtitle || "Royal Saffron Formula";
+  const card_title = settings?.card_title || "Pure Kesar Artisanal Shaving Puck";
+  const card_badge = settings?.card_badge || "100% Pure";
+
+  const trustBadges = (settings?.trust_badges && settings.trust_badges.length > 0)
+    ? settings.trust_badges
+    : (settings?.hero?.trust_badges && settings.hero.trust_badges.length > 0)
+      ? settings.hero.trust_badges
+      : [
+          { title: "100% Natural Ingredients", description: "Pure essential oils & plant extracts", icon: "Leaf" },
+          { title: "Small-Batch Cold Processed", description: "Cured slowly for 6 weeks", icon: "Award" },
+          { title: "Cruelty-Free & Plastic-Free", description: "Zero synthetic chemicals or packaging waste", icon: "ShieldCheck" }
+        ];
 
   return (
     <section className="pt-10 pb-10 sm:pt-16 sm:pb-16 lg:pt-20 lg:pb-24 relative overflow-hidden">
@@ -40,35 +57,39 @@ export default function Hero({ settings }) {
               {description}
             </p>
 
-
-
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
-              <a
-                href="#product-selector"
-                className="w-full sm:w-auto px-8 py-4 bg-[#7A8B6F] hover:bg-[#68775E] text-white font-medium rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center gap-2 group text-base"
-              >
-                <span>Select Your Pack</span>
-                <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
-              </a>
+              {primary_button_text && (
+                <a
+                  href={primary_button_link}
+                  className="w-full sm:w-auto px-8 py-4 bg-[#7A8B6F] hover:bg-[#68775E] text-white font-medium rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center gap-2 group text-base"
+                >
+                  <span>{primary_button_text}</span>
+                  <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
+                </a>
+              )}
 
-              <a
-                href="#story"
-                className="w-full sm:w-auto px-7 py-4 bg-transparent border border-[#3A2E26]/20 hover:bg-[#3A2E26]/5 text-[#3A2E26] font-medium rounded-full transition-colors flex items-center justify-center text-base"
-              >
-                Discover Our Craft
-              </a>
+              {secondary_button_text && (
+                <a
+                  href={secondary_button_link}
+                  className="w-full sm:w-auto px-7 py-4 bg-transparent border border-[#3A2E26]/20 hover:bg-[#3A2E26]/5 text-[#3A2E26] font-medium rounded-full transition-colors flex items-center justify-center text-base"
+                >
+                  {secondary_button_text}
+                </a>
+              )}
             </div>
 
             {/* Social proof quick rating */}
             <div className="pt-4 flex flex-wrap items-center justify-center lg:justify-start gap-2 sm:gap-3 text-xs sm:text-sm text-[#3A2E26]/70">
-              <div className="flex text-[#C97C5D]">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current" />
-                ))}
-              </div>
-              <span className="font-medium text-[#3A2E26]">4.8 / 5.0 rating</span>
-              <span className="hidden sm:inline">•</span>
-              <span>Over 2,400+ happy bathers</span>
+              {rating_stars > 0 && (
+                <div className="flex text-[#C97C5D]">
+                  {[...Array(Math.min(5, Math.max(1, rating_stars)))].map((_, i) => (
+                    <Star key={i} className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current" />
+                  ))}
+                </div>
+              )}
+              {rating_score && <span className="font-medium text-[#3A2E26]">{rating_score}</span>}
+              {rating_score && rating_subtext && <span className="hidden sm:inline">•</span>}
+              {rating_subtext && <span>{rating_subtext}</span>}
             </div>
           </div>
 
@@ -82,14 +103,15 @@ export default function Hero({ settings }) {
                   alt="Handcrafted Botanical Soap Bar"
                   className="w-full h-[280px] sm:h-[420px] md:h-[480px] object-cover hover:scale-105 transition-transform duration-700"
                 />
-                <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4 bg-white/90 backdrop-blur-md p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-white/40 shadow-lg flex items-center justify-between gap-2">
-                  <div>
-                    <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-[#C97C5D]">Royal Saffron Formula</p>
-                    <p className="font-serif-brand font-bold text-[#3A2E26] text-sm sm:text-base">Pure Kesar Artisanal Shaving Puck</p>
-
+                {(card_subtitle || card_title || card_badge) && (
+                  <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4 bg-white/90 backdrop-blur-md p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-white/40 shadow-lg flex items-center justify-between gap-2">
+                    <div>
+                      {card_subtitle && <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-[#C97C5D]">{card_subtitle}</p>}
+                      {card_title && <p className="font-serif-brand font-bold text-[#3A2E26] text-sm sm:text-base">{card_title}</p>}
+                    </div>
+                    {card_badge && <span className="bg-[#C97C5D] text-white text-xs px-2.5 py-1 rounded-full font-bold">{card_badge}</span>}
                   </div>
-                  <span className="bg-[#C97C5D] text-white text-xs px-2.5 py-1 rounded-full font-bold">100% Pure</span>
-                </div>
+                )}
               </div>
             </div>
           </div>

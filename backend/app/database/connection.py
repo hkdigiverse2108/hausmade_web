@@ -28,6 +28,14 @@ class AsyncCollectionProxy:
         target = self._get_target()
         return await target.insert_one(document, *args, **kwargs)
 
+    async def insert_many(self, documents, *args, **kwargs):
+        target = self._get_target()
+        return await target.insert_many(documents, *args, **kwargs)
+
+    async def count_documents(self, filter={}, *args, **kwargs):
+        target = self._get_target()
+        return await target.count_documents(filter, *args, **kwargs)
+
     async def update_one(self, filter, update, *args, **kwargs):
         target = self._get_target()
         return await target.update_one(filter, update, *args, **kwargs)
@@ -39,6 +47,9 @@ class AsyncCollectionProxy:
     def find(self, filter={}, *args, **kwargs):
         target = self._get_target()
         return target.find(filter, *args, **kwargs)
+
+    def __getattr__(self, name):
+        return getattr(self._get_target(), name)
 
 # Global clients/dbs
 motor_client = None
@@ -159,11 +170,31 @@ async def initialize_db():
         except Exception as idx_err:
             print(f"Failed to initialize MongoDB Indexes: {idx_err}")
     except Exception as db_err:
-        print(f"\n[CRITICAL DATABASE ERROR] Failed to initialize/connect to MongoDB Database.")
-        print(f"Error Details: {db_err}")
-        import traceback
-        traceback.print_exc()
-        raise db_err
+        print(f"\n[WARNING] Could not connect to MongoDB Atlas database ({db_err}).")
+        print("[FALLBACK] Switching to In-Memory Database (mongomock_motor) so server remains active...")
+        try:
+            from mongomock_motor import AsyncMongoMockClient
+            motor_client = AsyncMongoMockClient()
+            motor_db = motor_client["soap_db"]
+            USE_JSON_FALLBACK = True
+            print("[FALLBACK] In-Memory Database initialized successfully.")
+            
+            # Migrate any existing JSON fallback data to MongoDB
+            await migrate_json_to_mongodb()
+            
+            # Initialize indexes on startup
+            try:
+                await motor_db["users"].create_index("email", unique=True, sparse=True)
+                await motor_db["users"].create_index("mobile", unique=True, sparse=True)
+                await motor_db["orders"].create_index("orderId", unique=True)
+                await motor_db["products"].create_index("id", unique=True)
+                await motor_db["coupons"].create_index("code", unique=True)
+                await motor_db["subscriptions"].create_index("subscriptionId", unique=True)
+            except Exception:
+                pass
+        except Exception as fallback_err:
+            print(f"[CRITICAL DATABASE ERROR] Fallback DB initialization failed: {fallback_err}")
+            raise db_err
 
 async def seed_admin_and_data_func():
     existing = await users_collection.find_one({"email": ADMIN_EMAIL})

@@ -260,7 +260,19 @@ export default function App() {
   }, [showAdminView]);
 
   const showNotification = useCallback((message, type = 'success') => {
-    setNotification({ message, type });
+    let formattedMsg = message;
+    if (typeof message === 'object' && message !== null) {
+      if (typeof message.message === 'string') {
+        formattedMsg = message.message;
+      } else if (Array.isArray(message.detail)) {
+        formattedMsg = message.detail.map(d => `${d.loc ? d.loc.filter(l => l !== 'body').join(' -> ') + ': ' : ''}${d.msg || JSON.stringify(d)}`).join('; ');
+      } else if (typeof message.detail === 'string') {
+        formattedMsg = message.detail;
+      } else {
+        formattedMsg = JSON.stringify(message);
+      }
+    }
+    setNotification({ message: String(formattedMsg || 'Notification'), type });
   }, []);
 
   useEffect(() => {
@@ -540,12 +552,12 @@ export default function App() {
           if (sectionId === 'identity') return activeHash === '#identity';
           if (sectionId === 'hero') return activeHash === '#hero' || activeHash === '#trust_badges';
           if (sectionId === 'subscription') return activeHash === '#subscription';
-          if (sectionId === 'ingredients') return activeHash === '#ingredients';
+          if (sectionId === 'ingredients') return activeHash === '#ingredients' || activeHash === '#difference';
           if (sectionId === 'story') return activeHash === '#story';
           if (sectionId === 'faqs') return activeHash === '#faqs';
           if (sectionId === 'contact') return activeHash === '#contact' || activeHash === '#social_links' || activeHash === '#policies';
           if (sectionId === 'products') return activeHash === '#products';
-          if (sectionId === 'reviews') return activeHash === '#reviews';
+          if (sectionId === 'reviews') return activeHash === '#reviews' || activeHash === '#reviews_header';
           return false;
         };
 
@@ -590,7 +602,7 @@ export default function App() {
             <main className="flex-1">
               {shouldShowSection('hero') && (
                 <div id="hero" className={getSectionClass('hero')} onClick={() => handleSectionClick('hero')}>
-                  <Hero settings={siteSettings.hero} />
+                  <Hero settings={{ ...siteSettings.hero, trust_badges: siteSettings.trust_badges }} />
                 </div>
               )}
               {shouldShowSection('subscription') && (
@@ -630,7 +642,7 @@ export default function App() {
               )}
               {shouldShowSection('reviews') && (
                 <div id="reviews" className={getSectionClass('reviews')} onClick={() => handleSectionClick('reviews')}>
-                  <Reviews />
+                  <Reviews settings={siteSettings} />
                 </div>
               )}
               {shouldShowSection('faqs') && (
