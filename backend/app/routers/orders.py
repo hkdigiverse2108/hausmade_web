@@ -498,21 +498,47 @@ async def process_delhivery_shipment_booking(order_or_id, weight=500, length=15,
     
     warehouse_name = config.get("warehouse_name") or config.get("pickup_name") or "Hausmade Soaps"
 
+    # Sanitize phone number (remove +91, leading 0, spaces)
+    raw_phone = order.get("shippingAddress", {}).get("phone", "")
+    clean_phone = ''.join(filter(str.isdigit, raw_phone))
+    if clean_phone.startswith("91") and len(clean_phone) > 10:
+        clean_phone = clean_phone[2:]
+    if clean_phone.startswith("0") and len(clean_phone) > 10:
+        clean_phone = clean_phone[1:]
+    
+    # Ensure address is at least 12 chars for Delhivery
+    raw_address = order.get("shippingAddress", {}).get("address", "")
+    if len(raw_address) < 12:
+        raw_address = raw_address + " - " + order.get("shippingAddress", {}).get("city", "")
+
     shipment_data = {
         "shipments": [
             {
                 "waybill": waybill,
                 "name": order.get("shippingAddress", {}).get("fullName", "Customer"),
-                "add": order.get("shippingAddress", {}).get("address", ""),
+                "add": raw_address,
                 "pin": order.get("shippingAddress", {}).get("pincode", "395010"),
-                "phone": order.get("shippingAddress", {}).get("phone", ""),
+                "city": order.get("shippingAddress", {}).get("city", "Surat"),
+                "state": order.get("shippingAddress", {}).get("state", "Gujarat"),
+                "country": "India",
+                "phone": clean_phone,
                 "payment_mode": pmode,
                 "cod_amount": cod_amt,
                 "order": order.get("orderId"),
                 "products_desc": "Botanical Cleanse Bars",
-                "quantity": sum(item.get("quantity", 1) for item in order.get("cartItems", [])),
-                "weight": weight,
-                "total_amount": float(order.get("grandTotal", 0.0))
+                "quantity": str(sum(item.get("quantity", 1) for item in order.get("cartItems", []))),
+                "weight": str(weight),
+                "shipment_length": str(length),
+                "shipment_width": str(width),
+                "shipment_height": str(height),
+                "total_amount": float(order.get("grandTotal", 0.0)),
+                "return_add": config.get("pickup_address") or "222 Yogi Arcade",
+                "return_pin": config.get("pickup_pincode") or "395010",
+                "return_city": config.get("pickup_city") or "Surat",
+                "return_state": config.get("pickup_state") or "Gujarat",
+                "return_country": "India",
+                "return_name": warehouse_name,
+                "return_phone": config.get("pickup_phone") or "7600081431",
             }
         ],
         "pickup_location": {

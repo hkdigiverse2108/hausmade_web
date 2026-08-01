@@ -28,6 +28,7 @@ import {
   Image,
   AlertCircle,
   Eye,
+  EyeOff,
   Sliders,
   MessageSquare,
   Star,
@@ -234,6 +235,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   const [activeTab, setActiveTab] = useState(() => {
     return localStorage.getItem('hausmade_admin_active_tab') || 'overview';
   });
+  const [showApiToken, setShowApiToken] = useState(false);
   const [confirmConfig, setConfirmConfig] = useState(null);
   const [stats, setStats] = useState({ total_revenue: 0, order_count: 0, customer_count: 0, average_order_value: 0 });
   const [targetsData, setTargetsData] = useState({ targets: [], comparison: [], yearly_comparison: [] });
@@ -4403,16 +4405,25 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                     <div className="space-y-4">
                       <div>
                         <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">API Auth Token</label>
-                        <input
-                          type="password"
-                          value={settingsForm.delhivery?.api_token || ''}
-                          onChange={(e) => setSettingsForm({
-                            ...settingsForm,
-                            delhivery: { ...settingsForm.delhivery, api_token: e.target.value }
-                          })}
-                          placeholder="Enter Delhivery API Token..."
-                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-mono"
-                        />
+                        <div className="relative">
+                          <input
+                            type={showApiToken ? "text" : "password"}
+                            value={settingsForm.delhivery?.api_token || ''}
+                            onChange={(e) => setSettingsForm({
+                              ...settingsForm,
+                              delhivery: { ...settingsForm.delhivery, api_token: e.target.value }
+                            })}
+                            placeholder="Enter Delhivery API Token..."
+                            className="w-full pl-4 pr-12 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-mono"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowApiToken(!showApiToken)}
+                            className="absolute right-4 top-1/2 -translate-y-1/2 text-[#3A2E26]/50 hover:text-[#3A2E26] transition-colors focus:outline-none"
+                          >
+                            {showApiToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
                       </div>
 
                       <div>
