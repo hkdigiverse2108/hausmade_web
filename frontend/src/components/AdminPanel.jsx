@@ -61,11 +61,15 @@ import {
   adminDeleteReview,
   adminUpdateReview,
   adminCreateReview,
-  adminLogOfflineSale,
   adminGetTargets,
   adminSetTarget,
   adminDeleteTarget,
-  adminGetActiveCarts
+  adminGetActiveCarts,
+  checkDelhiveryServiceability,
+  bookDelhiveryShipment,
+  scheduleDelhiveryPickup,
+  cancelDelhiveryShipment,
+  deleteAdminOrder
 } from '../utils/api';
 import ConfirmModal from './ConfirmModal';
 import { defaultTerms, defaultPrivacy, defaultShipping, defaultRefund } from '../utils/policyDefaults';
@@ -292,6 +296,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     subscription_offers: [],
     social_links: { instagram: '', facebook: '', whatsapp: '', twitter: '', youtube: '' },
     cashfree: { app_id_test: '', secret_key_test: '', app_id_live: '', secret_key_live: '', mode: 'test', active: false },
+    delhivery: { api_token: '', mode: 'test', active: false, warehouse_name: '', pickup_name: '', pickup_phone: '', pickup_email: '', pickup_pincode: '', pickup_state: '', pickup_city: '', pickup_address: '' },
     faqs: [],
     ingredients: [],
     ingredients_header: {
@@ -381,6 +386,8 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       const newSocial = settings.social_links || { instagram: '', facebook: '', whatsapp: '', twitter: '', youtube: '' };
       const currentCashfree = settingsForm.cashfree || { app_id_test: '', secret_key_test: '', app_id_live: '', secret_key_live: '', mode: 'test', active: false };
       const newCashfree = settings.cashfree || { app_id_test: '', secret_key_test: '', app_id_live: '', secret_key_live: '', mode: 'test', active: false };
+      const currentDelhivery = settingsForm.delhivery || { api_token: '', mode: 'test', active: false, pickup_name: '', pickup_phone: '', pickup_email: '', pickup_pincode: '', pickup_state: '', pickup_city: '', pickup_address: '' };
+      const newDelhivery = settings.delhivery || { api_token: '', mode: 'test', active: false, pickup_name: '', pickup_phone: '', pickup_email: '', pickup_pincode: '', pickup_state: '', pickup_city: '', pickup_address: '' };
 
       const hasChanged = 
         settingsForm.logo_url !== (settings.logo_url || '') ||
@@ -392,6 +399,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
         JSON.stringify(currentSub) !== JSON.stringify(newSub) ||
         JSON.stringify(currentSocial) !== JSON.stringify(newSocial) ||
         JSON.stringify(currentCashfree) !== JSON.stringify(newCashfree) ||
+        JSON.stringify(currentDelhivery) !== JSON.stringify(newDelhivery) ||
         settingsForm.subscription_discount_pct !== (settings.subscription_discount_pct !== undefined ? settings.subscription_discount_pct : 15.0) ||
         settingsForm.subscription_active !== (settings.subscription_active !== undefined ? settings.subscription_active : true) ||
         JSON.stringify(settingsForm.subscription_durations || []) !== JSON.stringify(settings.subscription_durations || []) ||
@@ -437,6 +445,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
           subscription_offers: settings.subscription_offers || [],
           social_links: settings.social_links || { instagram: '', facebook: '', whatsapp: '', twitter: '', youtube: '' },
           cashfree: settings.cashfree || { app_id_test: '', secret_key_test: '', app_id_live: '', secret_key_live: '', mode: 'test', active: false },
+          delhivery: settings.delhivery || { api_token: '', mode: 'test', active: false, pickup_name: '', pickup_phone: '', pickup_email: '', pickup_pincode: '', pickup_state: '', pickup_city: '', pickup_address: '' },
           faqs: settings.faqs || [],
           ingredients: settings.ingredients || [],
           ingredients_header: settings.ingredients_header || {
@@ -1005,8 +1014,9 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   const filteredOrders = orders.filter(order => {
     const matchesSource = 
       orderSourceFilter === 'all' || 
-      (orderSourceFilter === 'online' && !order.isOffline) ||
-      (orderSourceFilter === 'offline' && order.isOffline);
+      (orderSourceFilter === 'online' && !order.isOffline && order.status !== 'cancelled') ||
+      (orderSourceFilter === 'offline' && order.isOffline) ||
+      (orderSourceFilter === 'cancelled' && order.status === 'cancelled');
       
     if (!matchesSource) return false;
 
@@ -1172,12 +1182,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     setCheckingServiceability(true);
     setServiceabilityResult(null);
     try {
-      const res = await fetch(`/api/admin/orders/${orderId}/delhivery/serviceability`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      const data = await res.json();
+      const data = await checkDelhiveryServiceability(orderId, token);
       setServiceabilityResult(data);
       if (data.serviceable) {
         showNotification('Pincode ' + data.pincode + ' is serviceable by Delhivery!', 'success');
@@ -1185,7 +1190,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
         showNotification('Warning: Pincode ' + data.pincode + ' is NOT serviceable!', 'error');
       }
     } catch (err) {
-      showNotification('Failed to check pincode serviceability', 'error');
+      showNotification(err.message || 'Failed to check pincode serviceability', 'error');
     } finally {
       setCheckingServiceability(false);
     }
@@ -1194,29 +1199,21 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   const handleBookShipment = async (orderId) => {
     setSaving(true);
     try {
-      const res = await fetch(`/api/admin/orders/${orderId}/delhivery/ship`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          weight: shippingWeight,
-          length: shippingLength,
-          width: shippingWidth,
-          height: shippingHeight
-        })
-      });
-      const data = await res.json();
+      const data = await bookDelhiveryShipment(orderId, {
+        weight: shippingWeight,
+        length: shippingLength,
+        width: shippingWidth,
+        height: shippingHeight
+      }, token);
       if (data.status === 'success') {
-        showNotification('Consignment successfully booked with Delhivery! AWB: ' + data.fulfillment.awb, 'success');
+        showNotification('Consignment successfully booked with Delhivery! AWB: ' + (data.fulfillment?.awb || 'N/A'), 'success');
         setSelectedOrderForShipping(null);
         fetchAdminData(true);
       } else {
         showNotification(data.detail || 'Shipment booking failed', 'error');
       }
     } catch (err) {
-      showNotification('Failed to book shipment', 'error');
+      showNotification(err.message || 'Failed to book shipment', 'error');
     } finally {
       setSaving(false);
     }
@@ -1225,13 +1222,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   const handleSchedulePickup = async (orderId) => {
     setSaving(true);
     try {
-      const res = await fetch(`/api/admin/orders/${orderId}/delhivery/pickup`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      const data = await res.json();
+      const data = await scheduleDelhiveryPickup(orderId, token);
       if (data.status === 'success') {
         showNotification('Pickup scheduled successfully with Delhivery!', 'success');
         fetchAdminData(true);
@@ -1239,7 +1230,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
         showNotification(data.detail || 'Failed to schedule pickup', 'error');
       }
     } catch (err) {
-      showNotification('Failed to schedule pickup', 'error');
+      showNotification(err.message || 'Failed to schedule pickup', 'error');
     } finally {
       setSaving(false);
     }
@@ -1254,13 +1245,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
         setConfirmConfig(null);
         setSaving(true);
         try {
-          const res = await fetch(`/api/admin/orders/${orderId}/delhivery/cancel`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          const data = await res.json();
+          const data = await cancelDelhiveryShipment(orderId, token);
           if (data.status === 'success') {
             showNotification('Delhivery shipment successfully cancelled.', 'success');
             fetchAdminData(true);
@@ -1268,7 +1253,28 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
             showNotification(data.detail || 'Failed to cancel shipment', 'error');
           }
         } catch (err) {
-          showNotification('Failed to cancel shipment', 'error');
+          showNotification(err.message || 'Failed to cancel shipment', 'error');
+        } finally {
+          setSaving(false);
+        }
+      }
+    });
+  };
+
+  const handleDeleteOrder = async (orderId) => {
+    setConfirmConfig({
+      title: 'Delete Order',
+      message: `Are you sure you want to permanently delete Order #${orderId}? This action cannot be undone.`,
+      type: 'danger',
+      onConfirm: async () => {
+        setConfirmConfig(null);
+        setSaving(true);
+        try {
+          const data = await deleteAdminOrder(orderId, token);
+          showNotification(data.message || 'Order deleted successfully!', 'success');
+          fetchAdminData(true);
+        } catch (err) {
+          showNotification(err.message || 'Failed to delete order', 'error');
         } finally {
           setSaving(false);
         }
@@ -2410,7 +2416,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                     {/* Source Filters and Search Bar */}
                     <div className="flex items-center gap-3 w-full sm:w-auto flex-wrap">
                       <div className="flex bg-[#3A2E26]/5 p-1 rounded-xl border border-[#3A2E26]/10">
-                        {['all', 'online', 'offline'].map((source) => (
+                        {['all', 'online', 'offline', 'cancelled'].map((source) => (
                           <button
                             key={source}
                             onClick={() => setOrderSourceFilter(source)}
@@ -2472,7 +2478,9 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                 <td className="p-4 pl-6 align-top">
                                   <div className="flex flex-col gap-1">
                                     <span className="font-bold text-[#3A2E26]">{order.orderId}</span>
-                                    {order.isOffline ? (
+                                    {order.status === 'cancelled' ? (
+                                      <span className="text-[8px] font-bold uppercase tracking-wider text-red-700 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded-md inline-block w-fit">CANCELLED</span>
+                                    ) : order.isOffline ? (
                                       <span className="text-[8px] font-bold uppercase tracking-wider text-amber-850 bg-amber-50 border border-amber-200/50 px-1.5 py-0.5 rounded-md inline-block w-fit">Offline</span>
                                     ) : (
                                       <span className="text-[8px] font-bold uppercase tracking-wider text-green-800 bg-green-50 border border-green-200 px-1.5 py-0.5 rounded-md inline-block w-fit">Online</span>
@@ -2520,8 +2528,35 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                   {formatCurrency(order.grandTotal)}
                                 </td>
                                 <td className="p-4 pr-6 align-top text-right">
-                                  {order.isOffline ? (
-                                    <span className="text-[10px] text-gray-400 font-bold italic">N/A (Offline)</span>
+                                  {order.status === 'cancelled' ? (
+                                    <div className="flex items-center justify-end gap-2">
+                                      <div className="flex flex-col items-end gap-0.5">
+                                        <span className="px-2.5 py-1 bg-red-50 text-red-600 border border-red-200 rounded-xl text-[10px] font-bold uppercase tracking-wider">
+                                          Cancelled
+                                        </span>
+                                        {order.cancelled_by && (
+                                          <span className="text-[9px] text-gray-500 font-medium">By {order.cancelled_by}</span>
+                                        )}
+                                      </div>
+                                      <button
+                                        onClick={() => handleDeleteOrder(order.orderId || order._id)}
+                                        title="Delete Order Permanently"
+                                        className="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors cursor-pointer border-none flex items-center justify-center shrink-0"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                  ) : order.isOffline ? (
+                                    <div className="flex items-center justify-end gap-2">
+                                      <span className="text-[10px] text-gray-400 font-bold italic">N/A (Offline)</span>
+                                      <button
+                                        onClick={() => handleDeleteOrder(order.orderId || order._id)}
+                                        title="Delete Order Permanently"
+                                        className="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors cursor-pointer border-none flex items-center justify-center shrink-0"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
                                   ) : order.fulfillment ? (
                                     <div className="flex flex-col items-end gap-1.5 font-sans">
                                       <div className="flex items-center gap-1.5">
@@ -2535,7 +2570,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                       <div className="text-[10px] font-bold text-[#3A2E26]/60">
                                         Status: <span className="text-[#3A2E26] font-semibold">{order.fulfillment.status}</span>
                                       </div>
-                                      <div className="flex gap-2 justify-end mt-1 flex-wrap">
+                                      <div className="flex gap-2 justify-end mt-1 flex-wrap items-center">
                                         {!order.fulfillment.pickup_scheduled && (
                                           <button
                                             onClick={() => handleSchedulePickup(order.orderId)}
@@ -2544,35 +2579,52 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                             Pickup
                                           </button>
                                         )}
-                                        {order.fulfillment.label_url && (
-                                          <a
-                                            href={order.fulfillment.label_url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="px-2 py-1 bg-white border border-[#E6D5C3] hover:bg-gray-50 text-[#3A2E26] text-[9px] font-bold rounded-lg uppercase tracking-wider transition-colors no-underline"
-                                          >
-                                            Label
-                                          </a>
-                                        )}
+                                        {(order.fulfillment.label_url || order.fulfillment.awb) && (
+                                           <a
+                                             href={order.fulfillment.label_url || `/api/orders/label/${order.fulfillment.awb}`}
+                                             target="_blank"
+                                             rel="noopener noreferrer"
+                                             className="px-2.5 py-1 bg-white border border-[#E6D5C3] hover:bg-[#7A8B6F]/10 hover:border-[#7A8B6F]/30 text-[#3A2E26] text-[9px] font-bold rounded-lg uppercase tracking-wider transition-all no-underline inline-flex items-center gap-1 shadow-sm"
+                                           >
+                                             <svg className="w-2.5 h-2.5 text-[#7A8B6F]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H7a2 2 0 00-2 2v4h10z" /></svg>
+                                             Label
+                                           </a>
+                                         )}
                                         <button
                                           onClick={() => handleCancelShipment(order.orderId)}
-                                          className="px-2 py-1 bg-red-50 hover:bg-red-100 text-red-600 text-[9px] font-bold rounded-lg uppercase tracking-wider transition-colors cursor-pointer border-none"
+                                          className="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 text-[9px] font-bold rounded-lg uppercase tracking-wider transition-colors cursor-pointer border-none"
                                         >
                                           Cancel
+                                        </button>
+                                        <button
+                                          onClick={() => handleDeleteOrder(order.orderId || order._id)}
+                                          title="Delete Order Permanently"
+                                          className="p-1 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors cursor-pointer border-none flex items-center justify-center shrink-0"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
                                         </button>
                                       </div>
                                     </div>
                                   ) : (
-                                    <button
-                                      onClick={() => {
-                                        setSelectedOrderForShipping(order);
-                                        setServiceabilityResult(null);
-                                      }}
-                                      className="px-3.5 py-1.5 bg-[#3A2E26] hover:bg-[#2A201A] text-white rounded-xl text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1.5 ml-auto border-none"
-                                    >
-                                      <Truck className="w-3.5 h-3.5" />
-                                      <span>Ship Order</span>
-                                    </button>
+                                    <div className="flex items-center justify-end gap-2">
+                                      <button
+                                        onClick={() => {
+                                          setSelectedOrderForShipping(order);
+                                          setServiceabilityResult(null);
+                                        }}
+                                        className="px-3.5 py-1.5 bg-[#3A2E26] hover:bg-[#2A201A] text-white rounded-xl text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1.5 border-none"
+                                      >
+                                        <Truck className="w-3.5 h-3.5" />
+                                        <span>Ship Order</span>
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteOrder(order.orderId || order._id)}
+                                        title="Delete Order Permanently"
+                                        className="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors cursor-pointer border-none flex items-center justify-center shrink-0"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
                                   )}
                                 </td>
                               </tr>
@@ -4401,7 +4453,20 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                         <h4 className="text-xs font-bold uppercase text-[#3A2E26] mb-3">Default Pickup Warehouse Location</h4>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div>
-                            <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1">Warehouse / Contact Name</label>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1">Delhivery Warehouse Name</label>
+                            <input
+                              type="text"
+                              value={settingsForm.delhivery?.warehouse_name || ''}
+                              onChange={(e) => setSettingsForm({
+                                ...settingsForm,
+                                delhivery: { ...settingsForm.delhivery, warehouse_name: e.target.value }
+                              })}
+                              placeholder="e.g. Hausmade Soaps"
+                              className="w-full px-3 py-2 bg-white border border-[#E6D5C3]/40 rounded-xl text-xs font-semibold text-[#3A2E26]"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1">Warehouse Contact Person Name</label>
                             <input
                               type="text"
                               value={settingsForm.delhivery?.pickup_name || ''}
@@ -4491,6 +4556,17 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                               className="w-full px-3 py-2 bg-white border border-[#E6D5C3]/40 rounded-xl text-xs font-semibold text-[#3A2E26]"
                             />
                           </div>
+                        </div>
+
+                        <div className="pt-3 border-t border-[#3A2E26]/10 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={handleSaveSettings}
+                            disabled={saving}
+                            className="px-6 py-2.5 bg-[#7A8B6F] hover:bg-[#68785c] text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
+                          >
+                            {saving ? 'Saving...' : 'Save Delhivery Settings'}
+                          </button>
                         </div>
                       </div>
                     </div>

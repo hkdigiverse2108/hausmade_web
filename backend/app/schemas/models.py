@@ -229,6 +229,7 @@ class DelhiverySettings(BaseModel):
     api_token: str = ""
     mode: str = "test"  # "test" or "live"
     active: bool = False
+    warehouse_name: str = ""
     pickup_name: str = ""
     pickup_phone: str = ""
     pickup_email: str = ""
@@ -327,14 +328,14 @@ class SocialLoginRequest(BaseModel):
     provider: str = "google"
 
 class SubscriptionCreate(BaseModel):
-    durationMonths: int  # 6 or 12
-    soapsPerMonth: int
-    deliveryFrequency: str  # "monthly" or "every_3_months"
+    durationMonths: Optional[int] = 6
+    soapsPerMonth: Optional[int] = 2
+    deliveryFrequency: Optional[str] = "monthly"
     customerName: str
     customerPhone: str
     customerEmail: Optional[str] = None
     shippingAddress: ShippingAddress
-    paymentMethod: str
+    paymentMethod: Optional[str] = "Cash on Delivery"
 
 class SalesTargetCreate(BaseModel):
     name: str

@@ -51,10 +51,13 @@ async def process_recurring_subscriptions():
         if isinstance(next_del, str):
             try:
                 next_del = datetime.fromisoformat(next_del.replace("Z", "+00:00"))
-            except ValueError:
-                continue
+            except Exception:
+                try:
+                    next_del = datetime.strptime(next_del.split(".")[0].replace("T", " "), "%Y-%m-%d %H:%M:%S")
+                except Exception:
+                    next_del = None
         
-        if next_del and next_del <= now:
+        if isinstance(next_del, datetime) and next_del <= now:
             # Generate automated order
             short_uuid = str(uuid.uuid4()).split("-")[0].upper()
             order_id = f"SUB-AUTO-{short_uuid}"

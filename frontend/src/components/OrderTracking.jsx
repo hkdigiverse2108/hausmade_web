@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Package, MapPin, Truck, CheckCircle2, ChevronRight, AlertCircle, Calendar } from 'lucide-react';
+import { trackOrderShipment } from '../utils/api';
 
 export default function OrderTracking() {
   const [trackingId, setTrackingId] = useState('');
@@ -25,14 +26,10 @@ export default function OrderTracking() {
     setTrackingData(null);
 
     try {
-      const res = await fetch(`/api/orders/track/${encodeURIComponent(targetId.trim())}`);
-      if (!res.ok) {
-        throw new Error('Tracking identifier not found. Please verify your Order ID or Waybill number.');
-      }
-      const data = await res.json();
+      const data = await trackOrderShipment(targetId.trim());
       setTrackingData(data);
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'Tracking details not found. Please verify your Order ID or Waybill number.');
     } finally {
       setLoading(false);
     }

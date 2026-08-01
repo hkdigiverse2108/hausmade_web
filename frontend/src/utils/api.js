@@ -1,10 +1,10 @@
 const getApiUrl = () => {
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return `${window.location.protocol}//${window.location.hostname}:8005`;
+  }
   const envUrl = import.meta.env.VITE_API_URL;
   if (envUrl) {
     return envUrl;
-  }
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    return `${window.location.protocol}//${window.location.hostname}:8005`;
   }
   if (window.location.hostname === 'hausmade.in' || window.location.hostname === 'www.hausmade.in') {
     return 'https://api.hausmade.in';
@@ -748,6 +748,101 @@ export async function verifyCashfreePayment(orderId) {
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.detail || 'Failed to verify Cashfree payment');
+  }
+  return response.json();
+}
+
+export async function checkDelhiveryServiceability(orderId, token) {
+  const response = await fetch(`${API_URL}/api/admin/orders/${encodeURIComponent(orderId)}/delhivery/serviceability`, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || 'Failed to check serviceability');
+  }
+  return response.json();
+}
+
+export async function bookDelhiveryShipment(orderId, weightData, token) {
+  const response = await fetch(`${API_URL}/api/admin/orders/${encodeURIComponent(orderId)}/delhivery/ship`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(weightData)
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || 'Failed to book shipment');
+  }
+  return response.json();
+}
+
+export async function scheduleDelhiveryPickup(orderId, token) {
+  const response = await fetch(`${API_URL}/api/admin/orders/${encodeURIComponent(orderId)}/delhivery/pickup`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || 'Failed to schedule pickup');
+  }
+  return response.json();
+}
+
+export async function cancelDelhiveryShipment(orderId, token) {
+  const response = await fetch(`${API_URL}/api/admin/orders/${encodeURIComponent(orderId)}/delhivery/cancel`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || 'Failed to cancel shipment');
+  }
+  return response.json();
+}
+
+export async function trackOrderShipment(trackingId) {
+  const response = await fetch(`${API_URL}/api/orders/track/${encodeURIComponent(trackingId.trim())}`);
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Tracking details not found. Please verify your Order ID or Waybill number.');
+  }
+  return response.json();
+}
+
+export async function deleteAdminOrder(orderId, token) {
+  const response = await fetch(`${API_URL}/api/admin/orders/${encodeURIComponent(orderId)}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Failed to delete order');
+  }
+  return response.json();
+}
+
+export async function cancelUserOrder(orderId, token) {
+  const response = await fetch(`${API_URL}/api/user/orders/${encodeURIComponent(orderId)}/cancel`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || 'Failed to cancel order');
   }
   return response.json();
 }

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, Hash, Package, MapPin, CreditCard, ShoppingBag, Loader2, Sparkles } from 'lucide-react';
-import { getUserOrders } from '../utils/api';
+import { X, Calendar, Hash, Package, MapPin, CreditCard, ShoppingBag, Loader2, Sparkles, XCircle } from 'lucide-react';
+import { getUserOrders, cancelUserOrder } from '../utils/api';
 
 export default function OrderHistoryModal({ isOpen, onClose, token, onWriteReview }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [cancellingId, setCancellingId] = useState(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -28,9 +29,26 @@ export default function OrderHistoryModal({ isOpen, onClose, token, onWriteRevie
     }
   };
 
+  const handleCancelOrder = async (orderId) => {
+    if (!window.confirm(`Are you sure you want to cancel order ${orderId}?`)) {
+      return;
+    }
+    setCancellingId(orderId);
+    try {
+      await cancelUserOrder(orderId, token);
+      setOrders(prev => prev.map(o => (o.orderId === orderId || o._id === orderId) ? { ...o, status: 'cancelled' } : o));
+    } catch (err) {
+      alert(err.message || 'Failed to cancel order');
+    } finally {
+      setCancellingId(null);
+    }
+  };
+
   const statusColors = {
     pending: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+    confirmed: 'bg-blue-50 text-blue-700 border-blue-200',
     processing: 'bg-blue-50 text-blue-700 border-blue-200',
+    shipped: 'bg-indigo-50 text-indigo-700 border-indigo-200',
     delivered: 'bg-green-50 text-green-700 border-green-200',
     cancelled: 'bg-red-50 text-red-700 border-red-200'
   };
@@ -117,13 +135,26 @@ export default function OrderHistoryModal({ isOpen, onClose, token, onWriteRevie
                       })}
                     </span>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border uppercase tracking-wider ${statusColors[order.status?.toLowerCase()] || 'bg-blue-50 text-blue-700 border-blue-200'}`}>
-                      {order.status || 'processing'}
-                    </span>
-                    <span className="text-xs font-bold text-[#7A8B6F] bg-[#7A8B6F]/10 px-2.5 py-1 rounded-lg">
-                      {order.paymentMethod.toUpperCase()}
-                    </span>
+                  <div className="flex items-center gap-3">
+                    {!['shipped', 'manifested', 'in transit', 'out for delivery', 'delivered', 'cancelled'].includes(order.status?.toLowerCase()) ? (
+                      <button
+                        type="button"
+                        onClick={() => handleCancelOrder(order.orderId || order._id)}
+                        disabled={cancellingId === (order.orderId || order._id)}
+                        className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-[10px] font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-xs disabled:opacity-50"
+                      >
+                        {cancellingId === (order.orderId || order._id) ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <XCircle className="w-3.5 h-3.5" />
+                        )}
+                        <span>Cancel Order</span>
+                      </button>
+                    ) : order.status?.toLowerCase() === 'cancelled' ? (
+                      <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full border uppercase tracking-wider bg-red-50 text-red-700 border-red-200">
+                        CANCELLED
+                      </span>
+                    ) : null}
                     <span className="text-lg font-bold text-[#3A2E26]">
                       ₹{order.grandTotal.toFixed(2)}
                     </span>

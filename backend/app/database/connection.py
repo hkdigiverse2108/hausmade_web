@@ -11,6 +11,32 @@ from bson import ObjectId
 USE_JSON_FALLBACK = False
 JSON_DB_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+async def _persist_to_json(collection_name):
+    if motor_db is None:
+        return
+    try:
+        coll = motor_db[collection_name]
+        docs = await coll.find({}).to_list(length=None)
+        json_docs = []
+        for d in docs:
+            doc_copy = dict(d)
+            if "_id" in doc_copy:
+                doc_copy["_id"] = str(doc_copy["_id"])
+            for k, v in list(doc_copy.items()):
+                if isinstance(v, datetime):
+                    doc_copy[k] = v.isoformat()
+                elif isinstance(v, dict):
+                    for subk, subv in list(v.items()):
+                        if isinstance(subv, datetime):
+                            v[subk] = subv.isoformat()
+            json_docs.append(doc_copy)
+            
+        json_path = os.path.join(JSON_DB_DIR, f"{collection_name}.json")
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(json_docs, f, indent=2)
+    except Exception as e:
+        print(f"[JSON PERSIST ERROR] Failed to save '{collection_name}.json': {e}")
+
 class AsyncCollectionProxy:
     def __init__(self, collection_name):
         self.collection_name = collection_name
@@ -26,11 +52,15 @@ class AsyncCollectionProxy:
 
     async def insert_one(self, document, *args, **kwargs):
         target = self._get_target()
-        return await target.insert_one(document, *args, **kwargs)
+        res = await target.insert_one(document, *args, **kwargs)
+        await _persist_to_json(self.collection_name)
+        return res
 
     async def insert_many(self, documents, *args, **kwargs):
         target = self._get_target()
-        return await target.insert_many(documents, *args, **kwargs)
+        res = await target.insert_many(documents, *args, **kwargs)
+        await _persist_to_json(self.collection_name)
+        return res
 
     async def count_documents(self, filter={}, *args, **kwargs):
         target = self._get_target()
@@ -38,11 +68,15 @@ class AsyncCollectionProxy:
 
     async def update_one(self, filter, update, *args, **kwargs):
         target = self._get_target()
-        return await target.update_one(filter, update, *args, **kwargs)
+        res = await target.update_one(filter, update, *args, **kwargs)
+        await _persist_to_json(self.collection_name)
+        return res
 
     async def delete_one(self, filter, *args, **kwargs):
         target = self._get_target()
-        return await target.delete_one(filter, *args, **kwargs)
+        res = await target.delete_one(filter, *args, **kwargs)
+        await _persist_to_json(self.collection_name)
+        return res
 
     def find(self, filter={}, *args, **kwargs):
         target = self._get_target()

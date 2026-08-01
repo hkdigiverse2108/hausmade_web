@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, User, Mail, Phone, ShieldCheck, Sparkles, Loader2, MapPin, Compass, Building, Globe, Navigation, ChevronRight, UserCheck, Check, Heart, ShoppingBag, Lock, LogOut, Trash2, Calendar, Hash, Package, RefreshCw } from 'lucide-react';
-import { updateUserProfile, getUserOrders, getUserSubscriptions, requestUrgentSoap } from '../utils/api';
+import { X, User, Mail, Phone, ShieldCheck, Sparkles, Loader2, MapPin, Compass, Building, Globe, Navigation, ChevronRight, UserCheck, Check, Heart, ShoppingBag, Lock, LogOut, Trash2, Calendar, Hash, Package, RefreshCw, XCircle } from 'lucide-react';
+import { updateUserProfile, getUserOrders, getUserSubscriptions, requestUrgentSoap, cancelUserOrder } from '../utils/api';
 import ConfirmModal from './ConfirmModal';
 
 let isInitialPageLoad = true;
@@ -191,6 +191,30 @@ export default function ProfileModal({
       setOrdersError(err.message || 'Failed to fetch order history');
     } finally {
       setLoadingOrders(false);
+    }
+  };
+
+  const [cancellingOrderId, setCancellingOrderId] = useState(null);
+
+  const handleCancelOrder = async (orderId) => {
+    if (!window.confirm(`Are you sure you want to cancel order ${orderId}?`)) {
+      return;
+    }
+    setCancellingOrderId(orderId);
+    try {
+      await cancelUserOrder(orderId, token);
+      setOrders(prev => prev.map(o => (o.orderId === orderId || o._id === orderId) ? { ...o, status: 'cancelled' } : o));
+      if (showNotification) {
+        showNotification('Order cancelled successfully!', 'success');
+      }
+    } catch (err) {
+      if (showNotification) {
+        showNotification(err.message || 'Failed to cancel order', 'error');
+      } else {
+        alert(err.message || 'Failed to cancel order');
+      }
+    } finally {
+      setCancellingOrderId(null);
     }
   };
 
@@ -1037,10 +1061,26 @@ export default function ProfileModal({
                               })}
                             </span>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <span className="text-[9px] font-bold text-[#7A8B6F] bg-[#7A8B6F]/10 px-2 py-0.5 rounded-md">
-                              {order.paymentMethod.toUpperCase()}
-                            </span>
+                          <div className="flex items-center gap-2">
+                            {!['shipped', 'manifested', 'in transit', 'out for delivery', 'delivered', 'cancelled'].includes(order.status?.toLowerCase()) ? (
+                              <button
+                                type="button"
+                                onClick={() => handleCancelOrder(order.orderId || order._id)}
+                                disabled={cancellingOrderId === (order.orderId || order._id)}
+                                className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-[9px] font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer flex items-center gap-1 shadow-xs disabled:opacity-50"
+                              >
+                                {cancellingOrderId === (order.orderId || order._id) ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <XCircle className="w-3 h-3" />
+                                )}
+                                <span>Cancel Order</span>
+                              </button>
+                            ) : order.status?.toLowerCase() === 'cancelled' ? (
+                              <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider bg-red-50 text-red-700 border-red-200">
+                                CANCELLED
+                              </span>
+                            ) : null}
                             <span className="text-sm font-bold text-[#3A2E26]">
                               {formatCurrency(order.grandTotal)}
                             </span>

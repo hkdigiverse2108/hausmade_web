@@ -9,6 +9,12 @@ export default defineConfig({
   envDir: path.resolve(__dirname, '../'),
   server: {
     strictPort: true,
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:8005',
+        changeOrigin: true
+      }
+    },
     watch: {
       ignored: [
         '**/backend/**',

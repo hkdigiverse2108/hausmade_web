@@ -35,6 +35,25 @@ cloudinary.config(
 
 app = FastAPI(title="Hausmade™ Soap Backend", version="1.0.0")
 
+# Allow requests from specific origins explicitly to avoid CORS issues
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:8005",
+        "http://127.0.0.1:8005",
+        "https://hausmade.in",
+        "http://hausmade.in",
+        "https://www.hausmade.in",
+        "https://api.hausmade.in"
+    ],
+    allow_origin_regex=r"https?://.*",
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Simple In-Memory Rate Limiter for Sensitive Endpoints (no Redis dependency)
 class InMemoryRateLimiter:
     def __init__(self, requests_limit: int, window_seconds: int):
@@ -90,23 +109,6 @@ async def startup_event():
     await initialize_db()
     # Seed default collections
     await seed_admin_and_data_func()
-
-# Allow requests from specific origins explicitly to avoid CORS issues
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "https://hausmade.in",
-        "http://hausmade.in",
-        "https://www.hausmade.in",
-        "https://api.hausmade.in"
-    ],
-    allow_origin_regex=r"https?://.*",
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # Expose image upload directly
 @app.post("/api/upload")

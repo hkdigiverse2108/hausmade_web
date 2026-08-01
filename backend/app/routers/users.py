@@ -190,9 +190,9 @@ async def get_admin_orders(admin: dict = Depends(get_admin_user)):
     for order in orders:
         order["_id"] = str(order["_id"])
     try:
-        orders.sort(key=lambda x: x.get("created_at", ""), reverse=True)
-    except Exception:
-        pass
+        orders.sort(key=lambda x: str(x.get("created_at", "")), reverse=True)
+    except Exception as e:
+        print(f"Error sorting admin orders: {e}")
     return orders
 
 @router.get("/api/admin/subscriptions")

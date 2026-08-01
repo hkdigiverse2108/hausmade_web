@@ -393,7 +393,7 @@ async def test_delhivery_connection(test_data: DelhiveryTestModel, admin: dict =
         raise HTTPException(status_code=400, detail="API Token is required")
     
     base_url = "https://staging-express.delhivery.com" if test_data.mode == "test" else "https://track.delhivery.com"
-    url = f"{base_url}/api/kbc/v1/pin-codes/json/?filter_codes=110001"
+    url = f"{base_url}/c/api/pin-codes/json/?token={token}&filter_codes=110001"
     headers = {
         "Authorization": f"Token {token}",
         "Content-Type": "application/json"
@@ -403,7 +403,11 @@ async def test_delhivery_connection(test_data: DelhiveryTestModel, admin: dict =
         try:
             resp = await client.get(url, headers=headers, timeout=10.0)
             if resp.status_code == 200:
-                return {"status": "success", "message": "Successfully connected to Delhivery!"}
+                data = resp.json()
+                if "delivery_codes" in data or "postal_code" in str(data):
+                    return {"status": "success", "message": "Successfully connected to Delhivery!"}
+                else:
+                    return {"status": "success", "message": "Connected to Delhivery API!"}
             elif resp.status_code in [401, 403]:
                 raise HTTPException(status_code=401, detail="Authentication failed: Invalid API Token")
             else:

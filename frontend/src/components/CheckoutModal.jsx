@@ -280,20 +280,20 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
         let createdOrderId = generatedId;
         if (subItem) {
           const subPayload = {
-            durationMonths: subItem.subscriptionDetails.durationMonths,
-            soapsPerMonth: subItem.subscriptionDetails.soapsPerMonth,
-            deliveryFrequency: subItem.subscriptionDetails.deliveryFrequency,
+            durationMonths: subItem.subscriptionDetails?.durationMonths || 6,
+            soapsPerMonth: subItem.subscriptionDetails?.soapsPerMonth || subItem.count || 2,
+            deliveryFrequency: subItem.subscriptionDetails?.deliveryFrequency || (subItem.frequency?.toLowerCase().includes('3') ? 'every_3_months' : 'monthly'),
             customerName: formData.fullName,
             customerPhone: formData.phone,
-            customerEmail: formData.email,
+            customerEmail: formData.email || null,
             shippingAddress: {
               fullName: formData.fullName,
-              email: formData.email,
+              email: formData.email || null,
               phone: formData.phone,
               address: formData.address,
               city: formData.city,
               pincode: formData.pincode,
-              state: formData.state
+              state: formData.state || 'Gujarat'
             },
             paymentMethod: paymentMethod.toUpperCase()
           };
@@ -332,20 +332,20 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
 
       if (subItem) {
         const subPayload = {
-          durationMonths: subItem.subscriptionDetails.durationMonths,
-          soapsPerMonth: subItem.subscriptionDetails.soapsPerMonth,
-          deliveryFrequency: subItem.subscriptionDetails.deliveryFrequency,
+          durationMonths: subItem.subscriptionDetails?.durationMonths || 6,
+          soapsPerMonth: subItem.subscriptionDetails?.soapsPerMonth || subItem.count || 2,
+          deliveryFrequency: subItem.subscriptionDetails?.deliveryFrequency || (subItem.frequency?.toLowerCase().includes('3') ? 'every_3_months' : 'monthly'),
           customerName: formData.fullName,
           customerPhone: formData.phone,
-          customerEmail: formData.email,
+          customerEmail: formData.email || null,
           shippingAddress: {
             fullName: formData.fullName,
-            email: formData.email,
+            email: formData.email || null,
             phone: formData.phone,
             address: formData.address,
             city: formData.city,
             pincode: formData.pincode,
-            state: formData.state
+            state: formData.state || 'Gujarat'
           },
           paymentMethod: paymentMethod === 'cod' ? 'Cash on Delivery' : paymentMethod.toUpperCase()
         };
