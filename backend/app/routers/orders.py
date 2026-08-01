@@ -472,23 +472,7 @@ async def process_delhivery_shipment_booking(order_or_id, weight=500, length=15,
         
     config = await get_delhivery_config_internal()
     if not config or not config.get("active") or not config.get("api_token"):
-        mode = config.get("mode", "test") if config else "test"
-        mock_awb = f"DELHIVERY{str(uuid.uuid4().int)[:10]}"
-        fulfillment = {
-            "awb": mock_awb,
-            "provider": f"Delhivery ({'Demo' if not config or not config.get('active') else mode.capitalize()} Mode)",
-            "weight": weight,
-            "dimensions": f"{length}x{width}x{height} cm",
-            "shipped_at": datetime.utcnow().isoformat(),
-            "status": "In Transit",
-            "pickup_scheduled": False,
-            "label_url": f"/api/orders/label/{mock_awb}"
-        }
-        await orders_collection.update_one(
-            {"_id": order["_id"]},
-            {"$set": {"fulfillment": fulfillment, "status": "shipped"}}
-        )
-        return fulfillment
+        raise ValueError("Delhivery API token is not configured in Site Settings.")
         
     token = config["api_token"]
     mode = config.get("mode", "test")
@@ -541,7 +525,7 @@ async def process_delhivery_shipment_booking(order_or_id, weight=500, length=15,
         }
     }
     
-    url = f"{base_url}/api/p/create/json/"
+    url = f"{base_url}/api/cmu/create.json"
     headers = {
         "Authorization": f"Token {token}",
         "Content-Type": "application/x-www-form-urlencoded"
@@ -555,19 +539,22 @@ async def process_delhivery_shipment_booking(order_or_id, weight=500, length=15,
     async with httpx.AsyncClient() as client:
         try:
             resp = await client.post(url, data=body_data, headers=headers, timeout=15.0)
-            if resp.status_code == 200:
-                resp_json = resp.json()
-                packages = resp_json.get("packages", [])
-                if packages and isinstance(packages, list):
-                    pkg = packages[0]
-                    if pkg.get("waybill"):
-                        waybill = pkg.get("waybill")
-                create_resp = resp_json.get("createOrderResponse", {})
-                if isinstance(create_resp, dict) and create_resp.get("errorCode"):
-                    err_msg = create_resp.get("errorMessage") or f"Error {create_resp.get('errorCode')}"
-                    delhivery_api_notice = f"Delhivery API Notice: {err_msg}"
+            if resp.status_code != 200:
+                raise ValueError(f"Delhivery API responded with status {resp.status_code}: {resp.text}")
+                
+            resp_json = resp.json()
+            packages = resp_json.get("packages", [])
+            if packages and isinstance(packages, list):
+                pkg = packages[0]
+                if pkg.get("waybill"):
+                    waybill = pkg.get("waybill")
+                    
+            create_resp = resp_json.get("createOrderResponse", {})
+            if isinstance(create_resp, dict) and create_resp.get("errorCode"):
+                err_msg = create_resp.get("errorMessage") or f"Error {create_resp.get('errorCode')}"
+                raise ValueError(f"Delhivery API Error: {err_msg}")
         except Exception as e:
-            print(f"Delhivery shipment booking post notice: {e}")
+            raise ValueError(f"Delhivery shipment booking failed: {str(e)}")
             
     fulfillment = {
         "awb": waybill,
@@ -598,8 +585,10 @@ async def create_delhivery_shipment(order_id: str, payload: dict, admin: dict = 
         order = await orders_collection.find_one({"_id": order_id})
         if not order:
             raise HTTPException(status_code=404, detail="Order not found")
-            
-    fulfillment = await process_delhivery_shipment_booking(order, weight=weight, length=length, width=width, height=height)
+    try:
+        fulfillment = await process_delhivery_shipment_booking(order, weight=weight, length=length, width=width, height=height)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     
     msg = f"Consignment successfully booked! AWB: {fulfillment.get('awb')}"
     if fulfillment.get("api_notice"):
