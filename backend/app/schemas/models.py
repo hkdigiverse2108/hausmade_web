@@ -151,6 +151,20 @@ class SubscriptionSettings(BaseModel):
     card_description: str
     button_text: str
 
+class ProductSelectorHeaderSettings(BaseModel):
+    badge: str = "Choose Your Ritual"
+    title: str = "Select Your Handmade Batch"
+    description: str = "Handcrafted with organic botanical butter and essential oils. Stock up and save more per bar."
+    product_badge: str = "LUXURY BATH ELEMENT"
+    product_title: str = "Hausmade™ Kesar Soap"
+    weight_badge: str = "75g Bar"
+    rating_text: str = "4.9 ★ · 480+ Happy Glow Reviews"
+    product_description: str = "A purely handmade cleansing bar infused with real saffron extract, camphor, and 100% coconut oil. Helps remove sun tanning, fade dark spots, and deeply nourish skin for natural daily glow care. Suitable for all skins."
+
+class ProductSelectorImageItem(BaseModel):
+    src: str
+    alt: Optional[str] = "Hausmade Soap Gallery Image"
+
 class FAQItem(BaseModel):
     q: str
     a: str
@@ -269,6 +283,8 @@ class SiteSettingsModel(BaseModel):
     policies_privacy: Optional[str] = ""
     policies_shipping: Optional[str] = ""
     policies_refund: Optional[str] = ""
+    product_selector_header: Optional[ProductSelectorHeaderSettings] = ProductSelectorHeaderSettings()
+    product_selector_images: List[ProductSelectorImageItem] = []
 
 class ReviewSubmitModel(BaseModel):
     productId: str

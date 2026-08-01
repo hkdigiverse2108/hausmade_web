@@ -94,10 +94,27 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
   const items = (products && products.length > 0 ? products : PACK_OPTIONS).filter(p => p.active !== false);
   const pack = items.find(p => p.id === selectedPack) || items[2] || items[0];
 
+  const headerSettings = settings?.product_selector_header || {
+    badge: "Choose Your Ritual",
+    title: "Select Your Handmade Batch",
+    description: "Handcrafted with organic botanical butter and essential oils. Stock up and save more per bar.",
+    product_badge: "LUXURY BATH ELEMENT",
+    product_title: "Hausmade™ Kesar Soap",
+    weight_badge: "75g Bar",
+    rating_text: "4.9 ★ · 480+ Happy Glow Reviews",
+    product_description: "A purely handmade cleansing bar infused with real saffron extract, camphor, and 100% coconut oil. Helps remove sun tanning, fade dark spots, and deeply nourish skin for natural daily glow care. Suitable for all skins."
+  };
+
+  const customImages = (settings?.product_selector_images && settings.product_selector_images.length > 0)
+    ? settings.product_selector_images
+    : [
+        { src: '/images/soap-hero.png', alt: 'Hausmade Kesar Soap Single Box' },
+        { src: '/images/founder-workshop.png', alt: 'Artisan Workshop Studio' }
+      ];
+
   const images = [
     { src: pack.image, alt: `${pack.title} Hausmade Kesar Soap Packaging` },
-    { src: '/images/soap-hero.png', alt: 'Hausmade Kesar Soap Single Box' },
-    { src: '/images/founder-workshop.png', alt: 'Artisan Workshop Studio' }
+    ...customImages
   ];
 
   const matchedOffer = activeOffers.find(o => o.durationMonths === durationMonths && o.deliveryFrequency === deliveryFrequency) || activeOffers[0] || defaultOffers[0];
@@ -196,12 +213,12 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         
         <div className="text-center max-w-3xl mx-auto mb-12">
-          <span className="text-[#C97C5D] font-bold text-xs uppercase tracking-widest">Choose Your Ritual</span>
+          <span className="text-[#C97C5D] font-bold text-xs uppercase tracking-widest">{headerSettings.badge || "Choose Your Ritual"}</span>
           <h2 className="font-serif-brand text-2xl sm:text-4xl lg:text-5xl font-normal text-[#3A2E26] mt-2">
-            Select Your Handmade Batch
+            {headerSettings.title || "Select Your Handmade Batch"}
           </h2>
           <p className="text-[#3A2E26]/70 mt-3 text-base sm:text-lg">
-            Handcrafted with organic botanical butter and essential oils. Stock up and save more per bar.
+            {headerSettings.description || "Handcrafted with organic botanical butter and essential oils. Stock up and save more per bar."}
           </p>
         </div>
 
@@ -211,8 +228,8 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
           <div className="lg:col-span-6 space-y-4 lg:sticky lg:top-28">
             <div className="relative rounded-3xl overflow-hidden bg-white shadow-lg border border-[#3A2E26]/10 aspect-square">
               <img
-                src={images[activeImageIndex].src}
-                alt={images[activeImageIndex].alt}
+                src={images[activeImageIndex]?.src || pack.image}
+                alt={images[activeImageIndex]?.alt || pack.title}
                 className="w-full h-full object-cover transition-all duration-500"
               />
               <div className="absolute top-4 left-4 bg-[#7A8B6F] text-white text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider flex items-center gap-1.5 shadow-md">
@@ -244,13 +261,13 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
             <div>
               <div className="flex items-center justify-between">
                 <div>
-                  <span className="text-xs font-bold uppercase tracking-widest text-[#C97C5D] block">Luxury Bath Element</span>
+                  <span className="text-xs font-bold uppercase tracking-widest text-[#C97C5D] block">{headerSettings.product_badge || "Luxury Bath Element"}</span>
                   <h3 className="font-serif-brand text-2xl sm:text-3xl font-bold text-[#3A2E26]">
-                    Hausmade™ Kesar Soap
+                    {headerSettings.product_title || "Hausmade™ Kesar Soap"}
                   </h3>
                 </div>
                 <span className="bg-[#C97C5D]/15 text-[#C97C5D] text-xs font-bold px-3 py-1 rounded-full border border-[#C97C5D]/30">
-                  75g Bar
+                  {headerSettings.weight_badge || "75g Bar"}
                 </span>
               </div>
 
@@ -260,16 +277,14 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
                   {[...Array(5)].map((_, i) => (
                     <Star key={i} className="w-4 h-4 fill-current" />
                   ))}
-                  <span className="ml-2 font-bold text-[#3A2E26] text-sm">4.9 ★</span>
                 </a>
-                <span className="text-sm text-[#3A2E26]/50">•</span>
                 <a href="#reviews" className="text-sm text-[#7A8B6F] font-medium hover:underline">
-                  480+ Happy Glow Reviews
+                  {headerSettings.rating_text || "4.9 ★ · 480+ Happy Glow Reviews"}
                 </a>
               </div>
 
               <p className="text-[#3A2E26]/80 text-sm sm:text-base mt-3 leading-relaxed">
-                A purely handmade cleansing bar infused with real saffron extract, camphor, and 100% coconut oil. Helps remove sun tanning, fade dark spots, and deeply nourish skin for natural daily glow care. Suitable for all skins.
+                {headerSettings.product_description || "A purely handmade cleansing bar infused with real saffron extract, camphor, and 100% coconut oil. Helps remove sun tanning, fade dark spots, and deeply nourish skin for natural daily glow care. Suitable for all skins."}
               </p>
 
 

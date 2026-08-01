@@ -342,6 +342,26 @@ async def get_site_settings():
             if "policies_refund" not in settings:
                 settings["policies_refund"] = ""
                 await settings_collection.update_one({"key": "site_settings"}, {"$set": {"policies_refund": ""}})
+            if "product_selector_header" not in settings:
+                default_ps_header = {
+                    "badge": "Choose Your Ritual",
+                    "title": "Select Your Handmade Batch",
+                    "description": "Handcrafted with organic botanical butter and essential oils. Stock up and save more per bar.",
+                    "product_badge": "LUXURY BATH ELEMENT",
+                    "product_title": "Hausmade™ Kesar Soap",
+                    "weight_badge": "75g Bar",
+                    "rating_text": "4.9 ★ · 480+ Happy Glow Reviews",
+                    "product_description": "A purely handmade cleansing bar infused with real saffron extract, camphor, and 100% coconut oil. Helps remove sun tanning, fade dark spots, and deeply nourish skin for natural daily glow care. Suitable for all skins."
+                }
+                settings["product_selector_header"] = default_ps_header
+                await settings_collection.update_one({"key": "site_settings"}, {"$set": {"product_selector_header": default_ps_header}})
+            if "product_selector_images" not in settings or not settings["product_selector_images"]:
+                default_ps_images = [
+                    {"src": "/images/soap-hero.png", "alt": "Hausmade Kesar Soap Single Box"},
+                    {"src": "/images/founder-workshop.png", "alt": "Artisan Workshop Studio"}
+                ]
+                settings["product_selector_images"] = default_ps_images
+                await settings_collection.update_one({"key": "site_settings"}, {"$set": {"product_selector_images": default_ps_images}})
             
         if "_id" in settings:
             settings["_id"] = str(settings["_id"])

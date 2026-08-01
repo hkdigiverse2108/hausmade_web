@@ -327,7 +327,21 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     policies_terms: '',
     policies_privacy: '',
     policies_shipping: '',
-    policies_refund: ''
+    policies_refund: '',
+    product_selector_header: {
+      badge: "Choose Your Ritual",
+      title: "Select Your Handmade Batch",
+      description: "Handcrafted with organic botanical butter and essential oils. Stock up and save more per bar.",
+      product_badge: "LUXURY BATH ELEMENT",
+      product_title: "Hausmade™ Kesar Soap",
+      weight_badge: "75g Bar",
+      rating_text: "4.9 ★ · 480+ Happy Glow Reviews",
+      product_description: "A purely handmade cleansing bar infused with real saffron extract, camphor, and 100% coconut oil. Helps remove sun tanning, fade dark spots, and deeply nourish skin for natural daily glow care. Suitable for all skins."
+    },
+    product_selector_images: [
+      { src: "/images/soap-hero.png", alt: "Hausmade Kesar Soap Single Box" },
+      { src: "/images/founder-workshop.png", alt: "Artisan Workshop Studio" }
+    ]
   });
   const [settingsSubTab, setSettingsSubTab] = useState(() => {
     return localStorage.getItem('hausmade_admin_settings_subtab') || 'identity';
@@ -475,7 +489,21 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
           policies_privacy: settings.policies_privacy || defaultPrivacy,
           policies_shipping: settings.policies_shipping || defaultShipping,
           policies_refund: settings.policies_refund || defaultRefund,
-          ingredients_active: settings.ingredients_active !== undefined ? settings.ingredients_active : true
+          ingredients_active: settings.ingredients_active !== undefined ? settings.ingredients_active : true,
+          product_selector_header: settings.product_selector_header || {
+            badge: "Choose Your Ritual",
+            title: "Select Your Handmade Batch",
+            description: "Handcrafted with organic botanical butter and essential oils. Stock up and save more per bar.",
+            product_badge: "LUXURY BATH ELEMENT",
+            product_title: "Hausmade™ Kesar Soap",
+            weight_badge: "75g Bar",
+            rating_text: "4.9 ★ · 480+ Happy Glow Reviews",
+            product_description: "A purely handmade cleansing bar infused with real saffron extract, camphor, and 100% coconut oil. Helps remove sun tanning, fade dark spots, and deeply nourish skin for natural daily glow care. Suitable for all skins."
+          },
+          product_selector_images: settings.product_selector_images || [
+            { src: "/images/soap-hero.png", alt: "Hausmade Kesar Soap Single Box" },
+            { src: "/images/founder-workshop.png", alt: "Artisan Workshop Studio" }
+          ]
         });
       }
     }
@@ -6388,6 +6416,240 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                 <span>Active Offer (Show on Storefront)</span>
                               </label>
                             </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Storefront Subscription & Selector Section Header CRUD */}
+                  <div className="bg-white rounded-3xl p-6 border border-[#3A2E26]/10 shadow-sm space-y-4 mt-6">
+                    <div className="flex items-center justify-between border-b border-[#3A2E26]/10 pb-2">
+                      <div>
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70">Subscription & Selector Header Content</h3>
+                        <p className="text-[11px] text-[#3A2E26]/50 mt-0.5">Customize badges, titles, descriptions, and product info displayed on the batch selector</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setSaving(true);
+                          try {
+                            await updateSiteSettings(settingsForm, token);
+                            showNotification('Header & section content saved successfully!', 'success');
+                            if (onUpdateSettings) onUpdateSettings();
+                          } catch (err) {
+                            showNotification(err.message || 'Failed to save header content', 'error');
+                          } finally {
+                            setSaving(false);
+                          }
+                        }}
+                        disabled={saving}
+                        className="px-4 py-1.5 bg-[#3A2E26] hover:bg-[#2A201A] disabled:opacity-50 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                      >
+                        {saving ? 'Saving...' : 'Save Header Content'}
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Section Badge Label</label>
+                        <input
+                          type="text"
+                          value={settingsForm.product_selector_header?.badge || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            product_selector_header: { ...(settingsForm.product_selector_header || {}), badge: e.target.value }
+                          })}
+                          placeholder="e.g. Choose Your Ritual"
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Section Main Heading</label>
+                        <input
+                          type="text"
+                          value={settingsForm.product_selector_header?.title || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            product_selector_header: { ...(settingsForm.product_selector_header || {}), title: e.target.value }
+                          })}
+                          placeholder="e.g. Select Your Handmade Batch"
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                        />
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Section Subtitle / Description</label>
+                        <AutoResizeTextarea
+                          rows="2"
+                          value={settingsForm.product_selector_header?.description || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            product_selector_header: { ...(settingsForm.product_selector_header || {}), description: e.target.value }
+                          })}
+                          placeholder="e.g. Handcrafted with organic botanical butter and essential oils. Stock up and save more per bar."
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Product Category / Sub-Badge</label>
+                        <input
+                          type="text"
+                          value={settingsForm.product_selector_header?.product_badge || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            product_selector_header: { ...(settingsForm.product_selector_header || {}), product_badge: e.target.value }
+                          })}
+                          placeholder="e.g. LUXURY BATH ELEMENT"
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Product Title / Name</label>
+                        <input
+                          type="text"
+                          value={settingsForm.product_selector_header?.product_title || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            product_selector_header: { ...(settingsForm.product_selector_header || {}), product_title: e.target.value }
+                          })}
+                          placeholder="e.g. Hausmade™ Kesar Soap"
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Weight / Size Badge</label>
+                        <input
+                          type="text"
+                          value={settingsForm.product_selector_header?.weight_badge || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            product_selector_header: { ...(settingsForm.product_selector_header || {}), weight_badge: e.target.value }
+                          })}
+                          placeholder="e.g. 75g Bar"
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Rating & Review Counter Text</label>
+                        <input
+                          type="text"
+                          value={settingsForm.product_selector_header?.rating_text || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            product_selector_header: { ...(settingsForm.product_selector_header || {}), rating_text: e.target.value }
+                          })}
+                          placeholder="e.g. 4.9 ★ · 480+ Happy Glow Reviews"
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                        />
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Product Description</label>
+                        <AutoResizeTextarea
+                          rows="3"
+                          value={settingsForm.product_selector_header?.product_description || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            product_selector_header: { ...(settingsForm.product_selector_header || {}), product_description: e.target.value }
+                          })}
+                          placeholder="e.g. A purely handmade cleansing bar infused with real saffron extract..."
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Storefront Section & Product Gallery Images CRUD */}
+                  <div className="bg-white rounded-3xl p-6 border border-[#3A2E26]/10 shadow-sm space-y-4 mt-6">
+                    <div className="flex items-center justify-between border-b border-[#3A2E26]/10 pb-2 flex-wrap gap-2">
+                      <div>
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70">Storefront Section Gallery Images</h3>
+                        <p className="text-[11px] text-[#3A2E26]/50 mt-0.5">Upload, add, edit, or remove images shown in the section gallery (Product box, Workshop, etc.)</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            setSaving(true);
+                            try {
+                              await updateSiteSettings(settingsForm, token);
+                              showNotification('Gallery images saved successfully!', 'success');
+                              if (onUpdateSettings) onUpdateSettings();
+                            } catch (err) {
+                              showNotification(err.message || 'Failed to save gallery images', 'error');
+                            } finally {
+                              setSaving(false);
+                            }
+                          }}
+                          disabled={saving}
+                          className="px-4 py-1.5 bg-[#3A2E26] hover:bg-[#2A201A] disabled:opacity-50 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                        >
+                          {saving ? 'Saving...' : 'Save Gallery Images'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const current = settingsForm.product_selector_images || [];
+                            setSettingsForm({
+                              ...settingsForm,
+                              product_selector_images: [
+                                ...current,
+                                { src: '/images/soap-hero.png', alt: 'Hausmade Soap Gallery Image' }
+                              ]
+                            });
+                          }}
+                          className="px-3.5 py-1.5 bg-[#7A8B6F] hover:bg-[#68785c] text-white text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1 shrink-0 border-none"
+                        >
+                          <Plus className="w-3.5 h-3.5" /> Add Gallery Image
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      {(!settingsForm.product_selector_images || settingsForm.product_selector_images.length === 0) ? (
+                        <p className="text-xs text-[#3A2E26]/60 italic py-2">No gallery images added yet. Click "Add Gallery Image" above to upload images.</p>
+                      ) : (
+                        settingsForm.product_selector_images.map((imgItem, idx) => (
+                          <div key={idx} className="p-4 bg-[#FDFBF7] rounded-2xl border border-[#E6D5C3]/40 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between text-[#3A2E26]">
+                            <div className="flex items-center gap-4 flex-1 min-w-0">
+                              <img
+                                src={imgItem.src || '/images/soap-hero.png'}
+                                alt={imgItem.alt || 'Gallery thumbnail'}
+                                className="w-16 h-16 object-cover rounded-xl border border-[#3A2E26]/10 shrink-0 bg-white"
+                                onError={(e) => { e.target.src = '/images/soap-hero.png'; }}
+                              />
+                              <div className="flex-1 space-y-2 min-w-0">
+                                <ImageUploader
+                                  label={`Image #${idx + 1}`}
+                                  value={imgItem.src || ''}
+                                  onChange={(url) => {
+                                    const updated = [...(settingsForm.product_selector_images || [])];
+                                    updated[idx] = { ...updated[idx], src: url };
+                                    setSettingsForm({ ...settingsForm, product_selector_images: updated });
+                                  }}
+                                  showNotification={showNotification}
+                                  isSaving={saving}
+                                  setIsSaving={setSaving}
+                                />
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = (settingsForm.product_selector_images || []).filter((_, i) => i !== idx);
+                                setSettingsForm({ ...settingsForm, product_selector_images: updated });
+                              }}
+                              className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl transition-colors cursor-pointer border-none bg-transparent shrink-0 self-end sm:self-center"
+                              title="Delete Gallery Image"
+                            >
+                              <Trash2 className="w-4.5 h-4.5" />
+                            </button>
                           </div>
                         ))
                       )}
