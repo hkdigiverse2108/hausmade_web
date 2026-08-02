@@ -83,6 +83,14 @@ async def get_site_settings():
                     "mode": "test",
                     "active": False
                 },
+                "razorpay": {
+                    "key_id_test": "",
+                    "key_secret_test": "",
+                    "key_id_live": "",
+                    "key_secret_live": "",
+                    "mode": "test",
+                    "active": False
+                },
                 "subscription": default_subscription,
                 "faqs": [
                     {
@@ -315,6 +323,17 @@ async def get_site_settings():
                 }
                 settings["cashfree"] = default_cashfree
                 await settings_collection.update_one({"key": "site_settings"}, {"$set": {"cashfree": default_cashfree}})
+            if "razorpay" not in settings:
+                default_razorpay = {
+                    "key_id_test": "",
+                    "key_secret_test": "",
+                    "key_id_live": "",
+                    "key_secret_live": "",
+                    "mode": "test",
+                    "active": False
+                }
+                settings["razorpay"] = default_razorpay
+                await settings_collection.update_one({"key": "site_settings"}, {"$set": {"razorpay": default_razorpay}})
             if "delhivery" not in settings:
                 default_delhivery = {
                     "api_token": "",

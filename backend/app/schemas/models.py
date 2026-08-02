@@ -225,6 +225,14 @@ class CashfreeSettings(BaseModel):
     mode: str = "test"  # "test" or "live"
     active: bool = False
 
+class RazorpaySettings(BaseModel):
+    key_id_test: str = ""
+    key_secret_test: str = ""
+    key_id_live: str = ""
+    key_secret_live: str = ""
+    mode: str = "test"  # "test" or "live"
+    active: bool = False
+
 class DelhiverySettings(BaseModel):
     api_token: str = ""
     mode: str = "test"  # "test" or "live"
@@ -264,6 +272,7 @@ class SiteSettingsModel(BaseModel):
     subscription: SubscriptionSettings
     social_links: SocialLinksSettings = SocialLinksSettings()
     cashfree: Optional[CashfreeSettings] = CashfreeSettings()
+    razorpay: Optional[RazorpaySettings] = RazorpaySettings()
     delhivery: Optional[DelhiverySettings] = DelhiverySettings()
     faqs: List[FAQItem] = []
     ingredients: List[IngredientItem] = []

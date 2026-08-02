@@ -5557,7 +5557,141 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                         </div>
                       </div>
                     </div>
+                    
+                    {/* Razorpay Payment Gateway Panel */}
+                    <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#3A2E26]/10 shadow-sm space-y-6 mt-6">
+                      <div className="flex justify-between items-center border-b border-[#3A2E26]/10 pb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold font-serif text-lg">
+                            RZ
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-bold uppercase tracking-wider text-[#3A2E26]">Razorpay Payment Gateway</h3>
+                            <p className="text-[10px] text-gray-500 font-sans">Accept UPI, Credit/Debit Cards, Net Banking, and Wallets.</p>
+                          </div>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={settingsForm.razorpay?.active || false}
+                            onChange={(e) => setSettingsForm({
+                              ...settingsForm,
+                              razorpay: { ...settingsForm.razorpay, active: e.target.checked }
+                            })}
+                            className="sr-only peer"
+                          />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                          <span className="ml-2.5 text-xs font-bold uppercase tracking-wider text-[#3A2E26]">
+                            {settingsForm.razorpay?.active ? "Active" : "Disabled"}
+                          </span>
+                        </label>
+                      </div>
 
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Sandbox credentials */}
+                        <div className="p-5 bg-gray-50/50 rounded-2xl border border-[#3A2E26]/5 space-y-4">
+                          <div className="flex items-center justify-between border-b pb-2">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Test Environment (Sandbox)</span>
+                            <span className="px-2 py-0.5 rounded-full text-[9px] bg-gray-200 text-gray-600 font-bold uppercase">Sandbox</span>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Key ID (Test)</label>
+                            <input
+                              type="text"
+                              value={settingsForm.razorpay?.key_id_test || ''}
+                              onChange={(e) => setSettingsForm({
+                                ...settingsForm,
+                                razorpay: { ...settingsForm.razorpay, key_id_test: e.target.value }
+                              })}
+                              placeholder="rzp_test_..."
+                              className="w-full px-4 py-2.5 bg-white border border-[#E6D5C3]/40 rounded-2xl text-xs focus:outline-none focus:border-[#3A2E26] font-mono"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Key Secret (Test)</label>
+                            <input
+                              type="password"
+                              value={settingsForm.razorpay?.key_secret_test || ''}
+                              onChange={(e) => setSettingsForm({
+                                ...settingsForm,
+                                razorpay: { ...settingsForm.razorpay, key_secret_test: e.target.value }
+                              })}
+                              placeholder="Enter Test Secret..."
+                              className="w-full px-4 py-2.5 bg-white border border-[#E6D5C3]/40 rounded-2xl text-xs focus:outline-none focus:border-[#3A2E26] font-mono"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Live credentials */}
+                        <div className="p-5 bg-yellow-50/10 rounded-2xl border border-yellow-100/30 space-y-4">
+                          <div className="flex items-center justify-between border-b pb-2">
+                            <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Live Environment (Production)</span>
+                            <span className="px-2 py-0.5 rounded-full text-[9px] bg-amber-100 text-amber-800 font-bold uppercase">Live</span>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Key ID (Live)</label>
+                            <input
+                              type="text"
+                              value={settingsForm.razorpay?.key_id_live || ''}
+                              onChange={(e) => setSettingsForm({
+                                ...settingsForm,
+                                razorpay: { ...settingsForm.razorpay, key_id_live: e.target.value }
+                              })}
+                              placeholder="rzp_live_..."
+                              className="w-full px-4 py-2.5 bg-white border border-[#E6D5C3]/40 rounded-2xl text-xs focus:outline-none focus:border-[#3A2E26] font-mono"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Key Secret (Live)</label>
+                            <input
+                              type="password"
+                              value={settingsForm.razorpay?.key_secret_live || ''}
+                              onChange={(e) => setSettingsForm({
+                                ...settingsForm,
+                                razorpay: { ...settingsForm.razorpay, key_secret_live: e.target.value }
+                              })}
+                              placeholder="Enter Live Secret..."
+                              className="w-full px-4 py-2.5 bg-white border border-[#E6D5C3]/40 rounded-2xl text-xs focus:outline-none focus:border-[#3A2E26] font-mono"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Mode selection */}
+                      <div className="pt-2 border-t border-[#3A2E26]/5">
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-2">Environment Mode</label>
+                        <div className="flex gap-6">
+                          <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-[#3A2E26] select-none">
+                            <input
+                              type="radio"
+                              name="razorpay_mode_page"
+                              value="test"
+                              checked={settingsForm.razorpay?.mode === 'test'}
+                              onChange={() => setSettingsForm({
+                                ...settingsForm,
+                                razorpay: { ...settingsForm.razorpay, mode: 'test' }
+                              })}
+                              className="text-blue-600 focus:ring-blue-600"
+                            />
+                            Test / Sandbox Mode
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-amber-700 select-none">
+                            <input
+                              type="radio"
+                              name="razorpay_mode_page"
+                              value="live"
+                              checked={settingsForm.razorpay?.mode === 'live'}
+                              onChange={() => setSettingsForm({
+                                ...settingsForm,
+                                razorpay: { ...settingsForm.razorpay, mode: 'live' }
+                              })}
+                              className="text-[#C97C5D] focus:ring-[#C97C5D]"
+                            />
+                            Live / Production Mode
+                          </label>
+                        </div>
+                      </div>
+                    </div>
                     <div className="flex justify-end gap-3 pt-2">
                       <button
                         type="submit"

@@ -2,6 +2,9 @@ from typing import Optional
 from datetime import datetime
 import uuid
 import httpx
+import hmac
+import hashlib
+import base64
 from fastapi import APIRouter, HTTPException, Depends, status
 from fastapi.responses import HTMLResponse, Response
 from app.schemas.models import OrderCreate, OfflineSaleCreate
@@ -360,6 +363,114 @@ async def verify_payment(payload: dict):
             }
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/api/orders/razorpay-session")
+async def create_razorpay_session(order_payload: dict):
+    settings = await settings_collection.find_one({"key": "site_settings"})
+    if not settings or "razorpay" not in settings:
+        raise HTTPException(status_code=400, detail="Razorpay payment gateway is not configured.")
+        
+    rzp_config = settings["razorpay"]
+    if not rzp_config.get("active"):
+        raise HTTPException(status_code=400, detail="Razorpay payment gateway is currently disabled.")
+        
+    mode = rzp_config.get("mode", "test")
+    if mode == "live":
+        key_id = rzp_config.get("key_id_live")
+        key_secret = rzp_config.get("key_secret_live")
+    else:
+        key_id = rzp_config.get("key_id_test")
+        key_secret = rzp_config.get("key_secret_test")
+        
+    if not key_id or not key_secret:
+        raise HTTPException(status_code=400, detail=f"Razorpay credentials for {mode} mode are missing.")
+        
+    order_id = order_payload.get("orderId") or f"HM-{int(datetime.utcnow().timestamp())}"
+    
+    auth_str = f"{key_id}:{key_secret}"
+    b64_auth = base64.b64encode(auth_str.encode()).decode()
+    headers = {
+        "Authorization": f"Basic {b64_auth}",
+        "Content-Type": "application/json"
+    }
+    
+    amount_in_paise = int(float(order_payload.get("grandTotal", 0)) * 100)
+    
+    rzp_payload = {
+        "amount": amount_in_paise,
+        "currency": "INR",
+        "receipt": order_id
+    }
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.post("https://api.razorpay.com/v1/orders", json=rzp_payload, headers=headers, timeout=10.0)
+            if resp.status_code != 200:
+                err_text = resp.text
+                raise HTTPException(status_code=400, detail=f"Razorpay API Error: {err_text}")
+                
+            rzp_data = resp.json()
+            return {
+                "razorpay_order_id": rzp_data.get("id"),
+                "order_id": order_id,
+                "amount": rzp_data.get("amount"),
+                "currency": rzp_data.get("currency"),
+                "key_id": key_id
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to communicate with Razorpay: {str(e)}")
+
+@router.post("/api/orders/verify-razorpay")
+async def verify_razorpay_payment(payload: dict):
+    order_id = payload.get("orderId")
+    razorpay_order_id = payload.get("razorpay_order_id")
+    razorpay_payment_id = payload.get("razorpay_payment_id")
+    razorpay_signature = payload.get("razorpay_signature")
+    
+    if not all([order_id, razorpay_order_id, razorpay_payment_id, razorpay_signature]):
+        raise HTTPException(status_code=400, detail="Missing Razorpay verification parameters")
+        
+    settings = await settings_collection.find_one({"key": "site_settings"})
+    rzp_config = settings.get("razorpay", {})
+    mode = rzp_config.get("mode", "test")
+    if mode == "live":
+        key_secret = rzp_config.get("key_secret_live", "")
+    else:
+        key_secret = rzp_config.get("key_secret_test", "")
+        
+    # Verify signature
+    msg = f"{razorpay_order_id}|{razorpay_payment_id}"
+    generated_signature = hmac.new(key_secret.encode(), msg.encode(), hashlib.sha256).hexdigest()
+    
+    is_valid = hmac.compare_digest(generated_signature, razorpay_signature)
+    
+    db_order = await orders_collection.find_one({"orderId": order_id})
+    if db_order:
+        new_status = "confirmed" if is_valid else "failed"
+        payment_status = "PAID" if is_valid else "FAILED"
+        
+        await orders_collection.update_one(
+            {"orderId": order_id},
+            {"$set": {
+                "payment_status": payment_status, 
+                "status": new_status,
+                "razorpay_payment_id": razorpay_payment_id,
+                "razorpay_order_id": razorpay_order_id
+            }}
+        )
+        if is_valid:
+            try:
+                await process_delhivery_shipment_booking(db_order)
+            except Exception as e:
+                print(f"Auto Delhivery booking error on paid order (Razorpay): {e}")
+                
+    if not is_valid:
+        raise HTTPException(status_code=400, detail="Invalid Razorpay signature")
+        
+    return {
+        "payment_status": "success",
+        "order_id": order_id
+    }
 
 # Helper to get settings
 async def get_delhivery_config_internal():

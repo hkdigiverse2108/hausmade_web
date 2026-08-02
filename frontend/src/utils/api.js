@@ -752,6 +752,36 @@ export async function verifyCashfreePayment(orderId) {
   return response.json();
 }
 
+export async function createRazorpaySession(orderPayload) {
+  const response = await fetch(`${API_URL}/api/orders/razorpay-session`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(orderPayload)
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || 'Failed to create Razorpay payment session');
+  }
+  return response.json();
+}
+
+export async function verifyRazorpayPayment(payload) {
+  const response = await fetch(`${API_URL}/api/orders/verify-razorpay`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || 'Failed to verify Razorpay payment');
+  }
+  return response.json();
+}
+
 export async function checkDelhiveryServiceability(orderId, token) {
   const response = await fetch(`${API_URL}/api/admin/orders/${encodeURIComponent(orderId)}/delhivery/serviceability`, {
     headers: {

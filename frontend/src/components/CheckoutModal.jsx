@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { X, CheckCircle2, ShieldCheck, CreditCard, Truck, Smartphone, Banknote, ArrowRight, Sparkles, Loader2, Compass, Navigation } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { placeOrder, updateUserProfile, validateCoupon, getActiveCoupons, createSubscription, createCashfreeSession, verifyCashfreePayment } from '../utils/api';
+import { placeOrder, updateUserProfile, validateCoupon, getActiveCoupons, createSubscription, createCashfreeSession, verifyCashfreePayment, createRazorpaySession, verifyRazorpayPayment } from '../utils/api';
 
 export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderComplete, token, user, settings }) {
   const [step, setStep] = useState('shipping'); // 'shipping', 'payment', 'success'
-  const [paymentMethod, setPaymentMethod] = useState('online'); // 'online', 'cod'
+  const [paymentMethod, setPaymentMethod] = useState('cashfree'); // 'cashfree', 'razorpay', 'cod'
   const [coupon, setCoupon] = useState('');
   const [discount, setDiscount] = useState(0);
   const [couponApplied, setCouponApplied] = useState(false);
@@ -21,6 +21,21 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
       }
       const script = document.createElement('script');
       script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  // Load Razorpay SDK dynamically
+  const loadRazorpay = () => {
+    return new Promise((resolve) => {
+      if (window.Razorpay) {
+        resolve(true);
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
       script.onload = () => resolve(true);
       script.onerror = () => resolve(false);
       document.body.appendChild(script);
@@ -178,8 +193,17 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
           state: 'Gujarat'
         });
       }
+      
+      // Determine default payment method
+      if (settings?.cashfree?.active) {
+        setPaymentMethod('cashfree');
+      } else if (settings?.razorpay?.active) {
+        setPaymentMethod('razorpay');
+      } else {
+        setPaymentMethod('cod');
+      }
     }
-  }, [user, isOpen]);
+  }, [user, isOpen, settings]);
 
   if (!isOpen) return null;
 
@@ -274,7 +298,8 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
       }
 
       const subItem = cartItems.find(item => item.isSubscription);
-      const isCashfreeActive = settings?.cashfree?.active && paymentMethod !== 'cod';
+      const isCashfreeActive = settings?.cashfree?.active && paymentMethod === 'cashfree';
+      const isRazorpayActive = settings?.razorpay?.active && paymentMethod === 'razorpay';
 
       if (isCashfreeActive) {
         let createdOrderId = generatedId;
@@ -327,6 +352,94 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
           paymentSessionId: sessionResponse.payment_session_id,
           redirectTarget: "_self"
         });
+        return;
+      }
+      
+      if (isRazorpayActive) {
+        let createdOrderId = generatedId;
+        if (subItem) {
+          const subPayload = {
+            durationMonths: subItem.subscriptionDetails?.durationMonths || 6,
+            soapsPerMonth: subItem.subscriptionDetails?.soapsPerMonth || subItem.count || 2,
+            deliveryFrequency: subItem.subscriptionDetails?.deliveryFrequency || (subItem.frequency?.toLowerCase().includes('3') ? 'every_3_months' : 'monthly'),
+            customerName: formData.fullName,
+            customerPhone: formData.phone,
+            customerEmail: formData.email || null,
+            shippingAddress: {
+              fullName: formData.fullName,
+              email: formData.email || null,
+              phone: formData.phone,
+              address: formData.address,
+              city: formData.city,
+              pincode: formData.pincode,
+              state: formData.state || 'Gujarat'
+            },
+            paymentMethod: paymentMethod.toUpperCase()
+          };
+          const res = await createSubscription(subPayload, token);
+          createdOrderId = res.subscription.subscriptionId;
+        } else {
+          await placeOrder(orderData, token);
+        }
+
+        const isLoaded = await loadRazorpay();
+        if (!isLoaded) {
+          throw new Error("Failed to load Razorpay payment SDK.");
+        }
+
+        const sessionPayload = {
+          orderId: createdOrderId,
+          grandTotal: parseFloat(grandTotal),
+          customerName: formData.fullName,
+          customerPhone: formData.phone,
+          customerEmail: formData.email
+        };
+
+        const sessionResponse = await createRazorpaySession(sessionPayload);
+        
+        const options = {
+          key: sessionResponse.key_id,
+          amount: sessionResponse.amount,
+          currency: sessionResponse.currency,
+          name: "Hausmade",
+          description: "Artisanal Soap Purchase",
+          image: settings?.logo_url || "https://example.com/logo.png",
+          order_id: sessionResponse.razorpay_order_id,
+          handler: async function (response) {
+            try {
+              await verifyRazorpayPayment({
+                orderId: createdOrderId,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature
+              });
+              window.location.href = `/?payment=verify&order_id=${createdOrderId}&method=razorpay`;
+            } catch (err) {
+              setError(err.message || "Payment verification failed.");
+              setLoading(false);
+            }
+          },
+          prefill: {
+            name: formData.fullName,
+            email: formData.email,
+            contact: formData.phone
+          },
+          theme: {
+            color: "#3A2E26"
+          },
+          modal: {
+            ondismiss: function() {
+              setLoading(false);
+            }
+          }
+        };
+
+        const rzp = new window.Razorpay(options);
+        rzp.on('payment.failed', function (response){
+          setError(response.error.description || "Payment failed.");
+          setLoading(false);
+        });
+        rzp.open();
         return;
       }
 
@@ -629,15 +742,28 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
 
                   <div className="space-y-3.5">
                     {settings?.cashfree?.active && (
-                      <label className={`p-4 rounded-2xl border-2 flex items-center justify-between cursor-pointer transition-all ${paymentMethod === 'online' ? 'border-[#C97C5D] bg-[#C97C5D]/5' : 'border-[#3A2E26]/10 bg-white'}`}>
+                      <label className={`p-4 rounded-2xl border-2 flex items-center justify-between cursor-pointer transition-all ${paymentMethod === 'cashfree' ? 'border-[#C97C5D] bg-[#C97C5D]/5' : 'border-[#3A2E26]/10 bg-white'}`}>
                         <div className="flex items-center gap-3">
                           <CreditCard className="w-5 h-5 text-[#C97C5D]" />
                           <div>
-                            <p className="font-bold text-sm text-[#3A2E26]">Pay Online (UPI / Card / Net Banking)</p>
-                            <p className="text-[10px] text-gray-500">Secure instant payment via Cashfree</p>
+                            <p className="font-bold text-sm text-[#3A2E26]">Pay via Cashfree (UPI/Card)</p>
+                            <p className="text-[10px] text-gray-500">Secure payment via Cashfree</p>
                           </div>
                         </div>
-                        <input type="radio" name="payment" checked={paymentMethod === 'online'} onChange={() => setPaymentMethod('online')} className="text-[#C97C5D]" />
+                        <input type="radio" name="payment" checked={paymentMethod === 'cashfree'} onChange={() => setPaymentMethod('cashfree')} className="text-[#C97C5D]" />
+                      </label>
+                    )}
+
+                    {settings?.razorpay?.active && (
+                      <label className={`p-4 rounded-2xl border-2 flex items-center justify-between cursor-pointer transition-all ${paymentMethod === 'razorpay' ? 'border-blue-600 bg-blue-50' : 'border-[#3A2E26]/10 bg-white'}`}>
+                        <div className="flex items-center gap-3">
+                          <CreditCard className="w-5 h-5 text-blue-600" />
+                          <div>
+                            <p className="font-bold text-sm text-[#3A2E26]">Pay via Razorpay (UPI/Card)</p>
+                            <p className="text-[10px] text-gray-500">Secure payment via Razorpay</p>
+                          </div>
+                        </div>
+                        <input type="radio" name="payment" checked={paymentMethod === 'razorpay'} onChange={() => setPaymentMethod('razorpay')} className="text-blue-600" />
                       </label>
                     )}
 
