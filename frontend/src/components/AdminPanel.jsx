@@ -5439,10 +5439,14 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                           <input
                             type="checkbox"
                             checked={settingsForm.cashfree?.active || false}
-                            onChange={(e) => setSettingsForm({
-                              ...settingsForm,
-                              cashfree: { ...settingsForm.cashfree, active: e.target.checked }
-                            })}
+                            onChange={(e) => {
+                              const isActive = e.target.checked;
+                              setSettingsForm(prev => ({
+                                ...prev,
+                                cashfree: { ...prev.cashfree, active: isActive },
+                                ...(isActive && prev.razorpay ? { razorpay: { ...prev.razorpay, active: false } } : {})
+                              }));
+                            }}
                             className="sr-only peer"
                           />
                           <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7A8B6F]"></div>
@@ -5574,10 +5578,14 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                           <input
                             type="checkbox"
                             checked={settingsForm.razorpay?.active || false}
-                            onChange={(e) => setSettingsForm({
-                              ...settingsForm,
-                              razorpay: { ...settingsForm.razorpay, active: e.target.checked }
-                            })}
+                            onChange={(e) => {
+                              const isActive = e.target.checked;
+                              setSettingsForm(prev => ({
+                                ...prev,
+                                razorpay: { ...prev.razorpay, active: isActive },
+                                ...(isActive && prev.cashfree ? { cashfree: { ...prev.cashfree, active: false } } : {})
+                              }));
+                            }}
                             className="sr-only peer"
                           />
                           <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
