@@ -53,6 +53,7 @@ export default function App() {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isPoliciesOpen, setIsPoliciesOpen] = useState(false);
   const [activePolicyTab, setActivePolicyTab] = useState('terms');
+  const [isSettingsLoading, setIsSettingsLoading] = useState(true);
 
   const handleOpenPolicy = useCallback((tab) => {
     setActivePolicyTab(tab);
@@ -144,7 +145,8 @@ export default function App() {
           setSiteSettings(data);
         }
       })
-      .catch(err => console.error("Error loading site settings:", err));
+      .catch(err => console.error("Error loading site settings:", err))
+      .finally(() => setIsSettingsLoading(false));
   };
 
   useEffect(() => {
@@ -499,6 +501,14 @@ export default function App() {
   }, []);
 
   const isAdminView = user?.is_admin && showAdminView;
+
+  if (isSettingsLoading) {
+    return (
+      <div className="min-h-screen bg-[#FDFBF7] flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-[#3A2E26]/20 border-t-[#3A2E26] rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <>
