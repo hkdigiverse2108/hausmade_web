@@ -67,16 +67,6 @@ async def place_order(order_data: OrderCreate, current_user_email: Optional[str]
     await orders_collection.insert_one(order_dict)
     order_dict["_id"] = str(order_dict["_id"])
 
-    # Auto-book with Delhivery if active and confirmed
-    if order_dict.get("status") == "confirmed":
-        try:
-            fulfillment = await process_delhivery_shipment_booking(order_dict)
-            if fulfillment:
-                order_dict["fulfillment"] = fulfillment
-                order_dict["status"] = "shipped"
-        except Exception as e:
-            print(f"Auto Delhivery booking error on order placement: {e}")
-
     return order_dict
 
 @router.post("/api/admin/orders/offline", status_code=201)
@@ -349,11 +339,6 @@ async def verify_payment(payload: dict):
                         "status": new_status
                     }}
                 )
-                if order_status == "PAID":
-                    try:
-                        await process_delhivery_shipment_booking(db_order)
-                    except Exception as e:
-                        print(f"Auto Delhivery booking error on paid order: {e}")
             
             return {
                 "order_status": order_status,
@@ -486,12 +471,7 @@ async def verify_razorpay_payment(payload: dict):
                 "razorpay_order_id": razorpay_order_id
             }}
         )
-        if is_valid:
-            try:
-                await process_delhivery_shipment_booking(db_order)
-            except Exception as e:
-                print(f"Auto Delhivery booking error on paid order (Razorpay): {e}")
-                
+        
     if not is_valid:
         raise HTTPException(status_code=400, detail="Invalid Razorpay signature")
         
@@ -732,8 +712,17 @@ async def process_delhivery_shipment_booking(order_or_id, weight=500, length=15,
         "label_url": f"/api/orders/label/{waybill}",
         "api_notice": delhivery_api_notice
     }
+    
+    from bson import ObjectId
+    filter_id = order["_id"]
+    if isinstance(filter_id, str):
+        try:
+            filter_id = ObjectId(filter_id)
+        except Exception:
+            pass
+
     await orders_collection.update_one(
-        {"_id": order["_id"]},
+        {"_id": filter_id},
         {"$set": {"fulfillment": fulfillment, "status": "shipped"}}
     )
     return fulfillment
