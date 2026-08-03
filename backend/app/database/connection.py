@@ -4,6 +4,39 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from app.config.settings import MONGODB_URI, ADMIN_EMAIL, ADMIN_PASSWORD
 from app.security.auth import hash_password
 
+import json
+import os
+from bson import ObjectId
+
+USE_JSON_FALLBACK = False
+JSON_DB_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+async def _persist_to_json(collection_name):
+    if motor_db is None:
+        return
+    try:
+        coll = motor_db[collection_name]
+        docs = await coll.find({}).to_list(length=None)
+        json_docs = []
+        for d in docs:
+            doc_copy = dict(d)
+            if "_id" in doc_copy:
+                doc_copy["_id"] = str(doc_copy["_id"])
+            for k, v in list(doc_copy.items()):
+                if isinstance(v, datetime):
+                    doc_copy[k] = v.isoformat()
+                elif isinstance(v, dict):
+                    for subk, subv in list(v.items()):
+                        if isinstance(subv, datetime):
+                            v[subk] = subv.isoformat()
+            json_docs.append(doc_copy)
+            
+        json_path = os.path.join(JSON_DB_DIR, f"{collection_name}.json")
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(json_docs, f, indent=2)
+    except Exception as e:
+        print(f"[JSON PERSIST ERROR] Failed to save '{collection_name}.json': {e}")
+
 class AsyncCollectionProxy:
     def __init__(self, collection_name):
         self.collection_name = collection_name
@@ -19,11 +52,15 @@ class AsyncCollectionProxy:
 
     async def insert_one(self, document, *args, **kwargs):
         target = self._get_target()
-        return await target.insert_one(document, *args, **kwargs)
+        res = await target.insert_one(document, *args, **kwargs)
+        await _persist_to_json(self.collection_name)
+        return res
 
     async def insert_many(self, documents, *args, **kwargs):
         target = self._get_target()
-        return await target.insert_many(documents, *args, **kwargs)
+        res = await target.insert_many(documents, *args, **kwargs)
+        await _persist_to_json(self.collection_name)
+        return res
 
     async def count_documents(self, filter={}, *args, **kwargs):
         target = self._get_target()
@@ -31,11 +68,15 @@ class AsyncCollectionProxy:
 
     async def update_one(self, filter, update, *args, **kwargs):
         target = self._get_target()
-        return await target.update_one(filter, update, *args, **kwargs)
+        res = await target.update_one(filter, update, *args, **kwargs)
+        await _persist_to_json(self.collection_name)
+        return res
 
     async def delete_one(self, filter, *args, **kwargs):
         target = self._get_target()
-        return await target.delete_one(filter, *args, **kwargs)
+        res = await target.delete_one(filter, *args, **kwargs)
+        await _persist_to_json(self.collection_name)
+        return res
 
     def find(self, filter={}, *args, **kwargs):
         target = self._get_target()
@@ -63,12 +104,52 @@ def check_mongodb_connection(uri):
     if not uri:
         raise ValueError("MongoDB URI is not configured.")
     import pymongo
-    client = pymongo.MongoClient(uri, serverSelectionTimeoutMS=10000, connectTimeoutMS=10000)
+    client = pymongo.MongoClient(uri, serverSelectionTimeoutMS=3000, connectTimeoutMS=3000)
     client.admin.command('ping')
     client.close()
 
+async def migrate_json_to_mongodb():
+    collections_to_migrate = ["users", "orders", "otps", "products", "coupons", "settings", "reviews", "subscriptions", "targets"]
+    for coll_name in collections_to_migrate:
+        try:
+            coll = motor_db[coll_name]
+            count = await coll.count_documents({})
+            if count == 0:
+                json_path = os.path.join(JSON_DB_DIR, f"{coll_name}.json")
+                if os.path.exists(json_path):
+                    with open(json_path, "r", encoding="utf-8") as f:
+                        content = f.read().strip()
+                        if content:
+                            data = json.loads(content)
+                            if isinstance(data, dict):
+                                data = [data]
+                            if isinstance(data, list) and len(data) > 0:
+                                for doc in data:
+                                    if "_id" in doc:
+                                        if isinstance(doc["_id"], str) and len(doc["_id"]) == 24:
+                                            try:
+                                                doc["_id"] = ObjectId(doc["_id"])
+                                            except Exception:
+                                                pass
+                                    for key in ["created_at", "updated_at"]:
+                                        if key in doc and isinstance(doc[key], str):
+                                            try:
+                                                doc[key] = datetime.fromisoformat(doc[key].replace("Z", "+00:00"))
+                                            except ValueError:
+                                                try:
+                                                    doc[key] = datetime.strptime(doc[key], "%Y-%m-%d %H:%M:%S.%f")
+                                                except ValueError:
+                                                    try:
+                                                        doc[key] = datetime.strptime(doc[key], "%Y-%m-%d %H:%M:%S")
+                                                    except ValueError:
+                                                        pass
+                                await coll.insert_many(data)
+                                print(f"[MIGRATION] Successfully migrated {len(data)} documents to collection '{coll_name}'")
+        except Exception as e:
+            print(f"[MIGRATION] Error migrating collection '{coll_name}': {e}")
+
 async def initialize_db():
-    global motor_client, motor_db
+    global motor_client, motor_db, USE_JSON_FALLBACK
     print("Connecting to MongoDB Atlas...")
     try:
         if not MONGODB_URI:
@@ -91,6 +172,9 @@ async def initialize_db():
             
         motor_db = motor_client[db_name]
         print(f"Successfully connected to MongoDB Database: {db_name}")
+        
+        # Migrate any existing JSON fallback data to MongoDB
+        await migrate_json_to_mongodb()
         
         # Initialize indexes on startup
         print("Initializing MongoDB Indexes...")
@@ -119,8 +203,31 @@ async def initialize_db():
         except Exception as idx_err:
             print(f"Failed to initialize MongoDB Indexes: {idx_err}")
     except Exception as db_err:
-        print(f"\n[CRITICAL DATABASE ERROR] Could not connect to MongoDB Atlas database ({db_err}).")
-        raise db_err
+        print(f"\n[WARNING] Could not connect to MongoDB Atlas database ({db_err}).")
+        print("[FALLBACK] Switching to In-Memory Database (mongomock_motor) with JSON persistence so server remains active...")
+        try:
+            from mongomock_motor import AsyncMongoMockClient
+            motor_client = AsyncMongoMockClient()
+            motor_db = motor_client["soap_db"]
+            USE_JSON_FALLBACK = True
+            print("[FALLBACK] In-Memory Database initialized successfully.")
+            
+            # Migrate any existing JSON fallback data to MongoDB
+            await migrate_json_to_mongodb()
+            
+            # Initialize indexes on startup
+            try:
+                await motor_db["users"].create_index("email", unique=True, sparse=True)
+                await motor_db["users"].create_index("mobile", unique=True, sparse=True)
+                await motor_db["orders"].create_index("orderId", unique=True)
+                await motor_db["products"].create_index("id", unique=True)
+                await motor_db["coupons"].create_index("code", unique=True)
+                await motor_db["subscriptions"].create_index("subscriptionId", unique=True)
+            except Exception:
+                pass
+        except Exception as fallback_err:
+            print(f"[CRITICAL DATABASE ERROR] Fallback DB initialization failed: {fallback_err}")
+            raise db_err
 
 async def seed_admin_and_data_func():
     existing = await users_collection.find_one({"email": ADMIN_EMAIL})

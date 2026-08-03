@@ -387,12 +387,19 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
           throw new Error("Failed to load Razorpay payment SDK.");
         }
 
+        // Clean & format phone number for Razorpay (10 digits without spaces or symbols)
+        const rawPhone = (formData.phone || user?.mobile || user?.phone || '').toString().trim();
+        const digitsOnly = rawPhone.replace(/\D/g, '');
+        const formattedPhone = (digitsOnly.length === 12 && digitsOnly.startsWith('91')) 
+          ? digitsOnly.slice(2) 
+          : (digitsOnly.length >= 10 ? digitsOnly.slice(-10) : digitsOnly);
+
         const sessionPayload = {
           orderId: createdOrderId,
           grandTotal: parseFloat(grandTotal),
-          customerName: formData.fullName,
-          customerPhone: formData.phone,
-          customerEmail: formData.email
+          customerName: formData.fullName || user?.name || '',
+          customerPhone: formattedPhone || rawPhone,
+          customerEmail: formData.email || user?.email || ''
         };
 
         const sessionResponse = await createRazorpaySession(sessionPayload);
@@ -420,9 +427,15 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
             }
           },
           prefill: {
-            name: formData.fullName,
-            email: formData.email,
-            contact: formData.phone
+            name: formData.fullName || user?.name || '',
+            email: formData.email || user?.email || '',
+            contact: formattedPhone || rawPhone
+          },
+          notes: {
+            customer_name: formData.fullName || user?.name || '',
+            customer_phone: formattedPhone || rawPhone,
+            customer_email: formData.email || user?.email || '',
+            shipping_address: `${formData.address || ''}, ${formData.city || ''}, ${formData.pincode || ''}`
           },
           theme: {
             color: "#3A2E26"

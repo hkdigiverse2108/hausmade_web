@@ -385,6 +385,12 @@ async def create_razorpay_session(order_payload: dict):
     if not key_id or not key_secret:
         raise HTTPException(status_code=400, detail=f"Razorpay credentials for {mode} mode are missing.")
         
+    if key_secret == "***********************" or key_secret == "***" or "placeholder" in key_secret.lower():
+        raise HTTPException(
+            status_code=400,
+            detail="Razorpay Authentication Failed: Default placeholder secret ('***') is currently set. Please enter your valid Razorpay Key Secret in Admin Panel > Payment Gateway or choose COD."
+        )
+        
     order_id = order_payload.get("orderId") or f"HM-{int(datetime.utcnow().timestamp())}"
     
     auth_str = f"{key_id}:{key_secret}"
@@ -399,7 +405,12 @@ async def create_razorpay_session(order_payload: dict):
     rzp_payload = {
         "amount": amount_in_paise,
         "currency": "INR",
-        "receipt": order_id
+        "receipt": order_id,
+        "notes": {
+            "customer_name": order_payload.get("customerName", ""),
+            "customer_phone": order_payload.get("customerPhone", ""),
+            "customer_email": order_payload.get("customerEmail", "")
+        }
     }
     
     async with httpx.AsyncClient() as client:
@@ -407,7 +418,22 @@ async def create_razorpay_session(order_payload: dict):
             resp = await client.post("https://api.razorpay.com/v1/orders", json=rzp_payload, headers=headers, timeout=10.0)
             if resp.status_code != 200:
                 err_text = resp.text
-                raise HTTPException(status_code=400, detail=f"Razorpay API Error: {err_text}")
+                try:
+                    err_json = resp.json()
+                    err_desc = ""
+                    if isinstance(err_json, dict) and "error" in err_json:
+                        err_desc = str(err_json["error"].get("description", ""))
+                    if "authentication" in err_desc.lower() or "authentication" in err_text.lower() or "bad_request_error" in err_text.lower():
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"Razorpay Authentication Failed ({mode} mode): Invalid Key ID or Key Secret. Please enter your valid Razorpay API credentials in Admin Panel > Payment Gateway or select Cash on Delivery."
+                        )
+                    detail_msg = err_desc or err_text
+                    raise HTTPException(status_code=400, detail=f"Razorpay API Error: {detail_msg}")
+                except HTTPException as he:
+                    raise he
+                except Exception:
+                    raise HTTPException(status_code=400, detail=f"Razorpay API Error: {err_text}")
                 
             rzp_data = resp.json()
             return {
@@ -417,6 +443,8 @@ async def create_razorpay_session(order_payload: dict):
                 "currency": rzp_data.get("currency"),
                 "key_id": key_id
             }
+        except HTTPException as he:
+            raise he
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to communicate with Razorpay: {str(e)}")
 
