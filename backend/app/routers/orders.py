@@ -771,18 +771,17 @@ async def schedule_delhivery_pickup(order_id: str, admin: dict = Depends(get_adm
         
     config = await get_delhivery_config_internal()
     
-    # Always update DB state so order reflects Pickup Scheduled
-    await orders_collection.update_one(
-        {"_id": order["_id"]},
-        {"$set": {
-            "fulfillment.pickup_scheduled": True, 
-            "fulfillment.status": "Pickup Scheduled",
-            "status": "shipped"
-        }}
-    )
-    
     if not config or not config.get("active") or not config.get("api_token"):
-        return {"status": "success", "message": "Pickup scheduled successfully!"}
+        # Mock mode success
+        await orders_collection.update_one(
+            {"_id": order["_id"]},
+            {"$set": {
+                "fulfillment.pickup_scheduled": True, 
+                "fulfillment.status": "Pickup Scheduled",
+                "status": "shipped"
+            }}
+        )
+        return {"status": "success", "message": "Pickup scheduled (Mock mode)"}
         
     token = config["api_token"]
     mode = config.get("mode", "test")
@@ -802,29 +801,41 @@ async def schedule_delhivery_pickup(order_id: str, admin: dict = Depends(get_adm
         "Content-Type": "application/json"
     }
     
-    delhivery_notice = ""
+    delhivery_error = ""
+    is_success = False
     async with httpx.AsyncClient() as client:
         try:
             resp = await client.post(url, json=pickup_payload, headers=headers, timeout=10.0)
             if resp.status_code in [200, 201]:
-                delhivery_notice = "Pickup request registered with Delhivery network!"
+                is_success = True
             else:
                 try:
                     resp_json = resp.json()
                     if isinstance(resp_json, dict):
-                        err_detail = resp_json.get("prepaid") or resp_json.get("error") or resp_json.get("detail")
+                        err_detail = resp_json.get("prepaid") or resp_json.get("error") or resp_json.get("detail") or resp_json.get("message")
                         if err_detail:
-                            delhivery_notice = f"(Delhivery API: {err_detail})"
+                            delhivery_error = str(err_detail)
+                        else:
+                            delhivery_error = f"Status {resp.status_code}"
                 except Exception:
-                    pass
+                    delhivery_error = f"Status {resp.status_code}"
         except Exception as e:
-            print(f"Delhivery pickup API call exception: {e}")
+            delhivery_error = f"Exception: {str(e)}"
 
-    msg = "Pickup scheduled successfully!"
-    if delhivery_notice:
-        msg += f" {delhivery_notice}"
+    if not is_success:
+        raise HTTPException(status_code=400, detail=f"Delhivery rejected pickup: {delhivery_error}")
 
-    return {"status": "success", "message": msg}
+    # Delhivery succeeded! Update DB
+    await orders_collection.update_one(
+        {"_id": order["_id"]},
+        {"$set": {
+            "fulfillment.pickup_scheduled": True, 
+            "fulfillment.status": "Pickup Scheduled",
+            "status": "shipped"
+        }}
+    )
+
+    return {"status": "success", "message": "Pickup scheduled successfully with Delhivery!"}
 
 @router.delete("/api/admin/orders/{order_id}")
 async def delete_admin_order(order_id: str, admin: dict = Depends(get_admin_user)):
@@ -885,6 +896,47 @@ async def cancel_delhivery_shipment(order_id: str, admin: dict = Depends(get_adm
                 {"$unset": {"fulfillment": ""}, "$set": {"status": "confirmed"}}
             )
             return {"status": "success", "detail": "Shipment cancelled successfully"}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/api/admin/delhivery/label/{awb}")
+async def fetch_delhivery_label(awb: str, admin: dict = Depends(get_admin_user)):
+    config = await get_delhivery_config_internal()
+    if not config or not config.get("api_token"):
+        raise HTTPException(status_code=400, detail="Delhivery is not configured")
+        
+    token = config["api_token"]
+    mode = config.get("mode", "test")
+    base_url = "https://staging-express.delhivery.com" if mode == "test" else "https://track.delhivery.com"
+    
+    url = f"{base_url}/api/p/packing_slip?wbns={awb}&pdf=true"
+    headers = {
+        "Authorization": f"Token {token}",
+        "Accept": "application/json"
+    }
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.get(url, headers=headers, timeout=15.0)
+            if resp.status_code != 200:
+                raise HTTPException(status_code=resp.status_code, detail=f"Delhivery API Error: {resp.text}")
+                
+            data = resp.json()
+            packages = data.get("packages", [])
+            if not packages:
+                raise HTTPException(status_code=404, detail="No label found for this AWB")
+                
+            package = packages[0]
+            pdf_link = package.get("pdf_download_link")
+            html_content = package.get("packing_slip")
+            
+            if pdf_link:
+                return {"url": pdf_link}
+            elif html_content:
+                return {"html": html_content}
+            else:
+                raise HTTPException(status_code=404, detail="Label data not found in response")
+                
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 

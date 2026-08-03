@@ -70,6 +70,7 @@ import {
   bookDelhiveryShipment,
   scheduleDelhiveryPickup,
   cancelDelhiveryShipment,
+  getDelhiveryLabel,
   deleteAdminOrder
 } from '../utils/api';
 import ConfirmModal from './ConfirmModal';
@@ -1261,6 +1262,26 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
         }
       }
     });
+  };
+
+  const handleFetchLabel = async (awb) => {
+    setSaving(true);
+    try {
+      const data = await getDelhiveryLabel(awb, token);
+      if (data.url) {
+        window.open(data.url, '_blank');
+      } else if (data.html) {
+        const newWin = window.open('', '_blank');
+        newWin.document.write(data.html);
+        newWin.document.close();
+      } else {
+        showNotification('Label could not be displayed.', 'error');
+      }
+    } catch (err) {
+      showNotification(err.message || 'Failed to fetch label', 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDeleteOrder = async (orderId) => {
@@ -2582,15 +2603,19 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                           </button>
                                         )}
                                         {(order.fulfillment.label_url || order.fulfillment.awb) && (
-                                           <a
-                                             href={order.fulfillment.label_url || `/api/orders/label/${order.fulfillment.awb}`}
-                                             target="_blank"
-                                             rel="noopener noreferrer"
-                                             className="px-2.5 py-1 bg-white border border-[#E6D5C3] hover:bg-[#7A8B6F]/10 hover:border-[#7A8B6F]/30 text-[#3A2E26] text-[9px] font-bold rounded-lg uppercase tracking-wider transition-all no-underline inline-flex items-center gap-1 shadow-sm"
-                                           >
+                                           <button
+                                              onClick={() => {
+                                                if (order.fulfillment.label_url) {
+                                                  window.open(order.fulfillment.label_url, '_blank');
+                                                } else {
+                                                  handleFetchLabel(order.fulfillment.awb);
+                                                }
+                                              }}
+                                              className="cursor-pointer px-2.5 py-1 bg-white border border-[#E6D5C3] hover:bg-[#7A8B6F]/10 hover:border-[#7A8B6F]/30 text-[#3A2E26] text-[9px] font-bold rounded-lg uppercase tracking-wider transition-all no-underline inline-flex items-center gap-1 shadow-sm"
+                                            >
                                              <svg className="w-2.5 h-2.5 text-[#7A8B6F]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H7a2 2 0 00-2 2v4h10z" /></svg>
                                              Label
-                                           </a>
+                                           </button>
                                          )}
                                         <button
                                           onClick={() => handleCancelShipment(order.orderId)}
