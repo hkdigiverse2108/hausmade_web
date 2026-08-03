@@ -10,6 +10,8 @@ from collections import defaultdict
 from fastapi import FastAPI, HTTPException, File, UploadFile, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+import shutil
+import uuid
 import cloudinary
 import cloudinary.uploader
 from dotenv import load_dotenv, find_dotenv
@@ -110,12 +112,28 @@ async def startup_event():
     # Seed default collections
     await seed_admin_and_data_func()
 
-# Expose image upload directly
+# Expose image upload directly to local directory
 @app.post("/api/upload")
 def upload_image(file: UploadFile = File(...)):
     try:
-        result = cloudinary.uploader.upload(file.file)
-        return {"url": result.get("secure_url")}
+        # Determine paths
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        upload_dir = os.path.join(base_dir, 'frontend', 'public', 'images', 'uploads')
+        
+        # Ensure upload directory exists
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        # Generate unique filename
+        ext = os.path.splitext(file.filename)[1] or ".jpg"
+        filename = f"{uuid.uuid4().hex}{ext}"
+        filepath = os.path.join(upload_dir, filename)
+        
+        # Save file
+        with open(filepath, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+            
+        # Return local URL format that Vite/Frontend expects
+        return {"url": f"/images/uploads/{filename}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

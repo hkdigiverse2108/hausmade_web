@@ -117,6 +117,13 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
     ...customImages
   ];
 
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveImageIndex((prev) => (prev + 1) % images.length);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [images.length, setActiveImageIndex]);
+
   const matchedOffer = activeOffers.find(o => o.durationMonths === durationMonths && o.deliveryFrequency === deliveryFrequency) || activeOffers[0] || defaultOffers[0];
 
   const singleSoap = (products && products.length > 0 ? products : PACK_OPTIONS).find(i => i.id === 'single') || { basePrice: 299.0 };
