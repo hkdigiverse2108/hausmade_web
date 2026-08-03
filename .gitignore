@@ -50,3 +50,7 @@ app/config/*.env
 !*skills.json
 !*db.json
 !*settings.json
+
+# Uploaded images
+frontend/public/images/uploads/
+
