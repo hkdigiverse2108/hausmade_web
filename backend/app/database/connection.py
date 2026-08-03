@@ -2,9 +2,12 @@ import asyncio
 from datetime import datetime
 from motor.motor_asyncio import AsyncIOMotorClient
 from app.config.settings import MONGODB_URI, ADMIN_EMAIL, ADMIN_PASSWORD
+import os
+import json
+from bson import ObjectId
 from app.security.auth import hash_password
 
-
+JSON_DB_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'data')
 
 class AsyncCollectionProxy:
     def __init__(self, collection_name):

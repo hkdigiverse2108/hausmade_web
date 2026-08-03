@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ShoppingBag, Menu, X, Sparkles, Heart, User } from 'lucide-react';
 
-export default function Header({ cartCount, onOpenCart, wishlistCount, onOpenWishlist, user, isAuthenticated, onLogout, onOpenLogin, onOpenOrderHistory, onOpenProfile, onOpenAdminLogin, settings }) {
+export default function Header({ cartCount, onOpenCart, wishlistCount, onOpenWishlist, user, isAuthenticated, onLogout, onOpenLogin, onOpenOrderHistory, onOpenProfile, settings }) {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -47,35 +47,6 @@ export default function Header({ cartCount, onOpenCart, wishlistCount, onOpenWis
     { name: 'Track Order', href: '#track' },
   ];
 
-  const [logoClicks, setLogoClicks] = useState(0);
-  const clickTimeoutRef = useRef(null);
-
-  const handleLogoClick = (e) => {
-    e.preventDefault();
-    
-    // Clear any pending redirect to "/"
-    if (clickTimeoutRef.current) {
-      clearTimeout(clickTimeoutRef.current);
-    }
-
-    const newCount = logoClicks + 1;
-    setLogoClicks(newCount);
-
-    if (newCount >= 8) {
-      setLogoClicks(0);
-      clickTimeoutRef.current = null;
-      if (onOpenAdminLogin) {
-        onOpenAdminLogin();
-      }
-    } else {
-      // Wait to see if the user is multi-tapping, otherwise redirect to home
-      clickTimeoutRef.current = setTimeout(() => {
-        setLogoClicks(0);
-        window.location.href = '/';
-      }, 400);
-    }
-  };
-
   return (
     <header 
       className={`sticky top-0 z-50 w-full transition-all duration-300 ${
@@ -89,8 +60,7 @@ export default function Header({ cartCount, onOpenCart, wishlistCount, onOpenWis
           
           {/* Brand Logo */}
           <a 
-            href="#" 
-            onClick={handleLogoClick}
+            href="/" 
             className="flex items-center gap-2 sm:gap-2.5 group shrink-0 cursor-default"
           >
             <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#C97C5D] flex items-center justify-center text-white transition-transform group-hover:scale-105 shadow-sm cursor-default overflow-hidden shrink-0">

@@ -86,8 +86,7 @@ export default function App() {
   const [notification, setNotification] = useState(null);
   const [products, setProducts] = useState(PACK_OPTIONS);
   const [showAdminView, setShowAdminView] = useState(() => {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('mode') === 'admin';
+    return window.location.pathname === '/admin';
   });
   const [isReviewOpen, setIsReviewOpen] = useState(false);
   const [reviewProduct, setReviewProduct] = useState(null);
@@ -245,21 +244,14 @@ export default function App() {
   }, [isProfileOpen]);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (showAdminView) {
-      if (params.get('mode') !== 'admin') {
-        params.set('mode', 'admin');
-        const newSearch = params.toString();
-        window.history.replaceState(null, '', `${window.location.pathname}?${newSearch}${window.location.hash}`);
-      }
-    } else {
-      if (params.get('mode') === 'admin') {
-        params.delete('mode');
-        const newSearch = params.toString();
-        window.history.replaceState(null, '', `${window.location.pathname}${newSearch ? '?' + newSearch : ''}${window.location.hash}`);
-      }
+    if (showAdminView && window.location.pathname !== '/admin') {
+      window.history.replaceState(null, '', '/admin' + window.location.search + window.location.hash);
+    } else if (!showAdminView && window.location.pathname === '/admin') {
+      window.history.replaceState(null, '', '/' + window.location.search + window.location.hash);
     }
   }, [showAdminView]);
+
+
 
   const showNotification = useCallback((message, type = 'success') => {
     let formattedMsg = message;
@@ -346,6 +338,16 @@ export default function App() {
   const user = localUser || auth0User;
   const isAuthenticated = !!localUser || isAuth0Authenticated;
   const activeToken = localToken || auth0Token;
+
+  useEffect(() => {
+    if (window.location.pathname === '/admin') {
+      if (isAuthenticated && user?.is_admin) {
+        setShowAdminView(true);
+      } else if (!isAuthenticated || !user?.is_admin) {
+        setIsAdminLoginOpen(true);
+      }
+    }
+  }, [isAuthenticated, user]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -603,7 +605,6 @@ export default function App() {
                   onOpenLogin={() => setIsLoginOpen(true)}
                   onOpenOrderHistory={() => setIsOrderHistoryOpen(true)}
                   onOpenProfile={() => setIsProfileOpen(true)}
-                  onOpenAdminLogin={() => setIsAdminLoginOpen(true)}
                   settings={siteSettings}
                 />
               </>
@@ -719,7 +720,12 @@ export default function App() {
 
       <LoginModal
         isOpen={isAdminLoginOpen}
-        onClose={() => setIsAdminLoginOpen(false)}
+        onClose={() => {
+          setIsAdminLoginOpen(false);
+          if (window.location.pathname === '/admin' && !user?.is_admin) {
+            window.history.replaceState(null, '', '/' + window.location.search + window.location.hash);
+          }
+        }}
         showNotification={showNotification}
         isAdminOnly={true}
         onLoginSuccess={(userData) => {
