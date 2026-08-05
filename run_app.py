@@ -42,7 +42,7 @@ def main():
 
     # Service commands using dynamic ports and binding to 0.0.0.0 for server/remote access
     backend_cmd = f'"{python_exec}" -m uvicorn app.main:app --host 0.0.0.0 --reload --port {ports["PORT_BACKEND"]}'
-    frontend_cmd = f"npm run dev -- --host --port {ports['PORT_FRONTEND']}"
+    frontend_cmd = f"npm run dev -- --host --port {ports['PORT_FRONTEND']} --force"
 
     processes = []
     try:

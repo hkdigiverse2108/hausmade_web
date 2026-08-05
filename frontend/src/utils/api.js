@@ -840,6 +840,19 @@ export async function cancelDelhiveryShipment(orderId, token) {
   return response.json();
 }
 
+export async function getDelhiveryLabel(awb, token) {
+  const response = await fetch(`${API_URL}/api/admin/delhivery/label/${encodeURIComponent(awb)}`, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || 'Failed to fetch shipping label');
+  }
+  return response.json();
+}
+
 export async function trackOrderShipment(trackingId) {
   const response = await fetch(`${API_URL}/api/orders/track/${encodeURIComponent(trackingId.trim())}`);
   if (!response.ok) {
