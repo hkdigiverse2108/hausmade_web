@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ShoppingBag, Menu, X, Sparkles, Heart, User } from 'lucide-react';
+import { ShoppingBag, Menu, X, Sparkles, User } from 'lucide-react';
 
-export default function Header({ cartCount, onOpenCart, wishlistCount, onOpenWishlist, user, isAuthenticated, onLogout, onOpenLogin, onOpenOrderHistory, onOpenProfile, onOpenAdminLogin, settings }) {
+export default function Header({ cartCount, onOpenCart, user, isAuthenticated, onLogout, onOpenLogin, onOpenOrderHistory, onOpenProfile, onOpenAdminLogin, settings }) {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -174,18 +174,6 @@ export default function Header({ cartCount, onOpenCart, wishlistCount, onOpenWis
               )}
             </div>
 
-            <button
-              onClick={onOpenWishlist}
-              className="relative p-1.5 sm:p-2 text-[#3A2E26] hover:text-[#C97C5D] transition-colors rounded-full hover:bg-[#3A2E26]/5 cursor-pointer"
-              aria-label="View wishlist"
-            >
-              <Heart className={`w-5 h-5 sm:w-6 sm:h-6 ${wishlistCount > 0 ? 'fill-[#C97C5D] text-[#C97C5D]' : ''}`} />
-              {wishlistCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-[#7A8B6F] text-white text-[10px] font-bold w-4.5 h-4.5 rounded-full flex items-center justify-center ring-2 ring-[#F5F1E8] shadow-xs">
-                  {wishlistCount}
-                </span>
-              )}
-            </button>
 
             <button
               onClick={onOpenCart}

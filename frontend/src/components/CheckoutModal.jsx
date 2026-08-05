@@ -297,7 +297,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
         }
       }
 
-      const subItem = cartItems.find(item => item.isSubscription);
+      const subItem = null;
       const isCashfreeActive = settings?.cashfree?.active && paymentMethod === 'cashfree';
       const isRazorpayActive = settings?.razorpay?.active && paymentMethod === 'razorpay';
 

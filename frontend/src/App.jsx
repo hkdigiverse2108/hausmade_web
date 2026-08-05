@@ -6,7 +6,7 @@ import ProductSelector, { PACK_OPTIONS } from './components/ProductSelector';
 import Ingredients from './components/Ingredients';
 import Story from './components/Story';
 import Reviews from './components/Reviews';
-import SubscribeSave from './components/SubscribeSave';
+// Removed SubscribeSave import
 import FAQ from './components/FAQ';
 import Footer from './components/Footer';
 import PoliciesModal from './components/PoliciesModal';
@@ -15,7 +15,7 @@ import CheckoutModal from './components/CheckoutModal';
 import LoginModal from './components/LoginModal';
 import OrderHistoryModal from './components/OrderHistoryModal';
 import ProfileModal from './components/ProfileModal';
-import WishlistModal from './components/WishlistModal';
+
 import AdminPanel from './components/AdminPanel';
 import ReviewModal from './components/ReviewModal';
 import OrderTracking from './components/OrderTracking';
@@ -66,22 +66,7 @@ export default function App() {
     return params.get('view') === 'profile';
   });
   const hasProfileParam = useRef(false);
-  const [wishlistItems, setWishlistItems] = useState(() => {
-    const saved = localStorage.getItem('hausmade_wishlist');
-    return saved ? JSON.parse(saved) : [
-      {
-        id: 'pack-3',
-        title: 'Pack of 3',
-        count: 3,
-        basePrice: 717.00,
-        savingsBadge: 'Save 20%',
-        popular: true,
-        bestValue: false,
-        image: '/images/pack-3.png'
-      }
-    ];
-  });
-  const [isWishlistOpen, setIsWishlistOpen] = useState(false);
+  const wishlistItems = [];
   const [openCheckoutAfterLogin, setOpenCheckoutAfterLogin] = useState(false);
   const [notification, setNotification] = useState(null);
   const [products, setProducts] = useState(PACK_OPTIONS);
@@ -98,9 +83,7 @@ export default function App() {
     setIsReviewOpen(true);
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem('hausmade_wishlist', JSON.stringify(wishlistItems));
-  }, [wishlistItems]);
+
   const [siteSettings, setSiteSettings] = useState({
     announcement: {
       text: "",
@@ -413,8 +396,8 @@ export default function App() {
 
   
   // Product state shared between selector and mobile bar
-  const [selectedPack, setSelectedPack] = useState('pack-3');
-  const [isSubscription, setIsSubscription] = useState(false);
+  const [selectedPack, setSelectedPack] = useState('single');
+  const isSubscription = false;
   const [quantity, setQuantity] = useState(1);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
 
@@ -448,23 +431,8 @@ export default function App() {
     handleOpenCheckout();
   };
 
-  const handleAddToWishlist = (packItem) => {
-    setWishlistItems(prev => {
-      const exists = prev.some(item => item.id === packItem.id);
-      if (exists) {
-        showNotification(`${packItem.title} removed from wishlist`, 'info');
-        return prev.filter(item => item.id !== packItem.id);
-      } else {
-        showNotification(`${packItem.title} added to wishlist!`, 'success');
-        return [...prev, packItem];
-      }
-    });
-  };
-
-  const handleRemoveFromWishlist = (packItem) => {
-    setWishlistItems(prev => prev.filter(item => item.id !== packItem.id));
-    showNotification(`${packItem.title} removed from wishlist`, 'info');
-  };
+  const handleAddToWishlist = () => {};
+  const handleRemoveFromWishlist = () => {};
 
   const handleUpdateQuantity = (index, newQty) => {
     if (newQty <= 0) {
@@ -486,9 +454,7 @@ export default function App() {
 
   const activeProducts = products.filter(p => p.active !== false);
   const currentPack = activeProducts.find(p => p.id === selectedPack) || activeProducts[2] || activeProducts[0] || PACK_OPTIONS[0];
-  const discountPct = siteSettings?.subscription_discount_pct !== undefined ? siteSettings.subscription_discount_pct : 15.0;
-  const discountMultiplier = isSubscription ? (1.0 - (discountPct / 100.0)) : 1.0;
-  const currentPrice = (currentPack.basePrice * discountMultiplier).toFixed(2);
+  const currentPrice = currentPack.basePrice.toFixed(2);
 
   const scrollToSelector = () => {
     const el = document.getElementById('product-selector');
@@ -595,8 +561,7 @@ export default function App() {
                 <Header
                   cartCount={cartItems.reduce((acc, item) => acc + item.quantity, 0)}
                   onOpenCart={() => setIsCartOpen(true)}
-                  wishlistCount={wishlistItems.length}
-                  onOpenWishlist={() => setIsWishlistOpen(true)}
+                  wishlistCount={0}
                   user={user}
                   isAuthenticated={isAuthenticated}
                   onLogout={handleLogout}
@@ -615,23 +580,16 @@ export default function App() {
                   <Hero settings={{ ...siteSettings.hero, trust_badges: siteSettings.trust_badges }} />
                 </div>
               )}
-              {shouldShowSection('subscription') && (
-                <div id="subscription" className={getSectionClass('subscription')} onClick={() => handleSectionClick('subscription')}>
-                  <SubscribeSave settings={siteSettings.subscription} />
-                </div>
-              )}
+              {/* Subscription section removed */}
               {shouldShowSection('products') && (
                 <div id="products" className={getSectionClass('products')} onClick={() => handleSectionClick('products')}>
                   <ProductSelector
                     products={products}
                     onAddToCart={handleAddToCart}
                     onBuyNow={handleBuyNow}
-                    onAddToWishlist={handleAddToWishlist}
-                    wishlistItems={wishlistItems}
+
                     selectedPack={selectedPack}
-                    setSelectedPack={setSelectedPack}
-                    isSubscription={isSubscription}
-                    setIsSubscription={setIsSubscription}
+
                     quantity={quantity}
                     setQuantity={setQuantity}
                     activeImageIndex={activeImageIndex}
@@ -682,7 +640,7 @@ export default function App() {
           setIsCartOpen(false);
           setIsProfileOpen(false);
           setIsOrderHistoryOpen(false);
-          setIsWishlistOpen(false);
+
           // Remove query params like ?view=profile
           window.history.pushState({}, '', window.location.pathname + (window.location.hash || '#products'));
           setTimeout(() => {
@@ -756,20 +714,9 @@ export default function App() {
           setLocalUser(updatedUser);
         }}
         showNotification={showNotification}
-        wishlistItems={wishlistItems}
-        onRemoveFromWishlist={handleRemoveFromWishlist}
         onAddToCart={handleAddToCart}
         onBuyNow={handleBuyNow}
         onLogout={handleLogout}
-      />
-
-      <WishlistModal
-        isOpen={isWishlistOpen}
-        onClose={() => setIsWishlistOpen(false)}
-        wishlistItems={wishlistItems}
-        onRemoveFromWishlist={handleRemoveFromWishlist}
-        onAddToCart={handleAddToCart}
-        onBuyNow={handleBuyNow}
       />
 
       <PoliciesModal
@@ -788,22 +735,18 @@ export default function App() {
         packTitle={currentPack.title}
         price={currentPrice}
         onAddToCart={() => {
-          if (isSubscription) {
-            scrollToSelector();
-          } else {
-            handleAddToCart({
-              packId: currentPack.id,
-              title: currentPack.title,
-              count: currentPack.count,
-              isSubscription,
-              frequency: null,
-              unitPrice: ((currentPack.basePrice * discountMultiplier) / currentPack.count).toFixed(2),
-              packPrice: currentPrice,
-              quantity: 1,
-              totalPrice: currentPrice,
-              image: currentPack.image
-            });
-          }
+          handleAddToCart({
+            packId: currentPack.id,
+            title: currentPack.title,
+            count: currentPack.count,
+            isSubscription: false,
+            frequency: null,
+            unitPrice: (currentPack.basePrice / currentPack.count).toFixed(2),
+            packPrice: currentPrice,
+            quantity: 1,
+            totalPrice: currentPrice,
+            image: currentPack.image
+          });
         }}
         onScrollToSelector={scrollToSelector}
       />

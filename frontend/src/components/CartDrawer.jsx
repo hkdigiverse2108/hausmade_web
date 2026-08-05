@@ -56,9 +56,7 @@ export default function CartDrawer({ isOpen, onClose, cartItems, onUpdateQuantit
                   <img src={item.image} alt={item.title} className="w-20 h-20 rounded-xl object-cover border" />
                   <div className="flex-1">
                     <h4 className="font-serif-brand font-bold text-base text-[#3A2E26]">{item.title}</h4>
-                    <p className="text-xs text-[#7A8B6F] font-semibold mt-0.5">
-                      {item.isSubscription ? `Subscribed (${item.frequency})` : 'One-Time Purchase'}
-                    </p>
+
                     <p className="text-xs text-[#3A2E26]/60">₹{item.unitPrice} / bar</p>
                     
                     <div className="flex items-center justify-between mt-3">

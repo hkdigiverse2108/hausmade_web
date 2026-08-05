@@ -17,10 +17,7 @@ export default function FAQ({ settings }) {
       q: 'What is your shipping policy?',
       a: 'We ship all orders in 100% plastic-free, recyclable cardboard boxes. Standard shipping takes 3-5 business days. All orders over $35 ship completely FREE!'
     },
-    {
-      q: 'How does the Subscribe & Save subscription work?',
-      a: 'When you choose Subscribe & Save, you lock in an extra 15% discount on every order. We deliver fresh soap according to your selected frequency (every 1, 2, or 3 months). You can modify your schedule, pause, or cancel at any time directly from your email link.'
-    },
+
     {
       q: 'Are your soaps vegan and cruelty-free?',
       a: 'All our soap varieties are 100% cruelty-free and never tested on animals. Our formulations use pure plant oils, raw wildflower honey, and organic botanical powders.'
