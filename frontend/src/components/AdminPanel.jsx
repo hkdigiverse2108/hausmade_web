@@ -1792,29 +1792,29 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   return (
     <div className="min-h-screen bg-[#FDFBF7] text-[#3A2E26] flex flex-col font-sans">
       {/* Top Banner Navigation */}
-      <header className="bg-white/80 backdrop-blur-md border-b border-[#3A2E26]/10 px-6 py-4 flex justify-between items-center sticky top-0 z-50 shadow-sm transition-all duration-300">
+      <header className="bg-white/80 backdrop-blur-md border-b border-[#3A2E26]/10 px-4 sm:px-6 py-3 sm:py-4 flex flex-wrap gap-4 justify-between items-center sticky top-0 z-50 shadow-sm transition-all duration-300">
         <div className="flex items-center gap-2">
           <button 
             type="button" 
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="p-2 text-[#3A2E26] hover:bg-[#3A2E26]/5 rounded-xl transition-colors cursor-pointer mr-1 shrink-0"
+            className="p-1 sm:p-2 text-[#3A2E26] hover:bg-[#3A2E26]/5 rounded-xl transition-colors cursor-pointer shrink-0"
             title={sidebarCollapsed ? "Expand Navigation Menu" : "Collapse Navigation Menu"}
           >
-            <Menu className="w-5 h-5" />
+            <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#3A2E26] to-[#5A4E46] flex items-center justify-center text-white shadow-md shrink-0">
+          <div className="hidden sm:flex w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#3A2E26] to-[#5A4E46] items-center justify-center text-white shadow-md shrink-0">
             <ShieldCheck className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-sm font-bold tracking-tight uppercase font-sans text-[#3A2E26]">Hausmade™ Control Panel</h1>
-            <p className="text-[10px] uppercase tracking-widest text-[#7A8B6F] font-bold">Secure Operations Gateway</p>
+            <h1 className="text-xs sm:text-sm font-bold tracking-tight uppercase font-sans text-[#3A2E26]">Hausmade™ Control Panel</h1>
+            <p className="text-[9px] sm:text-[10px] uppercase tracking-widest text-[#7A8B6F] font-bold">Secure Operations Gateway</p>
           </div>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 flex-wrap justify-end">
           <button 
             onClick={handleRefresh}
             disabled={loading || refreshing}
-            className="p-2.5 text-[#3A2E26]/60 hover:text-[#3A2E26] rounded-xl hover:bg-[#3A2E26]/5 transition-all duration-200 disabled:opacity-50"
+            className="p-1.5 sm:p-2.5 text-[#3A2E26]/60 hover:text-[#3A2E26] rounded-xl hover:bg-[#3A2E26]/5 transition-all duration-200 disabled:opacity-50"
             title="Refresh statistics and data lists"
           >
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
@@ -1823,7 +1823,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
           {onViewStorefront && (
             <button 
               onClick={onViewStorefront}
-              className="flex items-center gap-2 px-4 py-2 bg-[#7A8B6F] hover:bg-[#68785c] text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer"
+              className="hidden sm:flex items-center gap-2 px-4 py-2 bg-[#7A8B6F] hover:bg-[#68785c] text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer"
             >
               <Eye className="w-3.5 h-3.5" />
               <span>View Storefront</span>
@@ -1831,10 +1831,11 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
           )}
           <button 
             onClick={onLogout}
-            className="flex items-center gap-2 px-4 py-2 bg-[#C97C5D] hover:bg-[#b86c4d] text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer"
+            className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 bg-[#C97C5D] hover:bg-[#b86c4d] text-white rounded-xl font-bold text-[10px] sm:text-xs uppercase tracking-wider transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" />
-            <span>Exit Admin</span>
+            <span className="hidden sm:inline">Exit Admin</span>
+            <span className="sm:hidden">Exit</span>
           </button>
         </div>
       </header>
