@@ -38,7 +38,8 @@ import {
   Target,
   ChevronDown,
   FileText,
-  RotateCcw
+  RotateCcw,
+  X
 } from 'lucide-react';
 import { 
   getAdminStats, 
@@ -351,6 +352,14 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       { src: "/images/founder-workshop.png", alt: "Artisan Workshop Studio" }
     ]
   });
+  const [isInstaModalOpen, setIsInstaModalOpen] = useState(false);
+  const [editingInstaIdx, setEditingInstaIdx] = useState(null);
+  const [instaForm, setInstaForm] = useState({
+    image_url: '',
+    post_url: '',
+    display_order: 0
+  });
+
   const [settingsSubTab, setSettingsSubTab] = useState(() => {
     return localStorage.getItem('hausmade_admin_settings_subtab') || 'identity';
   });
@@ -2019,6 +2028,10 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                   { id: 'identity', label: 'Identity & Banner', num: '1' },
                   { id: 'hero', label: 'Hero Section', num: '2' },
                   { id: 'trust_badges', label: 'Trust Badges', num: '3' },
+                  { id: 'about_section', label: 'About Section', num: '4' },
+                  { id: 'features_section', label: 'Features Section', num: '5' },
+                  { id: 'product_section', label: 'Product Section', num: '6' },
+                  { id: 'instagram_feed', label: 'Instagram Feed', num: '7' },
                   { id: 'story', label: 'Heritage Story', num: '4' },
                   { id: 'subscription', label: 'Subscription Sys', num: '5' },
                   { id: 'ingredients', label: 'Ingredients List', num: '6' },
@@ -5117,7 +5130,147 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                 </>
               )}
 
-              {settingsSubTab === 'difference' && (
+                            {settingsSubTab === 'instagram_feed' && (
+                <div className="bg-[#FDFBF7] rounded-lg border border-[#3A2E26]/5 w-full mb-10">
+                  {/* Header Title Bar */}
+                  <div className="bg-white rounded-t-lg border-b border-[#3A2E26]/5 p-6 flex items-center justify-between shadow-sm">
+                    <div>
+                      <h2 className="text-2xl font-serif text-[#2A2B2A]">Instagram Feed</h2>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-[#2A2B2A]/40 mt-1">Curating Your Social Presence</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setInstaForm({ image_url: '', post_url: '', display_order: (settingsForm.instagram_feed?.posts?.length || 0) + 1 });
+                        setEditingInstaIdx(null);
+                        setIsInstaModalOpen(true);
+                      }}
+                      className="px-5 py-2.5 bg-[#2A2B2A] hover:bg-black text-white text-xs font-bold uppercase tracking-wider rounded transition-colors flex items-center gap-2 cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" /> Add Post
+                    </button>
+                  </div>
+
+                  {/* Header Settings Section */}
+                  <div className="p-8 pb-10 border-b border-[#3A2E26]/5">
+                    <h3 className="text-base font-serif text-[#3A2E26] mb-4">Header Settings</h3>
+                    
+                    <div className="bg-[#F9F9F9] p-6 rounded-xl border border-gray-100 shadow-sm w-full">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+                        <div className="flex flex-col">
+                          <label className="block text-[10px] font-bold uppercase tracking-widest text-[#9CA3AF] mb-3 leading-[1.5]">
+                            Eyebrow<br/>(@Tag)
+                          </label>
+                          <input
+                            type="text"
+                            value={settingsForm.instagram_feed?.username || ''}
+                            onChange={(e) => setSettingsForm({
+                              ...settingsForm,
+                              instagram_feed: { ...settingsForm.instagram_feed, username: e.target.value }
+                            })}
+                            className="w-full px-4 py-3 bg-white border border-[#E5E7EB] rounded shadow-sm focus:outline-none focus:border-[#A38A58] text-sm text-[#6B7280]"
+                            placeholder="@hausmade"
+                          />
+                        </div>
+                        <div className="flex flex-col">
+                          <label className="block text-[10px] font-bold uppercase tracking-widest text-[#9CA3AF] mb-3 leading-[1.5]">
+                            Main<br/>Heading
+                          </label>
+                          <input
+                            type="text"
+                            value={settingsForm.instagram_feed?.title || ''}
+                            onChange={(e) => setSettingsForm({
+                              ...settingsForm,
+                              instagram_feed: { ...settingsForm.instagram_feed, title: e.target.value }
+                            })}
+                            className="w-full px-4 py-3 bg-white border border-[#E5E7EB] rounded shadow-sm focus:outline-none focus:border-[#A38A58] text-sm text-[#6B7280]"
+                            placeholder="Follow Us on Instagram"
+                          />
+                        </div>
+                        <div className="flex flex-col">
+                          <label className="block text-[10px] font-bold uppercase tracking-widest text-[#9CA3AF] mb-3 leading-[1.5]">
+                            Subheading
+                          </label>
+                          <input
+                            type="text"
+                            value={settingsForm.instagram_feed?.subtitle || ''}
+                            onChange={(e) => setSettingsForm({
+                              ...settingsForm,
+                              instagram_feed: { ...settingsForm.instagram_feed, subtitle: e.target.value }
+                            })}
+                            className="w-full px-4 py-3 bg-white border border-[#E5E7EB] rounded shadow-sm focus:outline-none focus:border-[#A38A58] text-sm text-[#6B7280]"
+                            placeholder="A glimpse into our world"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Post Collection Section */}
+                  <div className="p-8">
+                    <h3 className="text-sm font-serif text-[#2A2B2A] mb-6">Post Collection</h3>
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {(!settingsForm.instagram_feed?.posts || settingsForm.instagram_feed.posts.length === 0) ? (
+                        <div 
+                          className="col-span-full py-10 text-center text-sm text-[#2A2B2A]/40 italic cursor-pointer hover:text-[#2A2B2A]/60"
+                          onClick={() => {
+                            setInstaForm({ image_url: '', post_url: '', display_order: 1 });
+                            setEditingInstaIdx(null);
+                            setIsInstaModalOpen(true);
+                          }}
+                        >
+                          No posts added yet. Click "Add Post" to start curating your feed.
+                        </div>
+                      ) : (
+                        settingsForm.instagram_feed.posts
+                          .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
+                          .map((post, idx) => (
+                            <div 
+                              key={idx} 
+                              className="aspect-square relative group cursor-pointer overflow-hidden rounded-md border border-[#3A2E26]/5"
+                              onClick={() => {
+                                setInstaForm({
+                                  image_url: post.image_url || '',
+                                  post_url: post.post_url || '',
+                                  display_order: post.display_order || 0
+                                });
+                                setEditingInstaIdx(idx);
+                                setIsInstaModalOpen(true);
+                              }}
+                            >
+                              <img src={post.image_url || '/images/pack-single.png'} alt={`Post ${idx}`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-3">
+                                <span className="text-white text-xs font-bold uppercase tracking-wider">Edit Post</span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const updated = settingsForm.instagram_feed.posts.filter((_, i) => i !== idx);
+                                    const updatedSettings = {
+                                      ...settingsForm,
+                                      instagram_feed: { ...settingsForm.instagram_feed, posts: updated }
+                                    };
+                                    setSettingsForm(updatedSettings);
+                                    
+                                    updateSiteSettings(updatedSettings, token).then(() => {
+                                      showNotification('Post deleted!');
+                                    }).catch(console.error);
+                                  }}
+                                  className="p-2 bg-red-500/90 text-white rounded-full hover:bg-red-600 transition-colors cursor-pointer"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+{settingsSubTab === 'difference' && (
                 <>
                   {/* Comparison Section Header & Table Labels */}
                   <div className="bg-white rounded-3xl p-6 border border-[#3A2E26]/10 shadow-sm space-y-4 mb-6">
@@ -7636,6 +7789,108 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
         onConfirm={confirmConfig?.onConfirm}
         onCancel={() => setConfirmConfig(null)}
       />
+      {/* Add New Feed Post Modal */}
+      {isInstaModalOpen && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-[#3A2E26]/60 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-[#F6F5F2] w-full max-w-[500px] max-h-[90vh] overflow-y-auto shadow-2xl relative animate-slideUp">
+            
+            {/* Modal Header */}
+            <div className="flex justify-between items-center p-8 pb-4">
+              <h3 className="text-[28px] font-serif text-[#3A2E26]">
+                {editingInstaIdx !== null ? 'Edit Feed Post' : 'Add New Feed Post'}
+              </h3>
+              <button onClick={() => setIsInstaModalOpen(false)} className="text-[#3A2E26]/50 hover:text-[#3A2E26] transition-colors p-1 cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-8 pt-4 space-y-8">
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-[#9CA3AF] mb-3">Post Image</label>
+                
+                <div className="bg-white border-2 border-dashed border-[#E5E7EB] p-2 hover:border-[#A38A58]/50 transition-colors">
+                  <ImageUploader 
+                    value={instaForm.image_url}
+                    onChange={(val) => setInstaForm({ ...instaForm, image_url: val })}
+                    showNotification={showNotification}
+                    isSaving={saving}
+                    setIsSaving={setSaving}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-[#9CA3AF] mb-3">Instagram Link</label>
+                <div className="relative">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#3B82F6] font-bold text-lg select-none">#</div>
+                  <input
+                    type="text"
+                    value={instaForm.post_url}
+                    onChange={(e) => setInstaForm({ ...instaForm, post_url: e.target.value })}
+                    className="w-full pl-10 pr-4 py-3.5 bg-white border border-[#A38A58]/50 focus:outline-none focus:border-[#A38A58] text-sm text-[#3A2E26]"
+                    placeholder="https://instagram.com/p/..."
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-[#9CA3AF] mb-3">Display Order</label>
+                <input
+                  type="number"
+                  value={instaForm.display_order}
+                  onChange={(e) => setInstaForm({ ...instaForm, display_order: parseInt(e.target.value) || 0 })}
+                  className="w-full px-4 py-3.5 bg-white border border-[#E5E7EB] focus:outline-none focus:border-[#A38A58] text-sm text-[#3A2E26]"
+                />
+              </div>
+
+              {/* Footer Buttons */}
+              <div className="flex items-center justify-end gap-6 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsInstaModalOpen(false)}
+                  className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#3A2E26] hover:text-black cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const currentPosts = [...(settingsForm.instagram_feed?.posts || [])];
+                    if (editingInstaIdx !== null) {
+                      currentPosts[editingInstaIdx] = instaForm;
+                    } else {
+                      currentPosts.push(instaForm);
+                    }
+                    
+                    const updatedSettings = {
+                      ...settingsForm,
+                      instagram_feed: {
+                        ...settingsForm.instagram_feed,
+                        posts: currentPosts
+                      }
+                    };
+                    
+                    setSettingsForm(updatedSettings);
+                    setIsInstaModalOpen(false);
+                    
+                    // Trigger backend save immediately
+                    updateSiteSettings(updatedSettings, token).then(() => {
+                      showNotification('Post saved successfully!');
+                      localStorage.setItem('hausmade_preview_settings', JSON.stringify(updatedSettings));
+                      window.dispatchEvent(new Event('storage'));
+                    }).catch(console.error);
+                  }}
+                  className="px-8 py-3.5 bg-[#8C8C8C] hover:bg-[#707070] text-white text-[10px] font-bold uppercase tracking-[0.15em] transition-colors shadow-sm cursor-pointer"
+                >
+                  Save Post
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

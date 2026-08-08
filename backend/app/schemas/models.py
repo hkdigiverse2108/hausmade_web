@@ -263,6 +263,17 @@ class FooterSettings(BaseModel):
     social_subtext: str = "Stay connected for new launches, wellness tips, and exclusive offers."
     copyright_text: str = "© 2026 Hausmade. All rights reserved."
 
+class InstagramPostItem(BaseModel):
+    image_url: str
+    post_url: str
+    display_order: Optional[int] = 0
+
+class InstagramFeedSettings(BaseModel):
+    username: str = "@hausmade"
+    title: str = "Follow Us on Instagram"
+    subtitle: str = "A glimpse into our world"
+    posts: List[InstagramPostItem] = []
+
 class SiteSettingsModel(BaseModel):
     logo_url: str = ""
     announcement: AnnouncementSettings
@@ -281,6 +292,7 @@ class SiteSettingsModel(BaseModel):
     reviews_header: Optional[ReviewsHeaderSettings] = ReviewsHeaderSettings()
     faq_header: Optional[FAQHeaderSettings] = FAQHeaderSettings()
     footer: Optional[FooterSettings] = FooterSettings()
+    instagram_feed: Optional[InstagramFeedSettings] = InstagramFeedSettings()
     trust_badges: List[TrustBadgeItem] = []
     ingredients_active: bool = True
     subscription_active: bool = True

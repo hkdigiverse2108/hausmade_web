@@ -20,9 +20,6 @@ export default function Footer({ settings, onOpenPolicy }) {
                 <img src={settings.logo_url} alt="Hausmade Logo" className="h-9 w-auto object-contain max-h-12" />
               ) : (
                 <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-full bg-[#C97C5D] flex items-center justify-center text-white">
-                    <Sparkles className="w-5 h-5" />
-                  </div>
                   <span className="font-serif-brand text-2xl font-bold tracking-tight text-white">
                     Hausmade<span className="text-xs text-[#C97C5D]">™</span>
                   </span>
@@ -46,7 +43,7 @@ export default function Footer({ settings, onOpenPolicy }) {
             <div>
               <h4 className="font-serif-brand font-bold text-sm text-white uppercase tracking-wider mb-4">Quick Links</h4>
               <ul className="space-y-2.5 text-sm text-[#F5F1E8]/70">
-                <li><a href="#product-selector" className="hover:text-[#C97C5D] transition-colors">Shop Packs</a></li>
+                <li><a href="#product-selector" className="hover:text-[#C97C5D] transition-colors">Shop</a></li>
                 <li><a href="#story" className="hover:text-[#C97C5D] transition-colors">Our Story</a></li>
                 <li><a href="#ingredients" className="hover:text-[#C97C5D] transition-colors">Ingredients</a></li>
                 <li><a href="#reviews" className="hover:text-[#C97C5D] transition-colors">Reviews</a></li>

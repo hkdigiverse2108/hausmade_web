@@ -9,6 +9,7 @@ import Reviews from './components/Reviews';
 // Removed SubscribeSave import
 import FAQ from './components/FAQ';
 import Footer from './components/Footer';
+import InstagramFeed from './components/InstagramFeed';
 import PoliciesModal from './components/PoliciesModal';
 import CartDrawer from './components/CartDrawer';
 import CheckoutModal from './components/CheckoutModal';
@@ -181,7 +182,15 @@ export default function App() {
 
   useEffect(() => {
     const handleHashScroll = () => {
-      const hash = window.location.hash;
+      let hash = window.location.hash;
+      
+      // Auto-redirect to product selector if no hash is present on the homepage
+      if (!hash && window.location.pathname === '/') {
+        window.history.replaceState(null, '', '/#product-selector');
+        hash = '#product-selector';
+        setActiveHash(hash);
+      }
+
       if (hash) {
         const id = hash.replace('#', '');
         const el = document.getElementById(id);
@@ -192,7 +201,9 @@ export default function App() {
     };
 
     window.addEventListener('hashchange', handleHashScroll);
-    setTimeout(handleHashScroll, 500);
+    
+    // Let the page render fully, then smoothly scroll down to the shop section
+    const timerId = setTimeout(handleHashScroll, 800);
 
     const handlePopState = () => {
       const params = new URLSearchParams(window.location.search);
@@ -201,6 +212,7 @@ export default function App() {
     window.addEventListener('popstate', handlePopState);
 
     return () => {
+      clearTimeout(timerId);
       window.removeEventListener('hashchange', handleHashScroll);
       window.removeEventListener('popstate', handlePopState);
     };
@@ -536,6 +548,7 @@ export default function App() {
           if (sectionId === 'contact') return activeHash === '#contact' || activeHash === '#social_links' || activeHash === '#policies';
           if (sectionId === 'products') return activeHash === '#products';
           if (sectionId === 'reviews') return activeHash === '#reviews' || activeHash === '#reviews_header';
+          if (sectionId === 'instagram_feed') return activeHash === '#instagram_feed';
           return false;
         };
 
@@ -617,6 +630,11 @@ export default function App() {
               {shouldShowSection('faqs') && (
                 <div id="faqs" className={getSectionClass('faqs')} onClick={() => handleSectionClick('faqs')}>
                   <FAQ settings={siteSettings} />
+                </div>
+              )}
+              {shouldShowSection('instagram_feed') && (
+                <div id="instagram_feed" className={getSectionClass('instagram_feed')} onClick={() => handleSectionClick('instagram_feed')}>
+                  <InstagramFeed settings={siteSettings} />
                 </div>
               )}
             </main>

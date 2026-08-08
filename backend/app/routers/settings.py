@@ -117,7 +117,20 @@ async def get_site_settings():
                         "q": "What is your 30-day return policy?",
                         "a": "We want you to love your bathing experience! If you are not completely delighted with your purchase for any reason within 30 days, reach out to our customer care team and we will provide a full refund or exchange — no hassle required."
                     }
-                ]
+                ],
+                "instagram_feed": {
+                    "username": "@hausmade",
+                    "title": "Follow Us on Instagram",
+                    "subtitle": "A glimpse into our world",
+                    "posts": [
+                        {"image_url": "/images/soap-hero.png", "post_url": "https://instagram.com/"},
+                        {"image_url": "/images/founder-workshop.png", "post_url": "https://instagram.com/"},
+                        {"image_url": "/images/pack-2.png", "post_url": "https://instagram.com/"},
+                        {"image_url": "/images/pack-3.png", "post_url": "https://instagram.com/"},
+                        {"image_url": "/images/pack-5.png", "post_url": "https://instagram.com/"},
+                        {"image_url": "/images/soap-hero.png", "post_url": "https://instagram.com/"}
+                    ]
+                }
             }
             await settings_collection.insert_one(settings)
         else:
@@ -267,6 +280,15 @@ async def get_site_settings():
                 ]
                 settings["trust_badges"] = default_trust_badges
                 await settings_collection.update_one({"key": "site_settings"}, {"$set": {"trust_badges": default_trust_badges}})
+            if "instagram_feed" not in settings:
+                default_instagram_feed = {
+                    "username": "@hausmade",
+                    "title": "Follow Us on Instagram",
+                    "subtitle": "A glimpse into our world",
+                    "posts": []
+                }
+                settings["instagram_feed"] = default_instagram_feed
+                await settings_collection.update_one({"key": "site_settings"}, {"$set": {"instagram_feed": default_instagram_feed}})
             if "social_links" not in settings:
                 default_social_links = {
                     "instagram": "",
