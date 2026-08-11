@@ -15,10 +15,11 @@ export default function Hero({ settings }) {
       const y = rect.top + rect.height / 2;
       
       // Temporarily hide the badge so elementsFromPoint looks 'behind' it
-      const originalDisplay = badge.style.display;
-      badge.style.display = 'none';
+      // Using visibility instead of display to prevent CSS animations from resetting
+      const originalVisibility = badge.style.visibility;
+      badge.style.visibility = 'hidden';
       const elements = document.elementsFromPoint(x, y);
-      badge.style.display = originalDisplay;
+      badge.style.visibility = originalVisibility;
 
       if (!elements) return;
 
