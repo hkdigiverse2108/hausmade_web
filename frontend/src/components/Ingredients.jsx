@@ -143,24 +143,24 @@ export default function Ingredients({ settings }) {
         
         <div className="text-center max-w-3xl mx-auto mb-16">
           {header.badge && (
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#7A8B6F]/10 border border-[#7A8B6F]/20 mb-4">
-              <HeaderIcon className="w-3.5 h-3.5 text-[#7A8B6F]" />
-              <span className="text-[#7A8B6F] font-bold text-xs uppercase tracking-widest">{header.badge}</span>
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#8C7A5B]/10 border border-[#8C7A5B]/20 mb-4">
+              <HeaderIcon className="w-3.5 h-3.5 text-[#8C7A5B]" />
+              <span className="text-[#8C7A5B] font-bold text-xs uppercase tracking-widest">{header.badge}</span>
             </div>
           )}
           <h2 className="font-serif-brand text-3xl sm:text-4xl lg:text-5xl font-normal text-[#3A2E26] mt-2 leading-tight">
             {header.title_normal || "Ingredients You Can"}{' '}
             {header.title_highlight && (
-              <span className="relative inline-block">
+              <span className="relative inline-block text-[#3A2E26]">
                 {header.title_highlight}
                 <svg className="absolute -bottom-1 left-0 w-full" viewBox="0 0 200 8" fill="none">
-                  <path d="M2 6C50 2 150 2 198 6" stroke="#C97C5D" strokeWidth="3" strokeLinecap="round" opacity="0.4"/>
+                  <path d="M2 6C50 2 150 2 198 6" stroke="#8C7A5B" strokeWidth="3" strokeLinecap="round" opacity="0.3"/>
                 </svg>
               </span>
             )}
           </h2>
           {header.description && (
-            <p className="text-[#3A2E26]/60 mt-4 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
+            <p className="text-[#3A2E26]/70 mt-4 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
               {header.description}
             </p>
           )}
@@ -182,11 +182,11 @@ export default function Ingredients({ settings }) {
                 style={{ transitionDelay: `${idx * 80}ms` }}
               >
                 {/* Clean Editorial Card */}
-                <div className="relative bg-white p-6 sm:p-8 rounded-[1.5rem] border border-[#3A2E26]/5 shadow-sm hover:shadow-md transition-all duration-500 transform group-hover:-translate-y-1 flex flex-col justify-between h-full overflow-hidden">
-                  <div className="relative z-10">
+                <div className="relative bg-[#FDFBF7] p-6 sm:p-8 rounded-t-[4rem] rounded-b-2xl border border-[#3A2E26]/5 shadow-sm hover:shadow-lg transition-all duration-500 transform group-hover:-translate-y-1 flex flex-col items-center text-center justify-between h-full overflow-hidden hover:bg-white pt-10">
+                  <div className="relative z-10 flex flex-col items-center">
                     {/* Clean Icon */}
-                    <div className="w-12 h-12 rounded-full border border-[#3A2E26]/10 flex items-center justify-center mb-6 text-[#8C7A5B] bg-[#FDFBF7]">
-                      <Icon className="w-5 h-5" />
+                    <div className="w-16 h-16 rounded-full border border-[#8C7A5B]/20 flex items-center justify-center mb-6 text-[#8C7A5B] bg-[#F5F1E8]/50 group-hover:bg-[#8C7A5B]/10 transition-colors duration-300">
+                      <Icon className="w-7 h-7" />
                     </div>
 
                     {/* Content */}
@@ -211,44 +211,44 @@ export default function Ingredients({ settings }) {
             tableVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
           }`}
         >
-          <div className="relative max-w-full overflow-hidden bg-[#FDFBF7] p-6 sm:p-10 md:p-12 rounded-[2rem] border border-[#3A2E26]/5 shadow-sm transform transition-all duration-500 hover:shadow-md">
+          <div className="relative max-w-full overflow-hidden bg-white p-6 sm:p-10 md:p-12 rounded-[2rem] border border-[#3A2E26]/5 shadow-xl transform transition-all duration-500 hover:shadow-2xl">
             
             <div className="text-center mb-8 sm:mb-10">
               {diffSettings.badge && (
-                <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#C97C5D]/10 border border-[#C97C5D]/20 mb-3">
-                  <DiffBadgeIcon className="w-3.5 h-3.5 text-[#C97C5D]" />
-                  <span className="text-[#C97C5D] font-bold text-[10px] uppercase tracking-widest">{diffSettings.badge}</span>
+                <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#8C7A5B]/10 border border-[#8C7A5B]/20 mb-3">
+                  <DiffBadgeIcon className="w-3.5 h-3.5 text-[#8C7A5B]" />
+                  <span className="text-[#8C7A5B] font-bold text-[10px] uppercase tracking-widest">{diffSettings.badge}</span>
                 </div>
               )}
               <h3 className="font-serif-brand text-2xl sm:text-3xl lg:text-4xl font-normal text-[#3A2E26]">
                 {diffSettings.title_normal}{' '}
-                {diffSettings.title_italic && <span className="italic text-[#7A8B6F]">{diffSettings.title_italic}</span>}
+                {diffSettings.title_italic && <span className="italic text-[#8C7A5B]">{diffSettings.title_italic}</span>}
               </h3>
               {diffSettings.description && (
-                <p className="text-sm sm:text-base text-[#3A2E26]/55 mt-2 max-w-lg mx-auto">
+                <p className="text-sm sm:text-base text-[#3A2E26]/60 mt-2 max-w-lg mx-auto">
                   {diffSettings.description}
                 </p>
               )}
             </div>
 
-            <div className="overflow-x-auto w-full rounded-2xl border border-[#3A2E26]/8 shadow-inner bg-white/60 backdrop-blur-sm scrollbar-thin">
+            <div className="overflow-x-auto w-full rounded-2xl border border-[#3A2E26]/5 shadow-inner bg-[#FDFBF7]/60 backdrop-blur-sm scrollbar-thin">
               <table className="w-full min-w-[520px] text-left border-collapse">
                 <thead>
                   <tr className="border-b border-[#3A2E26]/10">
                     <th className="py-5 px-4 sm:px-6 font-bold text-xs sm:text-sm text-[#3A2E26] uppercase tracking-wider">
                       {diffSettings.col1_title || "Botanical Quality"}
                     </th>
-                    <th className="py-5 px-4 sm:px-6 font-bold text-xs sm:text-sm text-center text-[#3A2E26]/40 uppercase tracking-wider">
+                    <th className="py-5 px-4 sm:px-6 font-bold text-xs sm:text-sm text-center text-[#3A2E26]/50 uppercase tracking-wider">
                       <span className="inline-flex flex-col items-center">
                         <span className="text-xs">{diffSettings.col2_title || "Mass-Market"}</span>
-                        {diffSettings.col2_subtitle && <span className="text-[10px] text-[#3A2E26]/30 font-normal normal-case">{diffSettings.col2_subtitle}</span>}
+                        {diffSettings.col2_subtitle && <span className="text-[10px] text-[#3A2E26]/40 font-normal normal-case">{diffSettings.col2_subtitle}</span>}
                       </span>
                     </th>
-                    <th className="py-5 px-4 sm:px-6 font-bold text-xs sm:text-sm text-center text-[#7A8B6F] bg-gradient-to-b from-[#7A8B6F]/8 to-[#7A8B6F]/3 relative uppercase tracking-wider">
+                    <th className="py-5 px-4 sm:px-6 font-bold text-xs sm:text-sm text-center text-[#8C7A5B] bg-gradient-to-b from-[#8C7A5B]/10 to-[#8C7A5B]/5 relative uppercase tracking-wider">
                       <span className="relative z-10 flex flex-col items-center">
                         <span className="text-xs">{diffSettings.col3_title || "Hausmade™"}</span>
                         {diffSettings.col3_badge && (
-                          <span className="text-[10px] text-white bg-[#7A8B6F] px-2.5 py-0.5 rounded-full mt-1 font-bold tracking-wider shadow-sm">
+                          <span className="text-[10px] text-white bg-[#8C7A5B] px-2.5 py-0.5 rounded-full mt-1 font-bold tracking-wider shadow-sm">
                             {diffSettings.col3_badge}
                           </span>
                         )}
@@ -260,37 +260,37 @@ export default function Ingredients({ settings }) {
                   {comparison.map((row, index) => (
                     <tr 
                       key={index} 
-                      className={`group hover:bg-[#7A8B6F]/5 transition-all duration-500 ${
+                      className={`group hover:bg-[#8C7A5B]/5 transition-all duration-500 ${
                         tableVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'
                       }`}
                       style={{ transitionDelay: `${400 + index * 120}ms` }}
                     >
                       <td className="py-4 sm:py-5 px-4 sm:px-6 transition-all duration-300 group-hover:pl-7">
-                        <p className="font-semibold text-[#3A2E26] text-sm sm:text-base group-hover:text-[#7A8B6F] transition-colors">{row.feature}</p>
-                        {row.detail && <p className="text-[11px] sm:text-xs text-[#3A2E26]/45 mt-0.5 leading-relaxed">{row.detail}</p>}
+                        <p className="font-semibold text-[#3A2E26] text-sm sm:text-base group-hover:text-[#8C7A5B] transition-colors">{row.feature}</p>
+                        {row.detail && <p className="text-[11px] sm:text-xs text-[#3A2E26]/50 mt-0.5 leading-relaxed">{row.detail}</p>}
                       </td>
                       <td className="py-4 sm:py-5 px-4 sm:px-6 text-center">
                         <div className="flex items-center justify-center">
                           {row.commercial ? (
-                            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#7A8B6F]/15 border border-[#7A8B6F]/20 flex items-center justify-center">
-                              <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-[#7A8B6F]" />
+                            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#8C7A5B]/15 border border-[#8C7A5B]/20 flex items-center justify-center">
+                              <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-[#8C7A5B]" />
                             </div>
                           ) : (
-                            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-red-50 border border-red-200/50 flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:bg-red-100">
-                              <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-400" />
+                            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#F5F1E8] border border-[#3A2E26]/10 flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:bg-[#FDFBF7]">
+                              <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-500/60" />
                             </div>
                           )}
                         </div>
                       </td>
-                      <td className="py-4 sm:py-5 px-4 sm:px-6 text-center bg-[#7A8B6F]/3 group-hover:bg-[#7A8B6F]/8 transition-colors">
+                      <td className="py-4 sm:py-5 px-4 sm:px-6 text-center bg-[#8C7A5B]/5 group-hover:bg-[#8C7A5B]/10 transition-colors">
                         <div className="flex items-center justify-center">
                           {row.pure ? (
-                            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#7A8B6F]/15 border border-[#7A8B6F]/20 flex items-center justify-center transition-all duration-300 group-hover:scale-125 group-hover:bg-[#7A8B6F]/25 group-hover:shadow-md group-hover:shadow-[#7A8B6F]/20">
-                              <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-[#7A8B6F]" />
+                            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#8C7A5B]/15 border border-[#8C7A5B]/20 flex items-center justify-center transition-all duration-300 group-hover:scale-125 group-hover:bg-[#8C7A5B]/25 group-hover:shadow-md group-hover:shadow-[#8C7A5B]/20">
+                              <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-[#8C7A5B]" />
                             </div>
                           ) : (
-                            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-red-50 border border-red-200/50 flex items-center justify-center">
-                              <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-400" />
+                            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#F5F1E8] border border-[#3A2E26]/10 flex items-center justify-center">
+                              <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-500/60" />
                             </div>
                           )}
                         </div>
@@ -303,12 +303,12 @@ export default function Ingredients({ settings }) {
 
             {/* Bottom trust badge */}
             {diffSettings.footer_text && (
-              <div className="flex items-center justify-center gap-2 mt-6 sm:mt-8">
-                <div className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/70 border border-[#7A8B6F]/15 shadow-sm">
-                  <DiffFooterIcon className="w-3.5 h-3.5 text-[#7A8B6F]" />
-                  <span className="text-[11px] sm:text-xs font-bold text-[#3A2E26]/60 uppercase tracking-wider">{diffSettings.footer_text}</span>
-                </div>
-              </div>
+               <div className="flex items-center justify-center gap-2 mt-6 sm:mt-8">
+                 <div className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#FDFBF7] border border-[#8C7A5B]/15 shadow-sm">
+                   <DiffFooterIcon className="w-3.5 h-3.5 text-[#8C7A5B]" />
+                   <span className="text-[11px] sm:text-xs font-bold text-[#3A2E26]/60 uppercase tracking-wider">{diffSettings.footer_text}</span>
+                 </div>
+               </div>
             )}
           </div>
         </div>

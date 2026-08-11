@@ -1,8 +1,48 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Star, ArrowRight } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 
 export default function Hero({ settings }) {
+  const [isOverDark, setIsOverDark] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const badge = document.getElementById('rotating-badge');
+      if (!badge) return;
+      
+      const rect = badge.getBoundingClientRect();
+      const x = rect.left + rect.width / 2;
+      const y = rect.top + rect.height / 2;
+      
+      // Temporarily hide the badge so elementsFromPoint looks 'behind' it
+      const originalDisplay = badge.style.display;
+      badge.style.display = 'none';
+      const elements = document.elementsFromPoint(x, y);
+      badge.style.display = originalDisplay;
+
+      if (!elements) return;
+
+      const overDark = elements.some(el => {
+        const bg = window.getComputedStyle(el).backgroundColor;
+        return (
+          el.classList.contains('bg-[#241D17]') || 
+          el.classList.contains('bg-[#1A1512]') || 
+          el.classList.contains('bg-[#3A2E26]') ||
+          bg === 'rgb(36, 29, 23)' || 
+          bg === 'rgb(26, 21, 18)' ||
+          bg === 'rgb(58, 46, 38)'
+        );
+      });
+      
+      setIsOverDark(overDark);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll(); // Initial check
+    
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const badge = settings?.badge || "Hausmade™ Luxury Bath Element";
   const title_normal_1 = settings?.title_normal_1 || "Raw. Pure.";
   const title_italic = settings?.title_italic || "Hausmade.";
@@ -26,8 +66,13 @@ export default function Hero({ settings }) {
 
   return (
     <>
-      <section className="min-h-screen w-full flex flex-col justify-center overflow-hidden bg-[#FDFBF7]">
-        <div className="w-full max-w-7xl mx-auto flex flex-col md:flex-row items-center">
+      <section className="min-h-screen w-full flex flex-col justify-center overflow-hidden bg-[#FDFBF7] relative">
+        {/* Soft Ambient Glowing Background Elements */}
+        <div className="absolute top-[-20%] left-[-10%] w-[60vw] h-[60vw] rounded-full bg-[#F3E5D8] blur-[120px] opacity-60 pointer-events-none z-0"></div>
+        <div className="absolute bottom-[-20%] right-[-10%] w-[50vw] h-[50vw] rounded-full bg-[#E8DCCB] blur-[150px] opacity-50 pointer-events-none z-0"></div>
+        <div className="absolute top-[30%] right-[20%] w-[40vw] h-[40vw] rounded-full bg-[#FFF] blur-[100px] opacity-40 pointer-events-none z-0"></div>
+
+        <div className="w-full max-w-7xl mx-auto flex flex-col md:flex-row items-center relative z-10">
           
           {/* Left Side: Typography & CTA */}
           <div className="w-full md:w-1/2 flex flex-col justify-center px-6 sm:px-12 lg:px-16 pt-32 pb-16 md:py-32 relative z-10">
@@ -73,10 +118,10 @@ export default function Hero({ settings }) {
             </div>
           </div>
 
-          {/* Right Side: Editorial Imagery */}
+          {/* Right Side: Imagery with Soft Shadows */}
           <div className="w-full md:w-1/2 min-h-[50vh] md:h-screen relative flex items-center justify-center p-8 lg:p-12 overflow-hidden">
-           {/* Main Image - Professional Soft Rectangle */}
-           <div className="relative w-full max-w-[380px] aspect-[4/5] rounded-[2rem] overflow-hidden shadow-xl animate-float z-10 border-4 border-[#FDFBF7]/50">
+           {/* Main Image - Soft Professional Rectangle */}
+           <div className="relative w-full max-w-[380px] aspect-[4/5] rounded-[2rem] overflow-hidden shadow-2xl animate-float z-10 border-4 border-white/60 backdrop-blur-sm">
               <img 
                  src={settings?.image_url || "/images/soap-hero.png"}
                  alt="Primary Hero"
@@ -86,7 +131,7 @@ export default function Hero({ settings }) {
            </div>
 
            {/* Secondary Overlapping Image */}
-           <div className="absolute bottom-[12%] left-[5%] md:left-0 lg:left-[5%] w-48 lg:w-60 aspect-[4/3] rounded-[1.5rem] overflow-hidden shadow-2xl border-[8px] border-[#FDFBF7] animate-float-reverse z-20" style={{ animationDelay: '0.5s' }}>
+           <div className="absolute bottom-[12%] left-[5%] md:left-0 lg:left-[5%] w-48 lg:w-60 aspect-[4/3] rounded-[1.5rem] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.15)] border-[8px] border-white/80 animate-float-reverse z-20" style={{ animationDelay: '0.5s' }}>
               <img 
                  src="/images/soap-stack.png"
                  alt="Soap Stack"
@@ -95,10 +140,17 @@ export default function Hero({ settings }) {
            </div>
 
            {/* Subtle Text Badge overlay (Fixed & Rotating) */}
-           <div className="fixed bottom-8 right-8 z-[99] w-32 h-32 hidden lg:flex items-center justify-center opacity-80 mix-blend-multiply pointer-events-none">
+           <div 
+              id="rotating-badge"
+              className={`fixed bottom-8 right-8 z-[99] w-32 h-32 hidden lg:flex items-center justify-center pointer-events-none transition-all duration-500 ${
+                isOverDark ? 'opacity-100 mix-blend-normal' : 'opacity-80 mix-blend-multiply'
+              }`}
+           >
               <svg viewBox="0 0 100 100" className="w-full h-full animate-[spin_20s_linear_infinite]">
                  <path id="circle" d="M 50, 50 m -37, 0 a 37,37 0 1,1 74,0 a 37,37 0 1,1 -74,0" fill="none" />
-                 <text className="text-[10px] uppercase tracking-[0.2em] font-bold fill-[#3A2E26]">
+                 <text className={`text-[10px] uppercase tracking-[0.2em] font-bold transition-colors duration-500 ${
+                   isOverDark ? 'fill-[#FDFBF7]' : 'fill-[#3A2E26]'
+                 }`}>
                    <textPath href="#circle">
                      {settings?.hero?.rotating_text || "HANDCRAFTED • 100% PURE ART •"}
                    </textPath>

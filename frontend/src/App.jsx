@@ -576,9 +576,9 @@ export default function App() {
         };
 
         return (
-          <div className="min-h-screen flex flex-col selection:bg-[#7A8B6F] selection:text-white">
+          <div className={`min-h-screen flex flex-col selection:bg-[#7A8B6F] selection:text-white ${user?.is_admin ? 'pt-[40px]' : ''}`}>
             {user?.is_admin && (
-              <div className="bg-purple-950 text-[#E6D5C3] px-4 py-2 flex items-center justify-between text-xs font-semibold z-[100] border-b border-[#E6D5C3]/20">
+              <div className="fixed top-0 left-0 right-0 bg-purple-950 text-[#E6D5C3] px-4 py-2 flex items-center justify-between text-xs font-semibold z-[100] border-b border-[#E6D5C3]/20">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-green-500 animate-ping"></span>
                   <span>Logged in as <strong>Administrator</strong> (Storefront Preview Mode)</span>

@@ -31,6 +31,30 @@ export default function Reviews({ settings }) {
       rating: 5,
       verified: 'Verified Bather',
       comment: '"Lasts twice as long as store soap. One bar lasted me nearly 4 weeks in the shower. The Subscribe & Save option is great."'
+    },
+    {
+      id: 'static-4',
+      name: 'Elena P.',
+      initial: 'E',
+      rating: 5,
+      verified: 'Verified Buyer',
+      comment: '"Absolutely love the sandalwood aroma. It fills the whole bathroom without being overpowering. Skin feels amazingly soft!"'
+    },
+    {
+      id: 'static-5',
+      name: 'Michael T.',
+      initial: 'M',
+      rating: 5,
+      verified: 'Google Verified',
+      comment: '"Best soap I’ve ever used. The lather is insanely rich and it doesn’t dry my skin out like normal bar soaps do."'
+    },
+    {
+      id: 'static-6',
+      name: 'Priya R.',
+      initial: 'P',
+      rating: 5,
+      verified: 'Verified Bather',
+      comment: '"The kesar infusion genuinely brightened my skin tone over a few weeks. So luxurious and totally worth the price."'
     }
   ];
 
@@ -40,6 +64,112 @@ export default function Reviews({ settings }) {
     const data = localStorage.getItem('hausmade_editing_review_data');
     return data ? JSON.parse(data) : null;
   });
+
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStartX, setDragStartX] = useState(null);
+
+  const minSwipeDistance = 50;
+
+  // Touch Handlers
+  const onTouchStart = (e) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEndHandler = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    if (distance > minSwipeDistance) setActiveIndex(prev => prev + 1);
+    if (distance < -minSwipeDistance) setActiveIndex(prev => prev - 1);
+  };
+
+  // Mouse Drag Handlers
+  const onMouseDown = (e) => {
+    setIsDragging(true);
+    setDragStartX(e.clientX);
+  };
+
+  const onMouseMove = (e) => {
+    if (!isDragging) return;
+    const distance = dragStartX - e.clientX;
+    if (distance > minSwipeDistance) {
+      setActiveIndex(prev => prev + 1);
+      setIsDragging(false);
+    } else if (distance < -minSwipeDistance) {
+      setActiveIndex(prev => prev - 1);
+      setIsDragging(false);
+    }
+  };
+
+  const onMouseUp = () => setIsDragging(false);
+  const onMouseLeave = () => setIsDragging(false);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveIndex(prev => (prev + 1)); // We will modulo this in getCardStyle
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const getCardStyle = (idx, len) => {
+    if (len === 0) return {};
+    let diff = (idx - activeIndex) % len;
+    
+    if (diff < -Math.floor(len/2)) diff += len;
+    if (diff > Math.floor(len/2)) diff -= len;
+
+    let translateX = 0;
+    let scale = 1;
+    let opacity = 1;
+    let zIndex = 30;
+
+    if (diff === 0) {
+        translateX = 0;
+        scale = 1;
+        opacity = 1;
+        zIndex = 30;
+    } else if (diff === 1) {
+        translateX = 85;
+        scale = 0.85;
+        opacity = 0.5;
+        zIndex = 20;
+    } else if (diff === -1) {
+        translateX = -85;
+        scale = 0.85;
+        opacity = 0.5;
+        zIndex = 20;
+    } else if (diff === 2) {
+        translateX = 160;
+        scale = 0.7;
+        opacity = 0.15;
+        zIndex = 10;
+    } else if (diff === -2) {
+        translateX = -160;
+        scale = 0.7;
+        opacity = 0.15;
+        zIndex = 10;
+    } else {
+        translateX = diff > 0 ? 250 : -250;
+        scale = 0.5;
+        opacity = 0;
+        zIndex = 0;
+    }
+
+    return {
+        transform: `translateX(${translateX}%) scale(${scale})`,
+        opacity,
+        zIndex,
+        pointerEvents: diff === 0 ? 'auto' : 'none',
+        transition: 'all 0.6s cubic-bezier(0.25, 1, 0.5, 1)'
+    };
+  };
 
   useEffect(() => {
     async function loadReviews() {
@@ -60,7 +190,13 @@ export default function Reviews({ settings }) {
               comment: cleanComment
             };
           });
-          setReviewsList(formatted);
+          if (formatted.length < 6) {
+            const needed = 6 - formatted.length;
+            const remaining = staticReviews.slice(formatted.length, formatted.length + needed);
+            setReviewsList([...formatted, ...remaining]);
+          } else {
+            setReviewsList(formatted);
+          }
         } else {
           setReviewsList(staticReviews);
         }
@@ -100,27 +236,6 @@ export default function Reviews({ settings }) {
     };
   }, []);
 
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // Auto-slide every 5 seconds
-  useEffect(() => {
-    const activeLength = finalReviews.length;
-    if (activeLength === 0) return;
-    const timer = setInterval(() => {
-      handleNext();
-    }, 5000);
-    return () => clearInterval(timer);
-  }, [currentIndex, isMobile]);
-
   const finalReviews = (() => {
     if (editingReviewId) {
       const matched = reviewsList.find(r => r.id === editingReviewId || r._id === editingReviewId);
@@ -136,128 +251,86 @@ export default function Reviews({ settings }) {
     return reviewsList;
   })();
 
-  const handleNext = () => {
-    if (finalReviews.length === 0) return;
-    setCurrentIndex((prev) => (prev + 1) % finalReviews.length);
-  };
-
-  const handlePrev = () => {
-    if (finalReviews.length === 0) return;
-    setCurrentIndex((prev) => (prev - 1 + finalReviews.length) % finalReviews.length);
-  };
-
-  const handleDotClick = (idx) => {
-    setCurrentIndex(idx);
-  };
-
-  // Duplicate list to allow seamless loop sliding on desktop viewports
-  const displayReviews = [...finalReviews, ...finalReviews];
-
   return (
-    <section id="reviews" className="py-16 lg:py-24 bg-[#EFECE6] scroll-mt-20 overflow-hidden">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+    <section id="reviews" className="py-16 lg:py-24 bg-[#F5F1E8] scroll-mt-20 overflow-hidden relative">
+      {/* Abstract background blobs */}
+      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-[#8C7A5B]/5 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
+      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-[#C97C5D]/5 rounded-full blur-[60px] translate-y-1/3 -translate-x-1/4 pointer-events-none"></div>
+
+      <div className="w-full relative z-10">
         
-        {/* Header matching requested style */}
-        <div className="text-center max-w-3xl mx-auto mb-12">
-          <div className="flex items-center justify-center gap-4 mb-2">
-            <span className="h-[1px] w-12 bg-[#3A2E26]/20"></span>
-            <span className="text-[#8C7A5B] font-bold text-xs uppercase tracking-widest">{headerBadge}</span>
-            <span className="h-[1px] w-12 bg-[#3A2E26]/20"></span>
+        {/* Header */}
+        <div className="text-center max-w-3xl mx-auto mb-12 lg:mb-16 px-4">
+          <div className="flex items-center justify-center gap-4 mb-4">
+            <span className="h-[1px] w-8 bg-[#3A2E26]/20"></span>
+            <span className="text-[#8C7A5B] font-bold text-[10px] sm:text-xs uppercase tracking-widest">{headerBadge}</span>
+            <span className="h-[1px] w-8 bg-[#3A2E26]/20"></span>
           </div>
           
-          <h2 className="font-serif-brand text-2xl sm:text-4xl lg:text-5xl font-normal text-[#3A2E26] mt-2">
+          <h2 className="font-serif-brand text-3xl sm:text-4xl lg:text-5xl font-normal text-[#3A2E26] mt-2">
             {headerTitle}
           </h2>
 
-          <div className="flex items-center justify-center gap-2 text-xs sm:text-sm text-[#3A2E26]/70 mt-3 font-medium">
-            <ShieldCheck className="w-4 h-4 text-[#8C7A5B]" />
-            <span>{ratingSubtext}</span>
+          <div className="flex items-center justify-center gap-2 text-xs text-[#3A2E26]/70 mt-4 font-medium">
+            <ShieldCheck className="w-3.5 h-3.5 text-[#8C7A5B]" />
+            <span className="uppercase tracking-wider">{ratingSubtext}</span>
           </div>
         </div>
 
-        {/* Carousel Container */}
-        <div className="relative max-w-6xl mx-auto px-8 sm:px-10">
-          
-          {/* Previous Arrow Button */}
-          <button
-            onClick={handlePrev}
-            className="absolute -left-1 sm:-left-2 top-1/2 -translate-y-1/2 z-10 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/90 shadow-md border border-[#3A2E26]/10 flex items-center justify-center text-[#3A2E26] hover:bg-[#8C7A5B] hover:text-white transition-all cursor-pointer"
-            aria-label="Previous review"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
+        {/* Coverflow Container */}
+        <div 
+          className="relative w-full h-[380px] sm:h-[450px] flex justify-center items-center overflow-hidden max-w-[1400px] mx-auto py-8 cursor-grab active:cursor-grabbing"
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEndHandler}
+          onMouseDown={onMouseDown}
+          onMouseMove={onMouseMove}
+          onMouseUp={onMouseUp}
+          onMouseLeave={onMouseLeave}
+        >
+          {finalReviews.map((rev, idx) => {
+            const style = getCardStyle(idx, finalReviews.length);
+            return (
+              <div
+                key={rev.id || idx}
+                style={style}
+                className="absolute w-[85vw] sm:w-[360px] md:w-[420px] h-[300px] sm:h-[340px] rounded-[2rem] p-8 sm:p-10 border shadow-2xl flex flex-col bg-white border-[#3A2E26]/5 shadow-black/5"
+              >
+                <div className="absolute -top-6 right-4 text-[120px] font-serif-brand leading-none select-none transition-all duration-500 group-hover:scale-110 group-hover:rotate-6 text-[#8C7A5B]/10">"</div>
+                
+                <div className="relative z-10 flex flex-col h-full">
+                  <div className="flex text-[#FBBF24] mb-5">
+                    {[...Array(rev.rating)].map((_, i) => (
+                      <Star key={i} className="w-4 h-4 fill-current drop-shadow-sm" />
+                    ))}
+                  </div>
 
-          {/* Review Cards Grid with smooth CSS track sliding */}
-          <div className="w-full overflow-hidden min-h-[220px]">
-            <div 
-              className="flex transition-transform duration-500 ease-in-out"
-              style={{ transform: `translateX(-${currentIndex * (isMobile ? 100 : 33.3333)}%)` }}
-            >
-              {displayReviews.map((rev, idx) => (
-                <div
-                  key={`${rev.id}-${idx}`}
-                  className="w-full md:w-1/3 shrink-0 px-2 sm:px-3"
-                >
-                  <div className="bg-white rounded-3xl p-8 sm:p-10 border border-[#3A2E26]/5 shadow-sm hover:shadow-md transition-all duration-500 flex flex-col justify-between h-full min-h-[220px] sm:min-h-[260px] cursor-pointer select-none group relative overflow-hidden">
-                    <div className="absolute -top-4 right-4 text-[120px] font-serif-brand text-[#8C7A5B]/5 leading-none select-none">"</div>
-                    <div className="relative z-10">
-                      {/* Comment */}
-                      <p className="text-base sm:text-lg text-[#3A2E26]/80 font-serif-brand italic leading-relaxed mb-8">
-                        {rev.comment}
-                      </p>
-                      
-                      {/* Author Footer */}
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-[#8C7A5B]/10 text-[#8C7A5B] font-serif-brand font-bold text-sm flex items-center justify-center shrink-0">
-                          {rev.initial}
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-sm text-[#3A2E26] leading-snug">
-                            {rev.name}
-                          </h3>
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            <div className="flex text-[#8C7A5B]">
-                              {[...Array(rev.rating)].map((_, i) => (
-                                <Star key={i} className="w-3 h-3 fill-current" />
-                              ))}
-                            </div>
-                            <span className="text-[9px] text-[#3A2E26]/50 font-medium uppercase tracking-widest flex items-center gap-0.5">
-                              {rev.verified}
-                            </span>
-                          </div>
-                        </div>
+                  <p className="text-base sm:text-lg font-serif-brand italic leading-relaxed mb-6 line-clamp-4 text-[#3A2E26]/90">
+                    {rev.comment}
+                  </p>
+                  
+                  {/* Author Footer */}
+                  <div className="flex items-center gap-4 mt-auto">
+                    <div className="w-12 h-12 rounded-full font-serif-brand font-bold text-lg flex items-center justify-center shrink-0 bg-[#8C7A5B]/10 text-[#8C7A5B]">
+                      {rev.initial}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-sm leading-snug tracking-wide text-[#3A2E26]">
+                        {rev.name}
+                      </h3>
+                      <div className="flex items-center gap-1 mt-1">
+                        <span className="text-[9px] font-bold uppercase tracking-[0.2em] flex items-center gap-1 text-[#3A2E26]/50">
+                          <ShieldCheck className="w-3 h-3" />
+                          {rev.verified}
+                        </span>
                       </div>
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Next Arrow Button */}
-          <button
-            onClick={handleNext}
-            className="absolute -right-1 sm:-right-2 top-1/2 -translate-y-1/2 z-10 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#8C7A5B] shadow-md flex items-center justify-center text-white hover:bg-[#77674b] transition-all cursor-pointer"
-            aria-label="Next review"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
-
+              </div>
+            );
+          })}
         </div>
-
-        <div className="flex justify-center items-center gap-2 mt-8">
-          {finalReviews.map((_, idx) => (
-            <button
-              key={idx}
-              onClick={() => handleDotClick(idx)}
-              className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${
-                currentIndex === idx ? 'w-6 bg-[#8C7A5B]' : 'w-2 bg-[#3A2E26]/20'
-              }`}
-              aria-label={`Go to slide ${idx + 1}`}
-            />
-          ))}
-        </div>
-
       </div>
     </section>
   );

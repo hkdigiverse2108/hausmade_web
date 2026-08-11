@@ -48,7 +48,7 @@ export default function Header({ cartCount, onOpenCart, user, isAuthenticated, o
   ];
 
   return (
-    <div className={`fixed top-0 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none transition-all duration-500 ${scrolled ? 'mt-4' : 'mt-2'}`}>
+    <div className={`fixed ${user?.is_admin ? 'top-10' : 'top-0'} left-0 right-0 z-50 flex justify-center px-4 pointer-events-none transition-all duration-500 ${scrolled ? 'mt-4' : 'mt-2'}`}>
       <header 
         className={`pointer-events-auto rounded-full transition-all duration-500 w-full max-w-6xl ${
           scrolled 
