@@ -45,6 +45,7 @@ export const PACK_OPTIONS = [
 ];
 
 export default function ProductSelector({ products = [], onAddToCart, onBuyNow, selectedPack, quantity, setQuantity, activeImageIndex, setActiveImageIndex, settings }) {
+  const [isMainHovered, setIsMainHovered] = useState(false);
   const isSubscription = false;
 
   const items = (products && products.length > 0 ? products : PACK_OPTIONS).filter(p => p.active !== false);
@@ -119,7 +120,7 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
   };
 
   return (
-    <section id="product-selector" className="py-16 lg:py-24 bg-[#F5F1E8] border-t border-b border-[#3A2E26]/10 scroll-mt-20">
+    <section id="product-selector" className="py-16 lg:py-24 bg-[#F5F1E8] border-t border-b border-[#3A2E26]/10 scroll-mt-20 overflow-x-hidden">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         
         <div className="text-center max-w-3xl mx-auto mb-12">
@@ -132,23 +133,24 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
           </p>
         </div>
 
-        <div className="flex flex-col lg:flex-row items-stretch lg:items-start lg:gap-0 mt-8 relative max-w-6xl mx-auto">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-start lg:gap-0 mt-8 relative max-w-6xl mx-auto lg:translate-x-12">
           
           {/* Left Side: Product Gallery */}
           <div className="w-full lg:w-7/12 relative">
-            <div className="relative overflow-hidden bg-transparent rounded-sm aspect-square lg:aspect-[4/3] w-full">
+            <div 
+              className="relative overflow-hidden bg-transparent rounded-sm aspect-square lg:aspect-[4/3] w-full"
+              onMouseEnter={() => setIsMainHovered(true)}
+              onMouseLeave={() => setIsMainHovered(false)}
+            >
               <img
                 src={images[activeImageIndex]?.src || pack.image}
                 alt={images[activeImageIndex]?.alt || pack.title}
                 className="w-full h-full object-cover transition-transform duration-[1.5s] ease-out hover:scale-105"
               />
-              <div className="absolute top-6 left-6 text-[#FDFBF7] text-[10px] px-2 py-1 uppercase tracking-[0.2em] mix-blend-difference drop-shadow-sm font-mono">
-                — FRESH BATCH
-              </div>
             </div>
 
             {/* Thumbnails */}
-            <div className="grid grid-cols-3 gap-3 mt-4 lg:pr-32">
+            <div className="grid grid-cols-3 gap-3 mt-4 lg:pr-28">
               {images.map((img, idx) => (
                 <button
                   key={idx}
@@ -166,8 +168,8 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
           </div>
 
           {/* Right Side: Configuration & Add to Cart */}
-          <div className="w-full lg:w-5/12 z-20 relative lg:-ml-24 lg:mt-16">
-            <div className="bg-[#FDFBF7] p-8 sm:p-10 lg:p-12 border border-[#3A2E26]/5 shadow-[0_20px_50px_rgba(58,46,38,0.05)] rounded-sm space-y-10">
+          <div className={`w-full lg:w-5/12 z-20 relative lg:-ml-24 lg:mt-16 transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${isMainHovered ? 'lg:translate-x-24' : ''}`}>
+            <div className="bg-[#FDFBF7] p-6 sm:p-8 lg:p-10 border border-[#3A2E26]/5 shadow-[0_20px_50px_rgba(58,46,38,0.05)] rounded-sm space-y-8">
             
             <div className="space-y-6">
               <div>
@@ -210,7 +212,7 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
             </div>
 
             {/* Stepper, Add to Cart, Buy Now Row */}
-            <div className="pt-8 space-y-3">
+            <div className="pt-4 space-y-3">
               <div className="flex flex-col sm:flex-row gap-3">
                 {/* Stepper */}
                 <div className="flex items-center justify-between border border-[#3A2E26] bg-transparent p-1 h-14 w-full sm:w-32 shrink-0">
@@ -240,7 +242,7 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
                   type="button"
                   onClick={handleAdd}
                   disabled={isPackOutOfStock}
-                  className={`flex-1 w-full sm:w-auto h-14 border text-[10px] font-bold uppercase tracking-[0.2em] transition-all duration-300 flex items-center justify-center ${
+                  className={`flex-1 w-full sm:w-auto h-14 border text-xs font-bold uppercase tracking-[0.2em] transition-all duration-300 flex items-center justify-center ${
                     isPackOutOfStock
                       ? 'bg-transparent border-[#3A2E26]/20 text-[#3A2E26]/40 cursor-not-allowed'
                       : 'bg-transparent border-[#3A2E26] text-[#3A2E26] hover:bg-[#3A2E26] hover:text-[#FDFBF7] cursor-pointer'
@@ -255,7 +257,7 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
                 type="button"
                 onClick={handleBuy}
                 disabled={isPackOutOfStock}
-                className={`w-full h-14 text-[10px] font-bold uppercase tracking-[0.2em] transition-all duration-500 flex items-center justify-center gap-3 ${
+                className={`w-full h-14 text-xs font-bold uppercase tracking-[0.2em] transition-all duration-500 flex items-center justify-center gap-3 ${
                   isPackOutOfStock
                     ? 'bg-[#3A2E26]/5 text-[#3A2E26]/40 cursor-not-allowed'
                     : 'bg-[#C97C5D] text-[#FDFBF7] hover:bg-[#A96348] cursor-pointer hover:shadow-md'
@@ -270,7 +272,7 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
             </div>
 
             {/* Reassurance Icons */}
-            <div className="pt-10 grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-4 text-center sm:text-left text-[9px] uppercase tracking-[0.1em] text-[#3A2E26]/60">
+            <div className="pt-4 grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-4 text-center sm:text-left text-[9px] uppercase tracking-[0.1em] text-[#3A2E26]/60">
               <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2">
                 <Truck className="w-3.5 h-3.5 shrink-0 opacity-70" />
                 <span className="leading-relaxed">Free Shipping over ₹499</span>

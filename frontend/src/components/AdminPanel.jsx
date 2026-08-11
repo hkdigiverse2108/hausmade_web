@@ -4517,15 +4517,15 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">WhatsApp URL</label>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">WhatsApp Number</label>
                         <input
-                          type="url"
+                          type="text"
                           value={settingsForm.social_links?.whatsapp || ''}
                           onChange={(e) => setSettingsForm({
                             ...settingsForm,
                             social_links: { ...settingsForm.social_links, whatsapp: e.target.value }
                           })}
-                          placeholder="https://wa.me/91..."
+                          placeholder="e.g. 919876543210"
                           className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
                         />
                       </div>

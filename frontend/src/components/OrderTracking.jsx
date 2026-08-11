@@ -9,6 +9,7 @@ export default function OrderTracking() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     const params = new URLSearchParams(window.location.search);
     const id = params.get('id') || params.get('awb');
     if (id) {
@@ -60,7 +61,7 @@ export default function OrderTracking() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#FDFBF7] text-[#3A2E26] py-12 px-4 sm:px-6 lg:px-8 font-sans">
+    <div className="min-h-screen bg-[#FDFBF7] text-[#3A2E26] pt-32 pb-12 px-4 sm:px-6 lg:px-8 font-sans">
       <div className="max-w-3xl mx-auto space-y-8">
         
         <div className="text-center space-y-2">

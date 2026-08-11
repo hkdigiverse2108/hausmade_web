@@ -547,9 +547,7 @@ export default function App() {
         </div>
       )}
 
-      {activeHash === '#track' ? (
-        <OrderTracking />
-      ) : !isAdminView && !isProfileOpen && (() => {
+      {!isAdminView && !isProfileOpen && (() => {
         const isPreviewMode = window.location.search.includes('preview=true');
         const getSectionClass = (sectionId) => isPreviewMode 
           ? `cursor-pointer transition-all duration-300 hover:outline hover:outline-2 hover:outline-dashed hover:outline-amber-500/50 hover:bg-amber-500/[0.01] relative after:absolute after:top-2 after:right-2 after:bg-amber-500 after:text-white after:text-[8px] after:font-bold after:px-1.5 after:py-0.5 after:rounded-md after:content-['Click_to_Edit'] after:opacity-0 hover:after:opacity-100 after:transition-opacity after:z-[99] after:pointer-events-none` 
@@ -612,11 +610,15 @@ export default function App() {
             )}
 
             <main className="flex-1">
-              {shouldShowSection('hero') && (
-                <div id="hero" className={getSectionClass('hero')} onClick={() => handleSectionClick('hero')}>
-                  <Hero settings={{ ...siteSettings.hero, trust_badges: siteSettings.trust_badges }} />
-                </div>
-              )}
+              {activeHash === '#track' ? (
+                <OrderTracking />
+              ) : (
+                <>
+                  {shouldShowSection('hero') && (
+                    <div id="hero" className={getSectionClass('hero')} onClick={() => handleSectionClick('hero')}>
+                      <Hero settings={{ ...siteSettings.hero, trust_badges: siteSettings.trust_badges, social_links: siteSettings.social_links, contact: siteSettings.contact }} />
+                    </div>
+                  )}
               {/* Subscription section removed */}
               {shouldShowSection('products') && (
                 <div id="products" className={getSectionClass('products')} onClick={() => handleSectionClick('products')}>
@@ -659,6 +661,8 @@ export default function App() {
                 <div id="instagram_feed" className={getSectionClass('instagram_feed')} onClick={() => handleSectionClick('instagram_feed')}>
                   <InstagramFeed settings={siteSettings} />
                 </div>
+              )}
+                </>
               )}
             </main>
 
