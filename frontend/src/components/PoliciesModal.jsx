@@ -89,9 +89,9 @@ export default function PoliciesModal({ isOpen, onClose, defaultTab = 'terms', s
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all whitespace-nowrap md:w-full text-left ${
+                  className={`flex items-center gap-3 px-4 py-3 rounded-none font-bold text-xs uppercase tracking-wider transition-all whitespace-nowrap md:w-full text-left ${
                     isActive 
-                      ? 'bg-[#C97C5D] text-white shadow-lg shadow-[#C97C5D]/10' 
+                      ? 'bg-[#C97C5D] text-white  shadow-[#C97C5D]/10' 
                       : 'text-[#3A2E26]/75 hover:text-[#3A2E26] hover:bg-[#F5EFE6]'
                   }`}
                 >

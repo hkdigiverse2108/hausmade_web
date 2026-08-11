@@ -402,7 +402,7 @@ export default function ProfileModal({
       {/* Premium Top Navigation Bar */}
       <div className="sticky top-0 bg-white/70 backdrop-blur-xl border-b border-[#3A2E26]/10 px-6 py-4 flex items-center justify-between z-20">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#C97C5D] to-[#E09F80] flex items-center justify-center text-white shadow-md shadow-[#C97C5D]/20">
+          <div className="w-10 h-10 rounded-none bg-gradient-to-tr from-[#C97C5D] to-[#E09F80] flex items-center justify-center text-white  shadow-[#C97C5D]/20">
             <Sparkles className="w-5 h-5 animate-pulse" />
           </div>
           <div>
@@ -413,7 +413,7 @@ export default function ProfileModal({
 
         <button
           onClick={handleClose}
-          className="px-4 py-2 rounded-xl bg-[#3A2E26] hover:bg-[#3A2E26]/90 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
+          className="px-4 py-2 rounded-none bg-[#3A2E26] hover:bg-[#3A2E26]/90 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-1.5  transition-all cursor-pointer"
         >
           <span>Exit Settings</span>
           <X className="w-4 h-4" />
@@ -425,7 +425,7 @@ export default function ProfileModal({
         
         {/* Left Column: User Profile Overview Card & Sidebar Navigation */}
         <div className="w-full md:w-80 shrink-0 space-y-6">
-          <div className="bg-white border border-[#3A2E26]/10 rounded-3xl p-6 shadow-sm relative overflow-hidden">
+          <div className="bg-white border border-[#3A2E26]/10 rounded-none p-6  relative overflow-hidden">
             <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#7A8B6F] via-[#C97C5D] to-[#EAE3D2]" />
             
             <div className="flex flex-col items-center text-center mt-4">
@@ -448,12 +448,12 @@ export default function ProfileModal({
           </div>
 
           {/* Tab Navigation Sidebar */}
-          <div className="bg-[#FDFBF7]/60 border border-[#3A2E26]/10 rounded-3xl p-2.5 space-y-1">
+          <div className="bg-[#FDFBF7]/60 border border-[#3A2E26]/10 rounded-none p-2.5 space-y-1">
             <button
               onClick={() => setActiveTab('personal')}
-              className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-none text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
                 activeTab === 'personal'
-                  ? 'bg-white border border-[#3A2E26]/15 text-[#3A2E26] shadow-sm'
+                  ? 'bg-white border border-[#3A2E26]/15 text-[#3A2E26] '
                   : 'text-[#3A2E26]/60 hover:text-[#3A2E26] hover:bg-white/45'
               }`}
             >
@@ -465,9 +465,9 @@ export default function ProfileModal({
             </button>
             <button
               onClick={() => setActiveTab('address')}
-              className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-none text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
                 activeTab === 'address'
-                  ? 'bg-white border border-[#3A2E26]/15 text-[#3A2E26] shadow-sm'
+                  ? 'bg-white border border-[#3A2E26]/15 text-[#3A2E26] '
                   : 'text-[#3A2E26]/60 hover:text-[#3A2E26] hover:bg-white/45'
               }`}
             >
@@ -480,9 +480,9 @@ export default function ProfileModal({
 
             <button
               onClick={() => setActiveTab('orders')}
-              className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-none text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
                 activeTab === 'orders'
-                  ? 'bg-white border border-[#3A2E26]/15 text-[#3A2E26] shadow-sm'
+                  ? 'bg-white border border-[#3A2E26]/15 text-[#3A2E26] '
                   : 'text-[#3A2E26]/60 hover:text-[#3A2E26] hover:bg-white/45'
               }`}
             >
@@ -495,9 +495,9 @@ export default function ProfileModal({
 
             <button
               onClick={() => setActiveTab('security')}
-              className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-none text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
                 activeTab === 'security'
-                  ? 'bg-white border border-[#3A2E26]/15 text-[#3A2E26] shadow-sm'
+                  ? 'bg-white border border-[#3A2E26]/15 text-[#3A2E26] '
                   : 'text-[#3A2E26]/60 hover:text-[#3A2E26] hover:bg-white/45'
               }`}
             >
@@ -514,7 +514,7 @@ export default function ProfileModal({
                   if (onLogout) onLogout();
                   handleClose();
                 }}
-                className="w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold uppercase tracking-wider text-red-600 hover:bg-red-50 transition-all cursor-pointer"
+                className="w-full flex items-center justify-between px-4 py-3 rounded-none text-xs font-bold uppercase tracking-wider text-red-600 hover:bg-red-50 transition-all cursor-pointer"
               >
                 <div className="flex items-center gap-2.5">
                   <LogOut className="w-4 h-4 text-red-600" />
@@ -528,7 +528,7 @@ export default function ProfileModal({
 
         {/* Right Column: Settings Details Form */}
         <div className="flex-1">
-          <div className="bg-[#FDFBF7] border border-[#3A2E26]/10 rounded-3xl p-6 sm:p-8 shadow-sm">
+          <div className="bg-[#FDFBF7] border border-[#3A2E26]/10 rounded-none p-6 sm:p-8 ">
             
             {/* Tab: Personal Details Form */}
             {activeTab === 'personal' && (
@@ -552,7 +552,7 @@ export default function ProfileModal({
                           value={name}
                           onChange={(e) => setName(e.target.value)}
                           placeholder="e.g. John Doe"
-                          className="w-full pl-11 pr-4 py-3 rounded-2xl bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all font-medium"
+                          className="w-full pl-11 pr-4 py-3 rounded-none bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all font-medium"
                         />
                       </div>
                     </div>
@@ -569,7 +569,7 @@ export default function ProfileModal({
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           placeholder="e.g. john@example.com"
-                          className="w-full pl-11 pr-4 py-3 rounded-2xl bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all font-medium"
+                          className="w-full pl-11 pr-4 py-3 rounded-none bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all font-medium"
                         />
                       </div>
                     </div>
@@ -587,14 +587,14 @@ export default function ProfileModal({
                         value={mobile}
                         onChange={(e) => setMobile(e.target.value)}
                         placeholder="e.g. 9876543210"
-                        className="w-full pl-11 pr-4 py-3 rounded-2xl bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all font-medium"
+                        className="w-full pl-11 pr-4 py-3 rounded-none bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all font-medium"
                       />
                     </div>
                   </div>
                 </div>
 
                 {error && (
-                  <div className="p-4 text-xs font-semibold text-red-800 bg-red-50 border border-red-200 rounded-2xl">
+                  <div className="p-4 text-xs font-semibold text-red-800 bg-red-50 border border-red-200 rounded-none">
                     {error}
                   </div>
                 )}
@@ -604,14 +604,14 @@ export default function ProfileModal({
                   <button
                     type="button"
                     onClick={handleClose}
-                    className="px-6 py-3 rounded-2xl border border-[#3A2E26]/10 hover:border-[#3A2E26]/30 hover:bg-[#3A2E26]/5 text-xs font-bold uppercase tracking-wider hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 cursor-pointer bg-white"
+                    className="px-6 py-3 rounded-none border border-[#3A2E26]/10 hover:border-[#3A2E26]/30 hover:bg-[#3A2E26]/5 text-xs font-bold uppercase tracking-wider hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 cursor-pointer bg-white"
                   >
                     Discard
                   </button>
                   <button
                     type="submit"
                     disabled={loading}
-                    className="px-8 py-3.5 bg-[#3A2E26] hover:bg-black text-white font-extrabold rounded-2xl shadow-md shadow-[#3A2E26]/10 hover:shadow-lg hover:shadow-[#3A2E26]/20 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 text-xs uppercase tracking-widest flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:translate-y-0"
+                    className="px-8 py-3.5 bg-[#3A2E26] hover:bg-black text-white font-extrabold rounded-none  shadow-[#3A2E26]/10 hover: hover:shadow-[#3A2E26]/20 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 text-xs uppercase tracking-widest flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:translate-y-0"
                   >
                     {loading ? (
                       <>
@@ -655,7 +655,7 @@ export default function ProfileModal({
                 {!isAddingNew && !editingAddressId && (
                   <div className="space-y-4">
                     {addresses.length === 0 ? (
-                      <div className="text-center py-12 border-2 border-dashed border-[#3A2E26]/10 rounded-3xl">
+                      <div className="text-center py-12 border-2 border-dashed border-[#3A2E26]/10 rounded-none">
                         <MapPin className="w-8 h-8 text-[#3A2E26]/30 mx-auto mb-2" />
                         <p className="text-sm font-bold text-[#3A2E26]">No shipping addresses saved yet</p>
                         <p className="text-xs text-[#3A2E26]/60 mt-1">Please add a shipping address below to checkout quickly.</p>
@@ -664,9 +664,9 @@ export default function ProfileModal({
                       addresses.map((addr) => (
                         <div 
                           key={addr.id}
-                          className={`p-5 rounded-2xl border-2 transition-all relative ${
+                          className={`p-5 rounded-none border-2 transition-all relative ${
                             addr.is_default 
-                              ? 'border-[#7A8B6F] bg-white shadow-sm'
+                              ? 'border-[#7A8B6F] bg-white '
                               : 'border-[#3A2E26]/10 bg-white/50 hover:border-[#3A2E26]/20'
                           }`}
                         >
@@ -734,7 +734,7 @@ export default function ProfileModal({
                         setAddrCountry('India');
                         setAddrIsDefault(addresses.length === 0);
                       }}
-                      className="w-full py-4 rounded-2xl border-2 border-dashed border-[#3A2E26]/20 hover:border-[#3A2E26]/40 text-center text-sm font-bold text-[#3A2E26]/80 hover:text-[#3A2E26] transition-all cursor-pointer bg-white/40 hover:bg-white/70"
+                      className="w-full py-4 rounded-none border-2 border-dashed border-[#3A2E26]/20 hover:border-[#3A2E26]/40 text-center text-sm font-bold text-[#3A2E26]/80 hover:text-[#3A2E26] transition-all cursor-pointer bg-white/40 hover:bg-white/70"
                     >
                       + Add New Address
                     </button>
@@ -752,7 +752,7 @@ export default function ProfileModal({
                         <select
                           value={addrLabel}
                           onChange={(e) => setAddrLabel(e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all font-medium"
+                          className="w-full px-4 py-3 rounded-none bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all font-medium"
                         >
                           <option value="Home">Home</option>
                           <option value="Office">Office</option>
@@ -785,7 +785,7 @@ export default function ProfileModal({
                           value={addrLine1}
                           onChange={(e) => setAddrLine1(e.target.value)}
                           placeholder="House No, Apartment, Suite, Street Name"
-                          className="w-full pl-11 pr-4 py-3 rounded-2xl bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all font-medium"
+                          className="w-full pl-11 pr-4 py-3 rounded-none bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all font-medium"
                         />
                       </div>
                     </div>
@@ -801,7 +801,7 @@ export default function ProfileModal({
                           value={addrLine2}
                           onChange={(e) => setAddrLine2(e.target.value)}
                           placeholder="e.g. Near Shiv Temple, VIP Road"
-                          className="w-full pl-11 pr-4 py-3 rounded-2xl bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all font-medium"
+                          className="w-full pl-11 pr-4 py-3 rounded-none bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all font-medium"
                         />
                       </div>
                     </div>
@@ -819,7 +819,7 @@ export default function ProfileModal({
                             value={addrCity}
                             onChange={(e) => setAddrCity(e.target.value)}
                             placeholder="e.g. Surat"
-                            className="w-full pl-11 pr-4 py-3 rounded-2xl bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all font-medium"
+                            className="w-full pl-11 pr-4 py-3 rounded-none bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all font-medium"
                           />
                         </div>
                       </div>
@@ -836,7 +836,7 @@ export default function ProfileModal({
                             value={addrState}
                             onChange={(e) => setAddrState(e.target.value)}
                             placeholder="e.g. Gujarat"
-                            className="w-full pl-11 pr-4 py-3 rounded-2xl bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all font-medium"
+                            className="w-full pl-11 pr-4 py-3 rounded-none bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all font-medium"
                           />
                         </div>
                       </div>
@@ -876,7 +876,7 @@ export default function ProfileModal({
                               }
                             }}
                             placeholder="e.g. 395007"
-                            className="w-full pl-11 pr-4 py-3 rounded-2xl bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all font-medium"
+                            className="w-full pl-11 pr-4 py-3 rounded-none bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all font-medium"
                           />
                         </div>
                       </div>
@@ -893,7 +893,7 @@ export default function ProfileModal({
                             value={addrCountry}
                             onChange={(e) => setAddrCountry(e.target.value)}
                             placeholder="e.g. India"
-                            className="w-full pl-11 pr-4 py-3 rounded-2xl bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all font-medium"
+                            className="w-full pl-11 pr-4 py-3 rounded-none bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all font-medium"
                           />
                         </div>
                       </div>
@@ -907,7 +907,7 @@ export default function ProfileModal({
                           setIsAddingNew(false);
                           setEditingAddressId(null);
                         }}
-                        className="px-6 py-2.5 rounded-2xl border border-[#3A2E26]/10 hover:border-[#3A2E26]/30 hover:bg-[#3A2E26]/5 text-xs font-bold uppercase tracking-wider hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 cursor-pointer bg-white"
+                        className="px-6 py-2.5 rounded-none border border-[#3A2E26]/10 hover:border-[#3A2E26]/30 hover:bg-[#3A2E26]/5 text-xs font-bold uppercase tracking-wider hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 cursor-pointer bg-white"
                       >
                         Cancel
                       </button>
@@ -915,7 +915,7 @@ export default function ProfileModal({
                         type="button"
                         onClick={handleSaveAddressForm}
                         disabled={loading}
-                        className="px-6 py-2.5 bg-[#3A2E26] hover:bg-black text-white font-extrabold rounded-2xl shadow-md shadow-[#3A2E26]/10 hover:shadow-lg hover:shadow-[#3A2E26]/20 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 text-xs uppercase tracking-wider flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:translate-y-0"
+                        className="px-6 py-2.5 bg-[#3A2E26] hover:bg-black text-white font-extrabold rounded-none  shadow-[#3A2E26]/10 hover: hover:shadow-[#3A2E26]/20 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 text-xs uppercase tracking-wider flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:translate-y-0"
                       >
                         {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
                         <span>Save Address</span>
@@ -942,11 +942,11 @@ export default function ProfileModal({
                     <p className="text-xs font-semibold">Retrieving your order ledger...</p>
                   </div>
                 ) : ordersError ? (
-                  <div className="p-4 text-xs font-semibold text-red-800 bg-red-50 border border-red-200 rounded-2xl text-center">
+                  <div className="p-4 text-xs font-semibold text-red-800 bg-red-50 border border-red-200 rounded-none text-center">
                     {ordersError}
                   </div>
                 ) : orders.length === 0 ? (
-                  <div className="text-center py-16 border-2 border-dashed border-[#3A2E26]/10 rounded-3xl">
+                  <div className="text-center py-16 border-2 border-dashed border-[#3A2E26]/10 rounded-none">
                     <Package className="w-10 h-10 text-[#3A2E26]/20 mx-auto mb-2" />
                     <p className="text-sm font-bold text-[#3A2E26]">No orders recorded</p>
                     <p className="text-xs text-[#3A2E26]/60 mt-1">You haven't placed any botanical orders yet.</p>
@@ -954,7 +954,7 @@ export default function ProfileModal({
                 ) : (
                   <div className="space-y-5 max-h-[500px] overflow-y-auto pr-2">
                     {orders.map((order) => (
-                      <div key={order.orderId || order._id} className="bg-white rounded-2xl p-4 border border-[#3A2E26]/10 shadow-xs">
+                      <div key={order.orderId || order._id} className="bg-white rounded-none p-4 border border-[#3A2E26]/10 shadow-xs">
                         <div className="flex flex-wrap justify-between items-center gap-2 border-b border-[#3A2E26]/5 pb-3 mb-3">
                           <div className="flex items-center gap-2">
                             <span className="text-[10px] font-extrabold text-[#C97C5D] bg-[#C97C5D]/10 px-2 py-0.5 rounded-lg tracking-wider">
@@ -998,7 +998,7 @@ export default function ProfileModal({
 
                         <div className="space-y-2">
                           {order.cartItems.map((item, idx) => (
-                            <div key={idx} className="flex items-center gap-2 bg-[#FDFBF7] p-2 rounded-xl border border-[#3A2E26]/5">
+                            <div key={idx} className="flex items-center gap-2 bg-[#FDFBF7] p-2 rounded-none border border-[#3A2E26]/5">
                               <img 
                                 src={item.image} 
                                 alt={item.title} 
@@ -1046,7 +1046,7 @@ export default function ProfileModal({
                         value={currentPassword}
                         onChange={(e) => setCurrentPassword(e.target.value)}
                         placeholder="••••••••"
-                        className="w-full pl-11 pr-4 py-2.5 rounded-2xl bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all"
+                        className="w-full pl-11 pr-4 py-2.5 rounded-none bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all"
                       />
                     </div>
                   </div>
@@ -1063,7 +1063,7 @@ export default function ProfileModal({
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
                         placeholder="••••••••"
-                        className="w-full pl-11 pr-4 py-2.5 rounded-2xl bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all"
+                        className="w-full pl-11 pr-4 py-2.5 rounded-none bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all"
                       />
                     </div>
                   </div>
@@ -1080,7 +1080,7 @@ export default function ProfileModal({
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         placeholder="••••••••"
-                        className="w-full pl-11 pr-4 py-2.5 rounded-2xl bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all"
+                        className="w-full pl-11 pr-4 py-2.5 rounded-none bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all"
                       />
                     </div>
                   </div>
@@ -1090,7 +1090,7 @@ export default function ProfileModal({
                   <button
                     type="submit"
                     disabled={updatingSecurity}
-                    className="px-6 py-2.5 bg-[#3A2E26] hover:bg-[#3A2E26]/90 text-white font-bold rounded-2xl text-xs uppercase tracking-wider flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    className="px-6 py-2.5 bg-[#3A2E26] hover:bg-[#3A2E26]/90 text-white font-bold rounded-none text-xs uppercase tracking-wider flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                   >
                     {updatingSecurity ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
                     <span>Update Credentials</span>

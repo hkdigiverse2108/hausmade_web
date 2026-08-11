@@ -137,11 +137,7 @@ export default function Ingredients({ settings }) {
   }, []);
 
   return (
-    <section id="ingredients" className="py-16 lg:py-28 bg-[#F5F1E8] scroll-mt-20 relative overflow-hidden">
-      {/* Decorative background elements */}
-      <div className="absolute top-0 left-0 w-72 h-72 bg-[#7A8B6F]/5 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-[#C97C5D]/5 rounded-full blur-3xl translate-x-1/3 translate-y-1/3" />
-      <div className="absolute top-1/2 left-1/2 w-[600px] h-[600px] bg-[#8C7A5B]/3 rounded-full blur-[100px] -translate-x-1/2 -translate-y-1/2" />
+    <section id="ingredients" className="py-20 lg:py-32 bg-[#F5F1E8] scroll-mt-20 relative overflow-hidden border-t border-[#3A2E26]/5">
 
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 relative z-10">
         
@@ -185,40 +181,22 @@ export default function Ingredients({ settings }) {
                 }`}
                 style={{ transitionDelay: `${idx * 80}ms` }}
               >
-                {/* Animated gradient border */}
-                <div className="absolute -inset-[1px] rounded-2xl sm:rounded-3xl bg-gradient-to-br from-transparent via-[#3A2E26]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                
-                {/* Card */}
-                <div className={`relative bg-white/80 backdrop-blur-xl p-5 sm:p-7 rounded-2xl sm:rounded-3xl border border-white/60 shadow-lg hover:shadow-2xl ${item.glow} transition-all duration-500 transform group-hover:-translate-y-2 group-hover:bg-white/95 flex flex-col justify-between h-full overflow-hidden`}>
-                  
-                  {/* Subtle gradient overlay */}
-                  <div className={`absolute inset-0 bg-gradient-to-br ${item.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl sm:rounded-3xl`} />
-                  
-                  {/* Shimmer effect on hover */}
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 overflow-hidden rounded-2xl sm:rounded-3xl">
-                    <div className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] bg-gradient-to-r from-transparent via-white/20 to-transparent rotate-45 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 ease-out" />
-                  </div>
-
+                {/* Clean Editorial Card */}
+                <div className="relative bg-white p-6 sm:p-8 rounded-[1.5rem] border border-[#3A2E26]/5 shadow-sm hover:shadow-md transition-all duration-500 transform group-hover:-translate-y-1 flex flex-col justify-between h-full overflow-hidden">
                   <div className="relative z-10">
-                    {/* Icon with gradient background */}
-                    <div className={`w-11 h-11 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl ${item.iconBg} flex items-center justify-center mb-4 sm:mb-6 shadow-lg transform transition-all duration-500 group-hover:scale-110 group-hover:rotate-3`}>
-                      <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                    {/* Clean Icon */}
+                    <div className="w-12 h-12 rounded-full border border-[#3A2E26]/10 flex items-center justify-center mb-6 text-[#8C7A5B] bg-[#FDFBF7]">
+                      <Icon className="w-5 h-5" />
                     </div>
 
                     {/* Content */}
-                    <h3 className="font-serif-brand font-bold text-sm sm:text-lg lg:text-xl text-[#3A2E26] mb-2 sm:mb-3 group-hover:text-[#3A2E26] transition-colors leading-snug">
+                    <h3 className="font-serif-brand font-bold text-lg sm:text-xl text-[#3A2E26] mb-3 leading-snug">
                       {item.name}
                     </h3>
-                    <p className="text-xs sm:text-sm text-[#3A2E26]/60 leading-relaxed group-hover:text-[#3A2E26]/75 transition-colors">
+                    <p className="text-sm text-[#3A2E26]/70 leading-relaxed font-light">
                       {item.benefit}
                     </p>
                   </div>
-
-                  {/* Bottom accent line */}
-                  <div 
-                    className="mt-4 sm:mt-6 h-[2px] rounded-full w-0 group-hover:w-full transition-all duration-700 ease-out"
-                    style={{ background: `linear-gradient(to right, ${item.accent}, transparent)` }}
-                  />
                 </div>
               </div>
             );
@@ -233,10 +211,7 @@ export default function Ingredients({ settings }) {
             tableVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
           }`}
         >
-          {/* Glow behind card */}
-          <div className="absolute -inset-4 bg-gradient-to-br from-[#7A8B6F]/10 via-transparent to-[#C97C5D]/10 rounded-[2rem] blur-2xl" />
-          
-          <div className="relative max-w-full overflow-hidden bg-gradient-to-br from-[#EFECE6] to-[#F5F1E8] p-4 sm:p-10 md:p-12 rounded-3xl border border-[#3A2E26]/8 transform transition-all duration-500 hover:shadow-[0_25px_60px_-12px_rgba(58,46,38,0.15)]">
+          <div className="relative max-w-full overflow-hidden bg-[#FDFBF7] p-6 sm:p-10 md:p-12 rounded-[2rem] border border-[#3A2E26]/5 shadow-sm transform transition-all duration-500 hover:shadow-md">
             
             <div className="text-center mb-8 sm:mb-10">
               {diffSettings.badge && (

@@ -78,13 +78,13 @@ export default function ConfirmModal({
         <div className="flex items-center justify-end gap-3 mt-7">
           <button
             onClick={onCancel}
-            className="px-5 py-2.5 text-[#3A2E26]/80 hover:text-[#3A2E26] hover:bg-[#F5EFE6] border border-[#E6D5C3] font-bold text-xs uppercase tracking-wider rounded-2xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#3A2E26]/10"
+            className="px-5 py-2.5 text-[#3A2E26]/80 hover:text-[#3A2E26] hover:bg-[#F5EFE6] border border-[#E6D5C3] font-bold text-xs uppercase tracking-wider rounded-none transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#3A2E26]/10"
           >
             {cancelText}
           </button>
           <button
             onClick={onConfirm}
-            className={`px-6 py-2.5 font-bold text-xs uppercase tracking-wider rounded-2xl shadow-lg transition-all duration-200 transform hover:-translate-y-[1px] active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#FDFBF7] ${getConfirmButtonStyles()}`}
+            className={`px-6 py-2.5 font-bold text-xs uppercase tracking-wider rounded-none  transition-all duration-200 transform hover:-translate-y-[1px] active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#FDFBF7] ${getConfirmButtonStyles()}`}
           >
             {confirmText}
           </button>

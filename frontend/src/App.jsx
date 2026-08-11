@@ -167,6 +167,30 @@ export default function App() {
         if (event.data.type === 'update-preview-products') {
           setProducts(event.data.products);
         }
+        if (event.data.type === 'scroll-to-section') {
+          let sectionId = event.data.section;
+          // Map admin panel setting tabs to DOM IDs
+          const idMap = {
+            'identity': 'header',
+            'hero': 'hero',
+            'product_selector': 'products',
+            'trust_badges': 'hero', // Usually in hero
+            'story': 'story',
+            'subscription': 'products', // Removed mostly, but fallback to products
+            'ingredients': 'ingredients',
+            'difference': 'difference',
+            'faqs': 'faqs',
+            'instagram_feed': 'footer', // Next to footer
+            'contact': 'footer',
+            'policies': 'footer',
+            'delhivery': 'footer'
+          };
+          const targetId = idMap[sectionId] || sectionId;
+          const el = document.getElementById(targetId);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }
       }
     };
 
@@ -545,10 +569,9 @@ export default function App() {
           if (sectionId === 'ingredients') return activeHash === '#ingredients' || activeHash === '#difference';
           if (sectionId === 'story') return activeHash === '#story';
           if (sectionId === 'faqs') return activeHash === '#faqs';
-          if (sectionId === 'contact') return activeHash === '#contact' || activeHash === '#social_links' || activeHash === '#policies';
-          if (sectionId === 'products') return activeHash === '#products';
+          if (sectionId === 'contact') return activeHash === '#contact' || activeHash === '#social_links' || activeHash === '#policies' || activeHash === '#delhivery' || activeHash === '#instagram_feed';
+          if (sectionId === 'products') return activeHash === '#products' || activeHash === '#product_selector';
           if (sectionId === 'reviews') return activeHash === '#reviews' || activeHash === '#reviews_header';
-          if (sectionId === 'instagram_feed') return activeHash === '#instagram_feed';
           return false;
         };
 

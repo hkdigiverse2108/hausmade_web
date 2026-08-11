@@ -41,12 +41,12 @@ export default function ReviewModal({ isOpen, onClose, product, token, showNotif
 
   return (
     <div className="fixed inset-0 bg-[#3A2E26]/50 backdrop-blur-xs flex items-center justify-center p-4 z-[60] animate-fadeIn">
-      <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 border border-[#E6D5C3]/40 shadow-2xl relative">
+      <div className="bg-white rounded-none max-w-md w-full p-6 sm:p-8 border border-[#E6D5C3]/40  relative">
         
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 p-2 text-[#3A2E26]/40 hover:text-[#3A2E26] hover:bg-[#FDFBF7] rounded-xl transition-all cursor-pointer"
+          className="absolute right-4 top-4 p-2 text-[#3A2E26]/40 hover:text-[#3A2E26] hover:bg-[#FDFBF7] rounded-none transition-all cursor-pointer"
           title="Close Modal"
         >
           <X className="w-5 h-5" />
@@ -117,7 +117,7 @@ export default function ReviewModal({ isOpen, onClose, product, token, showNotif
                   placeholder="Tell us what you loved about this organic soap! How does it feel on your skin?"
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
-                  className="w-full px-4 py-3 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] placeholder-[#3A2E26]/40 transition-all font-sans"
+                  className="w-full px-4 py-3 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-none text-sm focus:outline-none focus:border-[#3A2E26] placeholder-[#3A2E26]/40 transition-all font-sans"
                 />
               </div>
 
@@ -125,7 +125,7 @@ export default function ReviewModal({ isOpen, onClose, product, token, showNotif
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3.5 px-6 bg-[#3A2E26] hover:bg-[#2A201A] disabled:bg-gray-200 disabled:text-gray-400 text-white font-bold rounded-2xl shadow-lg transition-colors cursor-pointer flex items-center justify-center gap-2"
+                className="w-full py-3.5 px-6 bg-[#3A2E26] hover:bg-[#2A201A] disabled:bg-gray-200 disabled:text-gray-400 text-white font-bold rounded-none  transition-colors cursor-pointer flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <>

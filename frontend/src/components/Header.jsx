@@ -48,14 +48,14 @@ export default function Header({ cartCount, onOpenCart, user, isAuthenticated, o
   ];
 
   return (
-    <header 
-      className={`sticky top-0 z-50 w-full transition-all duration-300 ${
-        scrolled 
-          ? 'bg-[#F5F1E8]/95 backdrop-blur-md shadow-sm border-b border-[#3A2E26]/10 py-3.5' 
-          : 'bg-[#F5F1E8] py-4'
-      }`}
-    >
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+    <div className={`fixed top-0 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none transition-all duration-500 ${scrolled ? 'mt-4' : 'mt-2'}`}>
+      <header 
+        className={`pointer-events-auto rounded-full transition-all duration-500 w-full max-w-6xl ${
+          scrolled 
+            ? 'bg-[#F5F1E8]/80 backdrop-blur-xl border border-[#3A2E26]/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] py-3 px-6' 
+            : 'bg-transparent py-4 px-2 sm:px-6'
+        }`}
+      >
         <div className="flex items-center justify-between">
           
           {/* Brand Logo */}
@@ -80,14 +80,15 @@ export default function Header({ cartCount, onOpenCart, user, isAuthenticated, o
 
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
+          <nav className="hidden md:flex items-center space-x-10">
             {navLinks.map((link) => (
               <a
                 key={link.name}
                 href={link.href}
-                className="text-sm font-medium text-[#3A2E26]/80 hover:text-[#7A8B6F] transition-colors"
+                className="group relative text-[11px] uppercase tracking-widest font-bold text-[#3A2E26]/80 hover:text-[#3A2E26] transition-colors py-2"
               >
                 {link.name}
+                <span className="absolute bottom-0 left-0 w-0 h-[1.5px] bg-[#C97C5D] transition-all duration-300 ease-out group-hover:w-full"></span>
               </a>
             ))}
           </nav>
@@ -210,7 +211,7 @@ export default function Header({ cartCount, onOpenCart, user, isAuthenticated, o
             </div>
           </div>
         )}
-      </div>
-    </header>
+      </header>
+    </div>
   );
 }

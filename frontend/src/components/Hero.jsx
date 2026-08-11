@@ -4,23 +4,15 @@ import * as LucideIcons from 'lucide-react';
 
 export default function Hero({ settings }) {
   const badge = settings?.badge || "Hausmade™ Luxury Bath Element";
-  const title_normal_1 = settings?.title_normal_1 || "Reveal your";
-  const title_italic = settings?.title_italic || "artisanal beauty";
-  const title_normal_2 = settings?.title_normal_2 || "with Kesar.";
+  const title_normal_1 = settings?.title_normal_1 || "Raw. Pure.";
+  const title_italic = settings?.title_italic || "Hausmade.";
+  const title_normal_2 = settings?.title_normal_2 || "";
   const description = settings?.description || "Purely handmade cleansing bar infused with real saffron extract, camphor, and 100% coconut oil. Naturally removes sun tan, fades dark spots, and brightens your daily complexing glow.";
 
   const primary_button_text = settings?.primary_button_text || "Select Your Pack";
   const primary_button_link = settings?.primary_button_link || "#product-selector";
   const secondary_button_text = settings?.secondary_button_text || "Discover Our Craft";
   const secondary_button_link = settings?.secondary_button_link || "#story";
-
-  const rating_score = settings?.rating_score || "4.8 / 5.0 rating";
-  const rating_subtext = settings?.rating_subtext || "Over 2,400+ happy bathers";
-  const rating_stars = Number(settings?.rating_stars) || 5;
-
-  const card_subtitle = settings?.card_subtitle || "Royal Saffron Formula";
-  const card_title = settings?.card_title || "Pure Kesar Artisanal Shaving Puck";
-  const card_badge = settings?.card_badge || "100% Pure";
 
   const trustBadges = (settings?.trust_badges && settings.trust_badges.length > 0)
     ? settings.trust_badges
@@ -33,120 +25,111 @@ export default function Hero({ settings }) {
         ];
 
   return (
-    <section className="pt-10 pb-10 sm:pt-16 sm:pb-16 lg:pt-20 lg:pb-24 relative overflow-hidden">
-      {/* Soft background glow accents */}
-      <div className="absolute top-10 left-1/2 -translate-x-1/2 w-96 h-96 bg-[#7A8B6F]/15 rounded-full blur-3xl -z-10 pointer-events-none" />
-      <div className="absolute top-40 right-10 w-80 h-80 bg-[#C97C5D]/15 rounded-full blur-3xl -z-10 pointer-events-none" />
-
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-8 items-center">
+    <>
+      <section className="min-h-screen w-full flex flex-col justify-center overflow-hidden bg-[#FDFBF7]">
+        <div className="w-full max-w-7xl mx-auto flex flex-col md:flex-row items-center">
           
-          {/* Left Column: Headline & Value Prop */}
-          <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
+          {/* Left Side: Typography & CTA */}
+          <div className="w-full md:w-1/2 flex flex-col justify-center px-6 sm:px-12 lg:px-16 pt-32 pb-16 md:py-32 relative z-10">
             
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#C97C5D]/15 text-[#C97C5D] text-xs sm:text-sm font-semibold tracking-wide uppercase">
-              <Star className="w-4 h-4 fill-current" />
-              <span>{badge}</span>
+            <div className="mb-8">
+              <span className="inline-block border-b border-[#3A2E26] pb-1 text-[9px] uppercase tracking-[0.25em] font-bold text-[#3A2E26]">
+                {badge}
+              </span>
             </div>
 
-            <h1 className="font-serif-brand text-3xl sm:text-5xl lg:text-6xl font-normal tracking-tight text-[#3A2E26] leading-[1.15]">
-              {title_normal_1} <span className="italic font-light text-[#C97C5D]">{title_italic}</span> {title_normal_2}
+            <h1 className="font-serif-brand text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-normal tracking-tight text-[#3A2E26] leading-[1.05] mb-8">
+              {title_normal_1} <br/>
+              <span className="italic font-light text-[#C97C5D]">{title_italic}</span>
+              {title_normal_2 && <><br/>{title_normal_2}</>}
             </h1>
 
-            <p className="text-base sm:text-xl text-[#3A2E26]/80 max-w-2xl mx-auto lg:mx-0 font-light leading-relaxed">
+            <p className="text-sm sm:text-base text-[#3A2E26]/70 max-w-md font-light leading-relaxed mb-12">
               {description}
             </p>
 
-            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
               {primary_button_text && (
                 <a
                   href={primary_button_link}
-                  className="w-full sm:w-auto px-8 py-4 bg-[#7A8B6F] hover:bg-[#68775E] text-white font-medium rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center gap-2 group text-base"
+                  className="group relative inline-flex items-center justify-center bg-[#3A2E26] text-[#FDFBF7] px-8 py-4 text-[10px] uppercase tracking-[0.2em] font-bold overflow-hidden transition-all duration-500 hover:bg-[#C97C5D]"
                 >
-                  <span>{primary_button_text}</span>
-                  <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
+                  <span className="relative z-10 flex items-center gap-3">
+                    {primary_button_text}
+                    <ArrowRight className="w-4 h-4 transition-transform duration-500 group-hover:translate-x-1" />
+                  </span>
                 </a>
               )}
 
               {secondary_button_text && (
                 <a
                   href={secondary_button_link}
-                  className="w-full sm:w-auto px-7 py-4 bg-transparent border border-[#3A2E26]/20 hover:bg-[#3A2E26]/5 text-[#3A2E26] font-medium rounded-full transition-colors flex items-center justify-center text-base"
+                  className="group inline-flex items-center justify-center text-[#3A2E26] px-2 py-4 text-[10px] uppercase tracking-[0.2em] font-bold relative"
                 >
                   {secondary_button_text}
+                  <span className="absolute bottom-3 left-2 w-0 h-[1px] bg-[#3A2E26] transition-all duration-500 group-hover:w-[calc(100%-16px)]"></span>
                 </a>
               )}
             </div>
-
-            {/* Social proof quick rating */}
-            <div className="pt-4 flex flex-wrap items-center justify-center lg:justify-start gap-2 sm:gap-3 text-xs sm:text-sm text-[#3A2E26]/70">
-              {rating_stars > 0 && (
-                <div className="flex text-[#C97C5D]">
-                  {[...Array(Math.min(5, Math.max(1, rating_stars)))].map((_, i) => (
-                    <Star key={i} className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current" />
-                  ))}
-                </div>
-              )}
-              {rating_score && <span className="font-medium text-[#3A2E26]">{rating_score}</span>}
-              {rating_score && rating_subtext && <span className="hidden sm:inline">•</span>}
-              {rating_subtext && <span>{rating_subtext}</span>}
-            </div>
           </div>
 
-          {/* Right Column: Hero Image Frame */}
-          <div className="lg:col-span-5 relative">
-            <div className="relative mx-auto max-w-md lg:max-w-none">
-              <div className="absolute -inset-2 rounded-[2.5rem] bg-gradient-to-tr from-[#7A8B6F]/30 to-[#C97C5D]/20 blur-xl opacity-70" />
-              <div className="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white/60 bg-[#F5F1E8]">
-                <img
-                  src={settings?.image_url || "/images/soap-hero.png"}
-                  alt="Handcrafted Botanical Soap Bar"
-                  className="w-full h-[280px] sm:h-[420px] md:h-[480px] object-cover hover:scale-105 transition-transform duration-700"
-                />
-                {(card_subtitle || card_title || card_badge) && (
-                  <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4 bg-white/90 backdrop-blur-md p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-white/40 shadow-lg flex items-center justify-between gap-2">
-                    <div>
-                      {card_subtitle && <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-[#C97C5D]">{card_subtitle}</p>}
-                      {card_title && <p className="font-serif-brand font-bold text-[#3A2E26] text-sm sm:text-base">{card_title}</p>}
-                    </div>
-                    {card_badge && <span className="bg-[#C97C5D] text-white text-xs px-2.5 py-1 rounded-full font-bold">{card_badge}</span>}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+          {/* Right Side: Editorial Imagery */}
+          <div className="w-full md:w-1/2 min-h-[50vh] md:h-screen relative flex items-center justify-center p-8 lg:p-12 overflow-hidden">
+           {/* Main Image - Professional Soft Rectangle */}
+           <div className="relative w-full max-w-[380px] aspect-[4/5] rounded-[2rem] overflow-hidden shadow-xl animate-float z-10 border-4 border-[#FDFBF7]/50">
+              <img 
+                 src={settings?.image_url || "/images/soap-hero.png"}
+                 alt="Primary Hero"
+                 className="w-full h-full object-cover origin-center transition-transform duration-[10s] ease-out hover:scale-105"
+                 onError={(e) => { e.target.onerror = null; e.target.src = "/images/soap-hero.png"; }}
+              />
+           </div>
 
+           {/* Secondary Overlapping Image */}
+           <div className="absolute bottom-[12%] left-[5%] md:left-0 lg:left-[5%] w-48 lg:w-60 aspect-[4/3] rounded-[1.5rem] overflow-hidden shadow-2xl border-[8px] border-[#FDFBF7] animate-float-reverse z-20" style={{ animationDelay: '0.5s' }}>
+              <img 
+                 src="/images/soap-stack.png"
+                 alt="Soap Stack"
+                 className="w-full h-full object-cover origin-center transition-transform duration-[10s] ease-out hover:scale-105"
+              />
+           </div>
+
+           {/* Subtle Text Badge overlay (Fixed & Rotating) */}
+           <div className="fixed bottom-8 right-8 z-[99] w-32 h-32 hidden lg:flex items-center justify-center opacity-80 mix-blend-multiply pointer-events-none">
+              <svg viewBox="0 0 100 100" className="w-full h-full animate-[spin_20s_linear_infinite]">
+                 <path id="circle" d="M 50, 50 m -37, 0 a 37,37 0 1,1 74,0 a 37,37 0 1,1 -74,0" fill="none" />
+                 <text className="text-[10px] uppercase tracking-[0.2em] font-bold fill-[#3A2E26]">
+                   <textPath href="#circle">
+                     {settings?.hero?.rotating_text || "HANDCRAFTED • 100% PURE ART •"}
+                   </textPath>
+                 </text>
+              </svg>
+           </div>
         </div>
+        </div>
+      </section>
 
-        {/* Trust Strip Beneath Hero */}
-        {trustBadges && trustBadges.length > 0 && (
-          <div className="mt-10 sm:mt-16 pt-6 sm:pt-8 border-t border-[#3A2E26]/10 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 text-center sm:text-left">
-            {trustBadges.map((badge, idx) => {
-              const IconComp = LucideIcons[badge.icon] || LucideIcons.HelpCircle;
-              const colors = [
-                { bg: 'bg-[#7A8B6F]/15', text: 'text-[#7A8B6F]' },
-                { bg: 'bg-[#C97C5D]/15', text: 'text-[#C97C5D]' },
-                { bg: 'bg-[#3A2E26]/10', text: 'text-[#3A2E26]' },
-                { bg: 'bg-amber-100/60', text: 'text-amber-800' }
-              ];
-              const colorSet = colors[idx % colors.length];
-
+      {/* Trust Strip */}
+      {trustBadges && trustBadges.length > 0 && (
+        <div className="border-t border-b border-[#3A2E26]/10 bg-[#FDFBF7] py-8">
+          <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-left">
+            {trustBadges.slice(0,3).map((badge, idx) => {
+              const IconComp = LucideIcons[badge.icon] || LucideIcons.Check;
               return (
-                <div key={idx} className="flex items-center justify-center md:justify-start gap-3.5 p-3 rounded-2xl bg-white/40 border border-white/60 shadow-sm transition-all hover:scale-[1.02] hover:bg-white/60">
-                  <div className={`p-2.5 rounded-xl ${colorSet.bg} ${colorSet.text} shrink-0`}>
-                    <IconComp className="w-6 h-6" />
+                <div key={idx} className="flex flex-col md:flex-row items-center md:items-start gap-4">
+                  <div className="text-[#C97C5D] shrink-0">
+                    <IconComp className="w-5 h-5 stroke-[1.5]" />
                   </div>
-                  <div className="text-left">
-                    <h4 className="font-serif-brand font-bold text-[#3A2E26] text-sm">{badge.title}</h4>
-                    <p className="text-xs text-[#3A2E26]/70 leading-normal">{badge.description}</p>
+                  <div>
+                    <h4 className="font-bold text-[#3A2E26] text-[10px] uppercase tracking-widest mb-1">{badge.title}</h4>
+                    <p className="text-xs text-[#3A2E26]/60">{badge.description}</p>
                   </div>
                 </div>
               );
             })}
           </div>
-        )}
-
-      </div>
-    </section>
+        </div>
+      )}
+    </>
   );
 }

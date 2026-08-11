@@ -64,7 +64,7 @@ export default function OrderHistoryModal({ isOpen, onClose, token, onWriteRevie
       {/* Top Nav Bar */}
       <div className="sticky top-0 bg-white/70 backdrop-blur-xl border-b border-[#3A2E26]/10 px-6 py-4 flex items-center justify-between z-20 shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#7A8B6F] to-[#8FA283] flex items-center justify-center text-white shadow-md">
+          <div className="w-10 h-10 rounded-none bg-gradient-to-tr from-[#7A8B6F] to-[#8FA283] flex items-center justify-center text-white ">
             <ShoppingBag className="w-5 h-5" />
           </div>
           <div>
@@ -75,7 +75,7 @@ export default function OrderHistoryModal({ isOpen, onClose, token, onWriteRevie
 
         <button
           onClick={onClose}
-          className="px-4 py-2 rounded-xl bg-[#3A2E26] hover:bg-[#3A2E26]/90 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
+          className="px-4 py-2 rounded-none bg-[#3A2E26] hover:bg-[#3A2E26]/90 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-1.5  transition-all cursor-pointer"
         >
           <span>Exit History</span>
           <X className="w-4 h-4" />
@@ -91,11 +91,11 @@ export default function OrderHistoryModal({ isOpen, onClose, token, onWriteRevie
             <p className="text-sm font-semibold">Retrieving your order ledger...</p>
           </div>
         ) : error ? (
-          <div className="p-5 text-sm font-semibold text-red-800 bg-red-50 border border-red-200 rounded-2xl text-center shadow-xs">
+          <div className="p-5 text-sm font-semibold text-red-800 bg-red-50 border border-red-200 rounded-none text-center shadow-xs">
             {error}
           </div>
         ) : orders.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed border-[#3A2E26]/15 rounded-3xl bg-[#FDFBF7]/80 backdrop-blur-md p-8">
+          <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed border-[#3A2E26]/15 rounded-none bg-[#FDFBF7]/80 backdrop-blur-md p-8">
             <Package className="w-16 h-16 text-[#3A2E26]/30 mb-4" />
             <p className="text-lg font-bold text-[#3A2E26]">No orders recorded</p>
             <p className="text-xs text-[#3A2E26]/50 mt-1.5 max-w-sm">
@@ -103,7 +103,7 @@ export default function OrderHistoryModal({ isOpen, onClose, token, onWriteRevie
             </p>
             <button
               onClick={onClose}
-              className="mt-6 px-6 py-3 bg-[#7A8B6F] hover:bg-[#68775E] text-white font-bold text-xs uppercase tracking-widest rounded-xl shadow-md transition-all cursor-pointer"
+              className="mt-6 px-6 py-3 bg-[#7A8B6F] hover:bg-[#68775E] text-white font-bold text-xs uppercase tracking-widest rounded-none  transition-all cursor-pointer"
             >
               Start Shopping
             </button>
@@ -118,12 +118,12 @@ export default function OrderHistoryModal({ isOpen, onClose, token, onWriteRevie
             {orders.map((order) => (
               <div 
                 key={order.orderId || order._id} 
-                className="bg-[#FDFBF7] rounded-3xl p-6 border border-[#3A2E26]/10 shadow-xs hover:shadow-sm transition-all"
+                className="bg-[#FDFBF7] rounded-none p-6 border border-[#3A2E26]/10 shadow-xs hover: transition-all"
               >
                 {/* Order Top Bar */}
                 <div className="flex flex-wrap justify-between items-center gap-3 border-b border-[#3A2E26]/5 pb-4 mb-4">
                   <div className="flex items-center gap-3.5">
-                    <span className="text-xs font-extrabold text-[#C97C5D] bg-[#C97C5D]/10 px-3 py-1 rounded-xl tracking-wider">
+                    <span className="text-xs font-extrabold text-[#C97C5D] bg-[#C97C5D]/10 px-3 py-1 rounded-none tracking-wider">
                       {order.orderId}
                     </span>
                     <span className="flex items-center gap-1.5 text-xs text-[#3A2E26]/60 font-semibold">
@@ -141,7 +141,7 @@ export default function OrderHistoryModal({ isOpen, onClose, token, onWriteRevie
                         type="button"
                         onClick={() => handleCancelOrder(order.orderId || order._id)}
                         disabled={cancellingId === (order.orderId || order._id)}
-                        className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-[10px] font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-xs disabled:opacity-50"
+                        className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-[10px] font-bold uppercase tracking-wider rounded-none transition-all cursor-pointer flex items-center gap-1.5 shadow-xs disabled:opacity-50"
                       >
                         {cancellingId === (order.orderId || order._id) ? (
                           <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -170,11 +170,11 @@ export default function OrderHistoryModal({ isOpen, onClose, token, onWriteRevie
                     </h4>
                     <div className="space-y-2.5">
                       {order.cartItems.map((item, idx) => (
-                        <div key={idx} className="flex items-center gap-3 bg-white p-3 rounded-2xl border border-[#3A2E26]/5 shadow-xs">
+                        <div key={idx} className="flex items-center gap-3 bg-white p-3 rounded-none border border-[#3A2E26]/5 shadow-xs">
                           <img 
                             src={item.image} 
                             alt={item.title} 
-                            className="w-12 h-12 object-cover rounded-xl border border-[#3A2E26]/10 bg-[#F5F1E8]"
+                            className="w-12 h-12 object-cover rounded-none border border-[#3A2E26]/10 bg-[#F5F1E8]"
                           />
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-bold text-[#3A2E26] truncate">{item.title}</p>
@@ -187,7 +187,7 @@ export default function OrderHistoryModal({ isOpen, onClose, token, onWriteRevie
                             {order.status?.toLowerCase() === 'delivered' && (
                               <button
                                 onClick={() => onWriteReview({ id: item.packId, title: item.title })}
-                                className="px-2.5 py-1.5 bg-[#7A8B6F] hover:bg-[#6b7c60] text-white text-[10px] font-bold uppercase tracking-wider rounded-xl shadow-xs transition-colors cursor-pointer"
+                                className="px-2.5 py-1.5 bg-[#7A8B6F] hover:bg-[#6b7c60] text-white text-[10px] font-bold uppercase tracking-wider rounded-none shadow-xs transition-colors cursor-pointer"
                               >
                                 Write Review
                               </button>
@@ -206,7 +206,7 @@ export default function OrderHistoryModal({ isOpen, onClose, token, onWriteRevie
                     <h4 className="text-[10px] font-bold text-[#3A2E26]/50 uppercase tracking-widest">
                       Destination Details
                     </h4>
-                    <div className="bg-white p-4 rounded-2xl border border-[#3A2E26]/5 shadow-xs text-xs font-medium space-y-2">
+                    <div className="bg-white p-4 rounded-none border border-[#3A2E26]/5 shadow-xs text-xs font-medium space-y-2">
                       <p className="font-bold text-[#3A2E26]">{order.shippingAddress.fullName}</p>
                       <p className="text-[#3A2E26]/75 leading-relaxed flex items-start gap-1.5">
                         <MapPin className="w-3.5 h-3.5 text-[#C97C5D] shrink-0 mt-0.5" />

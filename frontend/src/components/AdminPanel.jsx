@@ -246,6 +246,10 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   const [subscriptions, setSubscriptions] = useState([]);
   const [settingsForm, setSettingsForm] = useState({
     logo_url: '',
+    product_selector_header: {
+      badge: '', title: '', description: '', product_badge: '', product_title: '', weight_badge: '', rating_text: '', product_description: ''
+    },
+    product_selector_images: [],
     announcement: { text: '', active: true },
     hero: {
       badge: '',
@@ -366,6 +370,15 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
 
   useEffect(() => {
     localStorage.setItem('hausmade_admin_settings_subtab', settingsSubTab);
+    
+    // Tell the preview iframe to scroll to the corresponding section
+    const iframe = document.getElementById('preview-storefront-frame');
+    if (iframe && iframe.contentWindow) {
+      iframe.contentWindow.postMessage({
+        type: 'scroll-to-section',
+        section: settingsSubTab
+      }, '*');
+    }
   }, [settingsSubTab]);
 
   const [selectedOrderForShipping, setSelectedOrderForShipping] = useState(null);
@@ -400,6 +413,8 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       const newCashfree = settings.cashfree || { app_id_test: '', secret_key_test: '', app_id_live: '', secret_key_live: '', mode: 'test', active: false };
       const currentDelhivery = settingsForm.delhivery || { api_token: '', mode: 'test', active: false, pickup_name: '', pickup_phone: '', pickup_email: '', pickup_pincode: '', pickup_state: '', pickup_city: '', pickup_address: '' };
       const newDelhivery = settings.delhivery || { api_token: '', mode: 'test', active: false, pickup_name: '', pickup_phone: '', pickup_email: '', pickup_pincode: '', pickup_state: '', pickup_city: '', pickup_address: '' };
+      const currentProductSelectorHeader = settingsForm.product_selector_header || {};
+      const newProductSelectorHeader = settings.product_selector_header || {};
 
       const hasChanged = 
         settingsForm.logo_url !== (settings.logo_url || '') ||
@@ -412,6 +427,8 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
         JSON.stringify(currentSocial) !== JSON.stringify(newSocial) ||
         JSON.stringify(currentCashfree) !== JSON.stringify(newCashfree) ||
         JSON.stringify(currentDelhivery) !== JSON.stringify(newDelhivery) ||
+        JSON.stringify(currentProductSelectorHeader) !== JSON.stringify(newProductSelectorHeader) ||
+        JSON.stringify(settingsForm.product_selector_images || []) !== JSON.stringify(settings.product_selector_images || []) ||
         settingsForm.subscription_discount_pct !== (settings.subscription_discount_pct !== undefined ? settings.subscription_discount_pct : 15.0) ||
         settingsForm.subscription_active !== (settings.subscription_active !== undefined ? settings.subscription_active : true) ||
         JSON.stringify(settingsForm.subscription_durations || []) !== JSON.stringify(settings.subscription_durations || []) ||
@@ -435,6 +452,25 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       if (hasChanged) {
         setSettingsForm({
           ...settings,
+          hero: {
+            badge: settings.hero?.badge || '',
+            title_normal_1: settings.hero?.title_normal_1 || '',
+            title_italic: settings.hero?.title_italic || '',
+            title_normal_2: settings.hero?.title_normal_2 || '',
+            description: settings.hero?.description || '',
+            primary_button_text: settings.hero?.primary_button_text || '',
+            primary_button_link: settings.hero?.primary_button_link || '',
+            secondary_button_text: settings.hero?.secondary_button_text || '',
+            secondary_button_link: settings.hero?.secondary_button_link || '',
+            rating_score: settings.hero?.rating_score || '',
+            rating_subtext: settings.hero?.rating_subtext || '',
+            rating_stars: settings.hero?.rating_stars || 5,
+            card_subtitle: settings.hero?.card_subtitle || '',
+            card_title: settings.hero?.card_title || '',
+            card_badge: settings.hero?.card_badge || '',
+            image_url: settings.hero?.image_url || '',
+            rotating_text: settings.hero?.rotating_text || ''
+          },
           story: {
             title: settings.story?.title || "From our kitchen counter to your daily sanctuary.",
             subtitle: settings.story?.subtitle || "Our Heritage",
@@ -2028,19 +2064,17 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                 {[
                   { id: 'identity', label: 'Identity & Banner', num: '1' },
                   { id: 'hero', label: 'Hero Section', num: '2' },
-                  { id: 'trust_badges', label: 'Trust Badges', num: '3' },
-                  { id: 'about_section', label: 'About Section', num: '4' },
-                  { id: 'features_section', label: 'Features Section', num: '5' },
-                  { id: 'product_section', label: 'Product Section', num: '6' },
-                  { id: 'instagram_feed', label: 'Instagram Feed', num: '7' },
-                  { id: 'story', label: 'Heritage Story', num: '4' },
-                  { id: 'subscription', label: 'Subscription Sys', num: '5' },
-                  { id: 'ingredients', label: 'Ingredients List', num: '6' },
-                  { id: 'difference', label: 'Comparison Chart', num: '7' },
-                  { id: 'faqs', label: 'FAQs Accordion', num: '8' },
-                  { id: 'contact', label: 'Footer & Socials', num: '9' },
-                  { id: 'policies', label: 'Store Policies', num: '10' },
-                  { id: 'delhivery', label: 'Delhivery Shipping', num: '11' }
+                  { id: 'product_selector', label: 'Product Selector', num: '3' },
+                  { id: 'trust_badges', label: 'Trust Badges', num: '4' },
+                  { id: 'story', label: 'Heritage Story', num: '5' },
+                  { id: 'subscription', label: 'Subscription Sys', num: '6' },
+                  { id: 'ingredients', label: 'Ingredients List', num: '7' },
+                  { id: 'difference', label: 'Comparison Chart', num: '8' },
+                  { id: 'faqs', label: 'FAQs Accordion', num: '9' },
+                  { id: 'instagram_feed', label: 'Instagram Feed', num: '10' },
+                  { id: 'contact', label: 'Footer & Socials', num: '11' },
+                  { id: 'policies', label: 'Store Policies', num: '12' },
+                  { id: 'delhivery', label: 'Delhivery Shipping', num: '13' }
                 ].map((sub) => {
                   const isActive = settingsSubTab === sub.id;
                   return (
@@ -3780,6 +3814,199 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                           placeholder="e.g. Pure Kesar Artisanal Shaving Puck"
                         />
                       </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Rotating Circular Text</label>
+                        <input
+                          type="text"
+                          value={settingsForm.hero.rotating_text || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            hero: { ...settingsForm.hero, rotating_text: e.target.value }
+                          })}
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          placeholder="e.g. HANDCRAFTED • 100% PURE ART •"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {settingsSubTab === 'product_selector' && (
+                <>
+                  <div className="bg-white rounded-3xl p-6 border border-[#3A2E26]/10 shadow-sm space-y-4">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70 border-b border-[#3A2E26]/10 pb-2">Product Selector Layout</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Section Top Label</label>
+                        <input
+                          type="text"
+                          value={settingsForm.product_selector_header?.badge || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            product_selector_header: { ...settingsForm.product_selector_header, badge: e.target.value }
+                          })}
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          placeholder="e.g. Choose Your Ritual"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Section Title</label>
+                        <input
+                          type="text"
+                          value={settingsForm.product_selector_header?.title || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            product_selector_header: { ...settingsForm.product_selector_header, title: e.target.value }
+                          })}
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          placeholder="e.g. Select Your Handmade Batch"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Section Description</label>
+                        <AutoResizeTextarea
+                          value={settingsForm.product_selector_header?.description || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            product_selector_header: { ...settingsForm.product_selector_header, description: e.target.value }
+                          })}
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          placeholder="e.g. Handcrafted with organic botanical butter..."
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-3xl p-6 border border-[#3A2E26]/10 shadow-sm space-y-4">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70 border-b border-[#3A2E26]/10 pb-2">Right Content Box</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Top Left Badge</label>
+                        <input
+                          type="text"
+                          value={settingsForm.product_selector_header?.product_badge || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            product_selector_header: { ...settingsForm.product_selector_header, product_badge: e.target.value }
+                          })}
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          placeholder="e.g. LUXURY BATH ELEMENT"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Top Right Badge (Weight)</label>
+                        <input
+                          type="text"
+                          value={settingsForm.product_selector_header?.weight_badge || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            product_selector_header: { ...settingsForm.product_selector_header, weight_badge: e.target.value }
+                          })}
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          placeholder="e.g. 75g Bar"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Main Product Title</label>
+                        <input
+                          type="text"
+                          value={settingsForm.product_selector_header?.product_title || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            product_selector_header: { ...settingsForm.product_selector_header, product_title: e.target.value }
+                          })}
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          placeholder="e.g. Hausmade™ Kesar Soap"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Rating Text</label>
+                        <input
+                          type="text"
+                          value={settingsForm.product_selector_header?.rating_text || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            product_selector_header: { ...settingsForm.product_selector_header, rating_text: e.target.value }
+                          })}
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          placeholder="e.g. 4.9 ★ · 480+ Happy Glow Reviews"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Product Description</label>
+                        <AutoResizeTextarea
+                          value={settingsForm.product_selector_header?.product_description || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            product_selector_header: { ...settingsForm.product_selector_header, product_description: e.target.value }
+                          })}
+                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                          placeholder="e.g. A purely handmade cleansing bar..."
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white rounded-3xl p-6 border border-[#3A2E26]/10 shadow-sm space-y-4">
+                    <div className="flex justify-between items-center border-b border-[#3A2E26]/10 pb-2">
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70">Additional Thumbnails</h3>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newImages = [...(settingsForm.product_selector_images || [])];
+                          newImages.push({ src: '', alt: '' });
+                          setSettingsForm({ ...settingsForm, product_selector_images: newImages });
+                        }}
+                        className="text-[10px] uppercase font-bold tracking-wider text-[#3A2E26]/60 hover:text-[#3A2E26] flex items-center gap-1"
+                      >
+                        <Plus className="w-3 h-3" /> Add Image
+                      </button>
+                    </div>
+                    <div className="space-y-4">
+                      <p className="text-xs text-[#3A2E26]/50 italic">Note: The first thumbnail is always the selected pack image. Add additional alternative images here.</p>
+                      {(settingsForm.product_selector_images || []).map((img, idx) => (
+                        <div key={idx} className="flex gap-4 items-start p-4 bg-[#F5F1E8]/30 rounded-2xl border border-[#E6D5C3]/30">
+                          <div className="flex-1 space-y-4">
+                            <ImageUploader
+                              label={`Thumbnail ${idx + 2} Image`}
+                              value={img.src}
+                              onChange={(url) => {
+                                const newImages = [...settingsForm.product_selector_images];
+                                newImages[idx].src = url;
+                                setSettingsForm({ ...settingsForm, product_selector_images: newImages });
+                              }}
+                              showNotification={showNotification}
+                              isSaving={saving}
+                              setIsSaving={setSaving}
+                            />
+                            <div>
+                              <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Alt Text</label>
+                              <input
+                                type="text"
+                                value={img.alt || ''}
+                                onChange={(e) => {
+                                  const newImages = [...settingsForm.product_selector_images];
+                                  newImages[idx].alt = e.target.value;
+                                  setSettingsForm({ ...settingsForm, product_selector_images: newImages });
+                                }}
+                                className="w-full px-4 py-2.5 bg-white border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
+                                placeholder="Alt text for SEO"
+                              />
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newImages = settingsForm.product_selector_images.filter((_, i) => i !== idx);
+                              setSettingsForm({ ...settingsForm, product_selector_images: newImages });
+                            }}
+                            className="w-8 h-8 flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors mt-6 shrink-0"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </>

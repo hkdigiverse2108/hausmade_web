@@ -52,10 +52,10 @@ export default function CartDrawer({ isOpen, onClose, cartItems, onUpdateQuantit
               </div>
             ) : (
               cartItems.map((item, index) => (
-                <div key={index} className="bg-white p-4 rounded-2xl border border-[#3A2E26]/10 shadow-sm flex gap-4 items-center">
-                  <img src={item.image} alt={item.title} className="w-20 h-20 rounded-xl object-cover border" />
+                <div key={index} className="bg-transparent py-4 border-b border-[#3A2E26]/10 flex gap-4 items-start">
+                  <img src={item.image} alt={item.title} className="w-20 h-20 rounded-none object-cover border border-[#3A2E26]/10" />
                   <div className="flex-1">
-                    <h4 className="font-serif-brand font-bold text-base text-[#3A2E26]">{item.title}</h4>
+                    <h4 className="font-bold text-sm text-[#3A2E26] uppercase tracking-wider">{item.title}</h4>
 
                     <p className="text-xs text-[#3A2E26]/60">₹{item.unitPrice} / bar</p>
                     
@@ -111,11 +111,11 @@ export default function CartDrawer({ isOpen, onClose, cartItems, onUpdateQuantit
                   onClose();
                   if (onOpenCheckout) onOpenCheckout();
                 }}
-                className="w-full py-4 bg-[#7A8B6F] hover:bg-[#68775E] text-white font-bold rounded-2xl shadow-lg transition-colors flex items-center justify-center gap-2 text-base"
+                className="w-full py-4 bg-[#3A2E26] hover:bg-transparent text-white hover:text-[#3A2E26] border border-[#3A2E26] font-bold rounded-none transition-colors flex items-center justify-center gap-2 text-[11px] uppercase tracking-[0.15em]"
               >
 
                 <span>Proceed to Checkout</span>
-                <ArrowRight className="w-5 h-5" />
+                <ArrowRight className="w-4 h-4" />
               </button>
 
               <div className="flex items-center justify-center gap-1.5 text-xs text-[#3A2E26]/60 pt-1">

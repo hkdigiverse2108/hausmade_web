@@ -56,25 +56,25 @@ export default function FAQ({ settings }) {
           )}
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-0 border-t border-[#3A2E26]/10">
           {faqs.map((faq, idx) => {
             const isOpen = openIndex === idx;
             return (
               <div
                 key={idx}
-                className="bg-white rounded-2xl border border-[#3A2E26]/10 shadow-sm overflow-hidden transition-all duration-200"
+                className="bg-transparent border-b border-[#3A2E26]/10 overflow-hidden transition-all duration-200"
               >
                 <button
                   type="button"
                   onClick={() => setOpenIndex(isOpen ? null : idx)}
-                  className="w-full p-4 sm:p-5 md:p-6 text-left flex items-center justify-between gap-3 font-serif-brand font-bold text-base sm:text-lg text-[#3A2E26] hover:text-[#7A8B6F] transition-colors"
+                  className="w-full py-5 text-left flex items-center justify-between gap-3 font-serif-brand font-bold text-base sm:text-lg text-[#3A2E26] hover:text-[#7A8B6F] transition-colors"
                 >
                   <span>{faq.q}</span>
                   <ChevronDown className={`w-5 h-5 text-[#7A8B6F] shrink-0 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {isOpen && (
-                  <div className="px-5 sm:px-6 pb-6 text-sm sm:text-base text-[#3A2E26]/80 leading-relaxed font-light border-t border-[#3A2E26]/5 pt-4 animate-fadeIn">
+                  <div className="pb-6 text-sm sm:text-base text-[#3A2E26]/80 leading-relaxed font-light animate-fadeIn">
                     {faq.a}
                   </div>
                 )}

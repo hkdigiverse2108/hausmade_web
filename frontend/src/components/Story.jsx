@@ -22,61 +22,57 @@ export default function Story({ settings }) {
   const rawPillars = settings?.pillars && settings.pillars.length > 0 ? settings.pillars : defaultPillars;
 
   return (
-    <section id="story" className="py-16 lg:py-24 bg-[#7A8B6F]/10 scroll-mt-20 relative overflow-hidden">
+    <section id="story" className="py-20 lg:py-32 bg-[#FDFBF7] scroll-mt-20 relative overflow-hidden border-t border-b border-[#3A2E26]/5">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
           
           {/* Workshop Image Frame */}
-          <div className="lg:col-span-6 relative order-2 lg:order-1">
-            <div className="relative mx-auto max-w-md lg:max-w-none">
-              <div className="absolute -inset-3 rounded-3xl bg-[#C97C5D]/20 blur-lg" />
-              <div className="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white">
+          <div className="lg:col-span-5 relative order-2 lg:order-1">
+            <div className="relative mx-auto max-w-sm lg:max-w-md">
+              <div className="relative rounded-[2rem] overflow-hidden shadow-xl border border-[#3A2E26]/5">
                 <img
                   src={imageUrl}
                   alt="Founder Crafting Soap in Workshop"
-                  className="w-full h-[280px] sm:h-[400px] md:h-[480px] object-cover"
+                  className="w-full h-[400px] sm:h-[500px] md:h-[600px] object-cover transition-transform duration-[15s] hover:scale-105"
                 />
-                <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-md p-4 rounded-2xl border border-white/50 shadow-md">
-                  <p className="font-serif-brand font-bold text-sm text-[#3A2E26]">{authorName}</p>
-                  <p className="text-xs text-[#7A8B6F] font-medium">{authorTitle}</p>
+                <div className="absolute bottom-6 left-6 right-6 bg-white/95 backdrop-blur-md p-5 rounded-2xl border border-[#3A2E26]/5 shadow-sm text-center">
+                  <p className="font-serif-brand text-lg text-[#3A2E26]">{authorName}</p>
+                  <p className="text-[10px] text-[#7A8B6F] uppercase tracking-[0.15em] mt-1 font-bold">{authorTitle}</p>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Story Narrative Text */}
-          <div className="lg:col-span-6 space-y-6 order-1 lg:order-2">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#C97C5D]/15 text-[#C97C5D] text-xs font-bold uppercase tracking-wider">
-              <Heart className="w-3.5 h-3.5 fill-current" /> {subtitle}
+          <div className="lg:col-span-7 space-y-8 order-1 lg:order-2 lg:pl-8">
+            <div className="flex items-center gap-4">
+              <span className="h-[1px] w-12 bg-[#3A2E26]/20"></span>
+              <span className="text-[#8C7A5B] font-bold text-xs uppercase tracking-[0.2em]">{subtitle}</span>
             </div>
 
-            <h2 className="font-serif-brand text-3xl sm:text-4xl lg:text-5xl font-normal text-[#3A2E26] leading-tight">
+            <h2 className="font-serif-brand text-3xl sm:text-5xl lg:text-6xl font-normal text-[#3A2E26] leading-[1.1]">
               {title}
             </h2>
 
-            <p className="text-base sm:text-lg text-[#3A2E26]/80 leading-relaxed font-light">
-              {paragraph1}
-            </p>
-
-            <p className="text-base sm:text-lg text-[#3A2E26]/80 leading-relaxed font-light">
-              {paragraph2}
-            </p>
+            <div className="space-y-6 text-base sm:text-lg text-[#3A2E26]/75 leading-relaxed font-light">
+              <p>{paragraph1}</p>
+              <p>{paragraph2}</p>
+            </div>
 
             {/* Micro Pillars */}
             {rawPillars.length > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-[#3A2E26]/10">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-8 border-t border-[#3A2E26]/10 mt-8">
                 {rawPillars.map((pillar, idx) => {
                   const Icon = iconMap[pillar.icon] || Sprout;
-                  const iconColorClass = idx % 2 === 0 ? "text-[#7A8B6F]" : "text-[#C97C5D]";
                   return (
-                    <div key={idx} className="flex items-start gap-3">
-                      <div className={`p-2 rounded-xl bg-white ${iconColorClass} shadow-sm mt-1 shrink-0`}>
-                        <Icon className="w-5 h-5" />
+                    <div key={idx} className="flex items-start gap-4">
+                      <div className="mt-1 shrink-0">
+                        <Icon className="w-5 h-5 text-[#8C7A5B]" />
                       </div>
                       <div>
-                        <h4 className="font-serif-brand font-bold text-sm text-[#3A2E26]">{pillar.title}</h4>
-                        <p className="text-xs text-[#3A2E26]/70 mt-0.5">{pillar.subtitle}</p>
+                        <h4 className="font-serif-brand font-bold text-base text-[#3A2E26]">{pillar.title}</h4>
+                        <p className="text-sm text-[#3A2E26]/60 mt-1">{pillar.subtitle}</p>
                       </div>
                     </div>
                   );

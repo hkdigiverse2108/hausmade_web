@@ -198,35 +198,35 @@ export default function Reviews({ settings }) {
                   key={`${rev.id}-${idx}`}
                   className="w-full md:w-1/3 shrink-0 px-2 sm:px-3"
                 >
-                  <div className="bg-[#F6F4F0] p-5 sm:p-6 md:p-8 rounded-2xl border border-[#3A2E26]/10 shadow-sm hover:shadow-lg hover:-translate-y-2 hover:scale-[1.02] hover:border-[#8C7A5B]/30 active:scale-[0.98] transition-all duration-300 ease-out flex flex-col justify-between h-full min-h-[180px] sm:min-h-[220px] cursor-pointer select-none">
-                    <div>
-                      {/* Author Header */}
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="w-12 h-12 rounded-full bg-[#8C7A5B] text-white font-serif-brand font-bold text-lg flex items-center justify-center shadow-xs shrink-0">
+                  <div className="bg-white rounded-3xl p-8 sm:p-10 border border-[#3A2E26]/5 shadow-sm hover:shadow-md transition-all duration-500 flex flex-col justify-between h-full min-h-[220px] sm:min-h-[260px] cursor-pointer select-none group relative overflow-hidden">
+                    <div className="absolute -top-4 right-4 text-[120px] font-serif-brand text-[#8C7A5B]/5 leading-none select-none">"</div>
+                    <div className="relative z-10">
+                      {/* Comment */}
+                      <p className="text-base sm:text-lg text-[#3A2E26]/80 font-serif-brand italic leading-relaxed mb-8">
+                        {rev.comment}
+                      </p>
+                      
+                      {/* Author Footer */}
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-[#8C7A5B]/10 text-[#8C7A5B] font-serif-brand font-bold text-sm flex items-center justify-center shrink-0">
                           {rev.initial}
                         </div>
                         <div>
-                          <h3 className="font-bold text-sm sm:text-base text-[#3A2E26] leading-snug">
+                          <h3 className="font-bold text-sm text-[#3A2E26] leading-snug">
                             {rev.name}
                           </h3>
                           <div className="flex items-center gap-1.5 mt-0.5">
                             <div className="flex text-[#8C7A5B]">
                               {[...Array(rev.rating)].map((_, i) => (
-                                <Star key={i} className="w-3.5 h-3.5 fill-current" />
+                                <Star key={i} className="w-3 h-3 fill-current" />
                               ))}
                             </div>
-                            <span className="text-[10px] text-[#3A2E26]/60 font-medium flex items-center gap-0.5">
-                              <ShieldCheck className="w-3 h-3 text-[#8C7A5B]" />
+                            <span className="text-[9px] text-[#3A2E26]/50 font-medium uppercase tracking-widest flex items-center gap-0.5">
                               {rev.verified}
                             </span>
                           </div>
                         </div>
                       </div>
-
-                      {/* Comment */}
-                      <p className="text-xs sm:text-sm text-[#3A2E26]/80 italic leading-relaxed font-light">
-                        {rev.comment}
-                      </p>
                     </div>
                   </div>
                 </div>

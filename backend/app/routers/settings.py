@@ -38,7 +38,8 @@ async def get_site_settings():
             "card_subtitle": "Royal Saffron Formula",
             "card_title": "Pure Kesar Artisanal Shaving Puck",
             "card_badge": "100% Pure",
-            "image_url": "/images/soap-hero.png"
+            "image_url": "/images/soap-hero.png",
+            "rotating_text": "HANDCRAFTED • 100% PURE ART •"
         }
         if not settings:
             settings = {

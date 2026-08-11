@@ -108,6 +108,7 @@ class HeroSettings(BaseModel):
     card_title: Optional[str] = "Pure Kesar Artisanal Shaving Puck"
     card_badge: Optional[str] = "100% Pure"
     image_url: Optional[str] = "/images/soap-hero.png"
+    rotating_text: Optional[str] = "HANDCRAFTED • 100% PURE ART •"
 
 
 class StoryPillarItem(BaseModel):

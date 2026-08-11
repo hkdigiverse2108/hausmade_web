@@ -529,7 +529,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
           onClick={() => window.location.href = '/'}
           title="Go to Homepage"
         >
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#C97C5D] to-[#E09F80] flex items-center justify-center text-white shadow-md">
+          <div className="w-10 h-10 rounded-none bg-gradient-to-tr from-[#C97C5D] to-[#E09F80] flex items-center justify-center text-white ">
             <Sparkles className="w-5 h-5 animate-pulse" />
           </div>
           <div>
@@ -546,7 +546,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
         
         {step === 'success' ? (
           /* STEP 3: SUCCESS / CONFIRMATION (Full Center Layout) */
-          <div className="w-full max-w-xl mx-auto bg-[#FDFBF7] border border-[#3A2E26]/10 rounded-3xl p-8 shadow-sm text-center space-y-6 self-center my-auto">
+          <div className="w-full max-w-xl mx-auto bg-[#FDFBF7] border border-[#3A2E26]/10 rounded-none p-8  text-center space-y-6 self-center my-auto">
             <div className="w-20 h-20 bg-[#7A8B6F]/20 text-[#7A8B6F] rounded-full flex items-center justify-center mx-auto shadow-inner">
               <CheckCircle2 className="w-12 h-12" />
             </div>
@@ -557,7 +557,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
               <p className="text-sm text-gray-600">Your Hausmade™ Kesar Soap order has been placed successfully.</p>
             </div>
 
-            <div className="p-5 rounded-2xl bg-[#F5F1E8] border border-[#3A2E26]/10 text-left space-y-2 text-xs">
+            <div className="p-5 rounded-none bg-[#F5F1E8] border border-[#3A2E26]/10 text-left space-y-2 text-xs">
               <div className="flex justify-between font-bold text-sm border-b pb-2">
                 <span>Order ID:</span>
                 <span className="text-[#C97C5D]">{orderId}</span>
@@ -580,7 +580,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
 
             <button
               onClick={onClose}
-              className="px-8 py-3 bg-[#3A2E26] hover:bg-black text-white font-bold text-xs uppercase tracking-widest rounded-xl transition-all cursor-pointer shadow-md"
+              className="px-8 py-3 bg-[#3A2E26] hover:bg-black text-white font-bold text-xs uppercase tracking-widest rounded-none transition-all cursor-pointer "
             >
               Continue Shopping
             </button>
@@ -591,7 +591,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
             <div className="flex-1 space-y-6">
               
               {/* Progress Indicator */}
-              <div className="bg-[#FDFBF7] border border-[#3A2E26]/10 rounded-2xl p-4 flex items-center justify-center gap-6 text-xs font-bold shadow-xs">
+              <div className="bg-[#FDFBF7] border border-[#3A2E26]/10 rounded-none p-4 flex items-center justify-center gap-6 text-xs font-bold shadow-xs">
                 <span className={`flex items-center gap-1.5 ${step === 'shipping' ? 'text-[#C97C5D]' : 'text-gray-400'}`}>
                   <Truck className="w-4 h-4" /> 1. Shipping Address
                 </span>
@@ -603,7 +603,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
 
               {/* STEP 1: SHIPPING */}
               {step === 'shipping' && (
-                <form onSubmit={handleProceedToPayment} className="bg-[#FDFBF7] border border-[#3A2E26]/10 rounded-3xl p-6 sm:p-8 space-y-5 shadow-sm">
+                <form onSubmit={handleProceedToPayment} className="bg-[#FDFBF7] border border-[#3A2E26]/10 rounded-none p-6 sm:p-8 space-y-5 ">
                   <h3 className="font-serif-brand text-lg font-bold text-[#3A2E26]">Delivery Address</h3>
 
                   {/* Saved Address Book Selection */}
@@ -625,7 +625,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
                             }
                           }
                         }}
-                        className="w-full px-4 py-3 rounded-xl bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all font-medium"
+                        className="w-full px-4 py-3 rounded-none bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all font-medium"
                       >
                         <option value="custom">✍️ Fill Custom / New Address</option>
                         {availableAddresses.map((addr) => (
@@ -648,7 +648,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
                         placeholder="e.g. John Doe"
                         value={formData.fullName}
                         onChange={handleFormChange}
-                        className="w-full px-4 py-3 rounded-xl bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all"
+                        className="w-full px-4 py-3 rounded-none bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all"
                       />
                     </div>
                     <div>
@@ -660,7 +660,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
                         placeholder="e.g. 9876543210"
                         value={formData.phone}
                         onChange={handleFormChange}
-                        className="w-full px-4 py-3 rounded-xl bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all"
+                        className="w-full px-4 py-3 rounded-none bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all"
                       />
                     </div>
                   </div>
@@ -673,7 +673,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
                       placeholder="For receipt & shipping updates..."
                       value={formData.email}
                       onChange={handleFormChange}
-                      className="w-full px-4 py-3 rounded-xl bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all"
+                      className="w-full px-4 py-3 rounded-none bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all"
                     />
                   </div>
 
@@ -686,7 +686,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
                       placeholder="Street name, landmark details..."
                       value={formData.address}
                       onChange={handleFormChange}
-                      className="w-full px-4 py-3 rounded-xl bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all"
+                      className="w-full px-4 py-3 rounded-none bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all"
                     />
                   </div>
 
@@ -700,7 +700,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
                         placeholder="e.g. Surat"
                         value={formData.city}
                         onChange={handleFormChange}
-                        className="w-full px-4 py-3 rounded-xl bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all"
+                        className="w-full px-4 py-3 rounded-none bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all"
                       />
                     </div>
                     <div>
@@ -712,7 +712,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
                         placeholder="e.g. 395007"
                         value={formData.pincode}
                         onChange={handleFormChange}
-                        className="w-full px-4 py-3 rounded-xl bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all"
+                        className="w-full px-4 py-3 rounded-none bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all"
                       />
                     </div>
                   </div>
@@ -731,7 +731,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
 
                   <button
                     type="submit"
-                    className="w-full h-12 bg-[#3A2E26] hover:bg-black text-white font-bold text-xs uppercase tracking-widest rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-2"
+                    className="w-full h-12 bg-[#3A2E26] hover:bg-black text-white font-bold text-xs uppercase tracking-widest rounded-none transition-all cursor-pointer flex items-center justify-center gap-2"
                   >
                     <span>Continue to Payment Option</span>
                     <ArrowRight className="w-4 h-4" />
@@ -741,7 +741,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
 
               {/* STEP 2: PAYMENT METHOD */}
               {step === 'payment' && (
-                <div className="bg-[#FDFBF7] border border-[#3A2E26]/10 rounded-3xl p-6 sm:p-8 space-y-6 shadow-sm">
+                <div className="bg-[#FDFBF7] border border-[#3A2E26]/10 rounded-none p-6 sm:p-8 space-y-6 ">
                   <div className="flex justify-between items-center border-b pb-3">
                     <h3 className="font-serif-brand text-lg font-bold text-[#3A2E26]">Choose Payment Option</h3>
                     <button
@@ -755,7 +755,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
 
                   <div className="space-y-3.5">
                     {settings?.cashfree?.active && (
-                      <label className={`p-4 rounded-2xl border-2 flex items-center justify-between cursor-pointer transition-all ${paymentMethod === 'cashfree' ? 'border-[#C97C5D] bg-[#C97C5D]/5' : 'border-[#3A2E26]/10 bg-white'}`}>
+                      <label className={`p-4 rounded-none border-2 flex items-center justify-between cursor-pointer transition-all ${paymentMethod === 'cashfree' ? 'border-[#C97C5D] bg-[#C97C5D]/5' : 'border-[#3A2E26]/10 bg-white'}`}>
                         <div className="flex items-center gap-3">
                           <CreditCard className="w-5 h-5 text-[#C97C5D]" />
                           <div>
@@ -768,7 +768,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
                     )}
 
                     {settings?.razorpay?.active && (
-                      <label className={`p-4 rounded-2xl border-2 flex items-center justify-between cursor-pointer transition-all ${paymentMethod === 'razorpay' ? 'border-blue-600 bg-blue-50' : 'border-[#3A2E26]/10 bg-white'}`}>
+                      <label className={`p-4 rounded-none border-2 flex items-center justify-between cursor-pointer transition-all ${paymentMethod === 'razorpay' ? 'border-blue-600 bg-blue-50' : 'border-[#3A2E26]/10 bg-white'}`}>
                         <div className="flex items-center gap-3">
                           <CreditCard className="w-5 h-5 text-blue-600" />
                           <div>
@@ -780,7 +780,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
                       </label>
                     )}
 
-                    <label className={`p-4 rounded-2xl border-2 flex items-center justify-between cursor-pointer transition-all ${paymentMethod === 'cod' ? 'border-[#7A8B6F] bg-[#7A8B6F]/5' : 'border-[#3A2E26]/10 bg-white'}`}>
+                    <label className={`p-4 rounded-none border-2 flex items-center justify-between cursor-pointer transition-all ${paymentMethod === 'cod' ? 'border-[#7A8B6F] bg-[#7A8B6F]/5' : 'border-[#3A2E26]/10 bg-white'}`}>
                       <div className="flex items-center gap-3">
                         <Banknote className="w-5 h-5 text-[#7A8B6F]" />
                         <div>
@@ -792,14 +792,14 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
                     </label>
                   </div>
 
-                  <div className="p-4 rounded-2xl bg-[#F5F1E8] border border-[#3A2E26]/10 text-xs space-y-1">
+                  <div className="p-4 rounded-none bg-[#F5F1E8] border border-[#3A2E26]/10 text-xs space-y-1">
                     <p className="font-bold text-[#3A2E26]">Shipping Address Details:</p>
                     <p className="text-[#3A2E26]/80">{formData.fullName} ({formData.phone})</p>
                     <p className="text-[#3A2E26]/80">{formData.address}, {formData.city} - {formData.pincode}</p>
                   </div>
 
                   {error && (
-                    <div className="p-3 text-xs font-semibold text-red-700 bg-red-50 border border-red-200 rounded-xl">
+                    <div className="p-3 text-xs font-semibold text-red-700 bg-red-50 border border-red-200 rounded-none">
                       {error}
                     </div>
                   )}
@@ -808,7 +808,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
                     type="button"
                     onClick={handlePlaceOrder}
                     disabled={loading}
-                    className="w-full h-12 bg-[#7A8B6F] hover:bg-[#68775E] text-white font-bold text-xs uppercase tracking-widest rounded-2xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                    className="w-full h-12 bg-[#7A8B6F] hover:bg-[#68775E] text-white font-bold text-xs uppercase tracking-widest rounded-none  transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
                   >
                     {loading ? (
                       <>
@@ -828,7 +828,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
 
             {/* Right Side: Order Summary Card */}
             <div className="w-full lg:w-96 shrink-0 space-y-6">
-              <div className="bg-[#FDFBF7] border border-[#3A2E26]/10 rounded-3xl p-6 shadow-sm space-y-5 sticky top-24">
+              <div className="bg-[#FDFBF7] border border-[#3A2E26]/10 rounded-none p-6  space-y-5 sticky top-24">
                 <h3 className="font-serif-brand text-lg font-bold text-[#3A2E26] border-b pb-3">Order Summary</h3>
 
                 {/* Items loop */}
@@ -852,7 +852,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
                         <select
                           value={coupon}
                           onChange={(e) => setCoupon(e.target.value)}
-                          className="w-full px-3 py-2 rounded-xl bg-white border border-[#3A2E26]/20 text-xs font-semibold focus:outline-none"
+                          className="w-full px-3 py-2 rounded-none bg-white border border-[#3A2E26]/20 text-xs font-semibold focus:outline-none"
                         >
                           <option value="">-- Choose Promo Offer --</option>
                           {activeCoupons.map((c) => (
@@ -870,7 +870,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
                           placeholder="PROMO CODE"
                           value={coupon}
                           onChange={(e) => setCoupon(e.target.value.toUpperCase())}
-                          className="w-full px-3 py-2 rounded-xl bg-white border border-[#3A2E26]/20 text-xs font-semibold uppercase tracking-wider focus:outline-none"
+                          className="w-full px-3 py-2 rounded-none bg-white border border-[#3A2E26]/20 text-xs font-semibold uppercase tracking-wider focus:outline-none"
                         />
                       </div>
                     )}
@@ -882,7 +882,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
                           placeholder="ENTER CUSTOM PROMO CODE"
                           value={coupon === 'custom_code' ? '' : coupon}
                           onChange={(e) => setCoupon(e.target.value.toUpperCase())}
-                          className="w-full px-3 py-2 rounded-xl bg-white border border-[#3A2E26]/20 text-xs font-semibold uppercase tracking-wider focus:outline-none"
+                          className="w-full px-3 py-2 rounded-none bg-white border border-[#3A2E26]/20 text-xs font-semibold uppercase tracking-wider focus:outline-none"
                         />
                       </div>
                     )}
@@ -891,7 +891,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
                      <button
                        type="button"
                        onClick={handleApplyCoupon}
-                       className="px-4 py-1.5 bg-[#3A2E26] hover:bg-black text-white text-xs font-bold uppercase rounded-xl transition-all cursor-pointer"
+                       className="px-4 py-1.5 bg-[#3A2E26] hover:bg-black text-white text-xs font-bold uppercase rounded-none transition-all cursor-pointer"
                      >
                        Apply
                      </button>

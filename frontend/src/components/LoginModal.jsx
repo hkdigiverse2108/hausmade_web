@@ -93,7 +93,7 @@ function OtpBoxes({ value, onChange }) {
           value={getBoxValue(index)}
           onChange={(e) => handleChange(e, index)}
           onKeyDown={(e) => handleKeyDown(e, index)}
-          className="w-10 h-12 sm:w-12 sm:h-14 text-center text-lg sm:text-xl font-bold rounded-2xl bg-white border border-[#3A2E26]/20 text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/20 transition-all shadow-sm hover:border-[#C97C5D]/40"
+          className="w-10 h-12 sm:w-12 sm:h-14 text-center text-lg sm:text-xl font-bold rounded-none bg-white border border-[#3A2E26]/20 text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/20 transition-all  hover:border-[#C97C5D]/40"
         />
       ))}
     </div>
@@ -294,7 +294,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotifi
       {/* Backdrop click to close */}
       <div className="absolute inset-0 cursor-default" onClick={onClose} />
 
-      <div className="relative w-full max-w-4xl bg-[#FDFBF7] rounded-3xl border border-[#3A2E26]/10 shadow-2xl overflow-hidden text-[#3A2E26] flex flex-col md:flex-row min-h-[520px] animate-scaleUp z-10">
+      <div className="relative w-full max-w-4xl bg-[#FDFBF7] rounded-none border border-[#3A2E26]/10  overflow-hidden text-[#3A2E26] flex flex-col md:flex-row min-h-[520px] animate-scaleUp z-10">
         
         {/* Close Button */}
         <button
@@ -337,7 +337,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotifi
 
             {/* Brand Header */}
             <div className="text-center mb-4">
-              <div className="inline-flex items-center justify-center w-10 h-10 rounded-2xl bg-[#C97C5D] text-white shadow-md mb-2 mx-auto">
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-none bg-[#C97C5D] text-white  mb-2 mx-auto">
                 <Sparkles className="w-5 h-5 animate-pulse" />
               </div>
               <h3 className="font-serif-brand text-xl font-bold tracking-tight text-[#3A2E26]">
@@ -370,7 +370,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotifi
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="name@example.com"
-                        className="w-full pl-11 pr-4 py-2.5 rounded-2xl bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] placeholder:text-[#3A2E26]/40 focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/20 transition-all font-medium disabled:bg-gray-50 disabled:text-[#3A2E26]/50"
+                        className="w-full pl-11 pr-4 py-2.5 rounded-none bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] placeholder:text-[#3A2E26]/40 focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/20 transition-all font-medium disabled:bg-gray-50 disabled:text-[#3A2E26]/50"
                       />
                     </div>
                   </div>
@@ -388,7 +388,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotifi
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           placeholder="Enter password..."
-                          className="w-full pl-11 pr-12 py-2.5 rounded-2xl bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] placeholder:text-[#3A2E26]/40 focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/20 transition-all font-medium"
+                          className="w-full pl-11 pr-12 py-2.5 rounded-none bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] placeholder:text-[#3A2E26]/40 focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/20 transition-all font-medium"
                         />
                         <button
                           type="button"
@@ -447,7 +447,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotifi
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="e.g. John Doe"
-                        className="w-full pl-11 pr-4 py-2.5 rounded-2xl bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] placeholder:text-[#3A2E26]/40 focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/20 transition-all font-medium"
+                        className="w-full pl-11 pr-4 py-2.5 rounded-none bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] placeholder:text-[#3A2E26]/40 focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/20 transition-all font-medium"
                       />
                     </div>
                   </div>
@@ -464,7 +464,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotifi
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="name@example.com"
-                        className="w-full pl-11 pr-4 py-2.5 rounded-2xl bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] placeholder:text-[#3A2E26]/40 focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/20 transition-all font-medium"
+                        className="w-full pl-11 pr-4 py-2.5 rounded-none bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] placeholder:text-[#3A2E26]/40 focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/20 transition-all font-medium"
                       />
                     </div>
                   </div>
@@ -482,7 +482,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotifi
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="Choose a strong password..."
-                        className="w-full pl-11 pr-12 py-2.5 rounded-2xl bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] placeholder:text-[#3A2E26]/40 focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/20 transition-all font-medium"
+                        className="w-full pl-11 pr-12 py-2.5 rounded-none bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] placeholder:text-[#3A2E26]/40 focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/20 transition-all font-medium"
                       />
                       <button
                         type="button"
@@ -536,7 +536,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotifi
               )}
 
               {error && (
-                <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-xs font-semibold text-red-800 animate-fadeIn">
+                <div className="p-3.5 rounded-none bg-red-50 border border-red-200 text-xs font-semibold text-red-800 animate-fadeIn">
                   {error}
                 </div>
               )}
@@ -544,7 +544,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotifi
               <button
                 type="submit"
                 disabled={loading || otpLoading}
-                className="w-full py-3 mt-4 bg-[#3A2E26] hover:bg-black text-white font-bold text-xs uppercase tracking-widest rounded-2xl shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-3 mt-4 bg-[#3A2E26] hover:bg-black text-white font-bold text-xs uppercase tracking-widest rounded-none  hover: transition-all cursor-pointer flex items-center justify-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading || otpLoading ? (
                   <>
@@ -582,7 +582,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotifi
                 <button
                   type="button"
                   onClick={handleGoogleLogin}
-                  className="w-full py-2.5 px-4 border border-[#3A2E26]/20 hover:bg-[#3A2E26]/5 text-[#3A2E26] font-bold rounded-2xl transition-all text-xs uppercase tracking-wider cursor-pointer flex items-center justify-center gap-2.5"
+                  className="w-full py-2.5 px-4 border border-[#3A2E26]/20 hover:bg-[#3A2E26]/5 text-[#3A2E26] font-bold rounded-none transition-all text-xs uppercase tracking-wider cursor-pointer flex items-center justify-center gap-2.5"
                 >
                   <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
