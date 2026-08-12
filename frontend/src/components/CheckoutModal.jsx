@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, CheckCircle2, ShieldCheck, CreditCard, Truck, Smartphone, Banknote, ArrowRight, Sparkles, Loader2, Compass, Navigation } from 'lucide-react';
+import { X, CheckCircle2, ShieldCheck, CreditCard, Truck, Smartphone, Banknote, ArrowRight, ArrowLeft, Loader2, Compass, Navigation } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { placeOrder, updateUserProfile, validateCoupon, getActiveCoupons, createSubscription, createCashfreeSession, verifyCashfreePayment, createRazorpaySession, verifyRazorpayPayment } from '../utils/api';
 
@@ -517,28 +517,46 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
   };
 
   return (
-    <div className="fixed inset-0 z-50 w-full h-full bg-gradient-to-br from-[#FDFBF7] via-[#F5F1E8] to-[#EAE3D2] text-[#3A2E26] overflow-y-auto flex flex-col animate-fadeIn font-sans">
+    <div className="fixed inset-0 z-50 w-full h-full bg-gradient-to-br from-[#FDFBF7] via-[#F5F1E8] to-[#EAE3D2] text-[#3A2E26] overflow-x-hidden overflow-y-auto flex flex-col animate-fadeIn font-sans">
       {/* Background Accents */}
       <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-[#7A8B6F]/5 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-[#C97C5D]/5 rounded-full blur-3xl pointer-events-none" />
 
       {/* Top Nav Bar */}
-      <div className="sticky top-0 bg-white/70 backdrop-blur-xl border-b border-[#3A2E26]/10 px-6 py-4 flex items-center justify-between z-10 shrink-0">
-        <div 
-          className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity" 
-          onClick={() => window.location.href = '/'}
-          title="Go to Homepage"
-        >
-          <div className="w-10 h-10 rounded-none bg-gradient-to-tr from-[#C97C5D] to-[#E09F80] flex items-center justify-center text-white ">
-            <Sparkles className="w-5 h-5 animate-pulse" />
-          </div>
-          <div>
-            <h1 className="font-serif-brand text-xl font-bold tracking-tight text-[#3A2E26]">Hausmade™ Checkout</h1>
-            <p className="text-[9px] uppercase tracking-widest text-[#7A8B6F] font-bold">Secure SSL Encrypted Checkout Gate</p>
+      <div className="sticky top-0 bg-white/70 backdrop-blur-xl border-b border-[#3A2E26]/10 px-4 sm:px-6 py-4 flex items-center justify-between z-10 shrink-0">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <button
+            onClick={onClose}
+            className="w-10 h-10 rounded-full border border-[#3A2E26]/15 flex items-center justify-center text-[#3A2E26] hover:bg-[#3A2E26]/5 transition-all cursor-pointer shrink-0"
+            title="Back to Shop"
+            aria-label="Back to Shop"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          
+          <div 
+            className="flex items-center gap-2 sm:gap-2.5 cursor-pointer hover:opacity-80 transition-opacity" 
+            onClick={() => window.location.href = '/'}
+            title="Go to Homepage"
+          >
+            {settings?.logo_url && (
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#C97C5D] flex items-center justify-center text-white overflow-hidden shrink-0">
+                <img src={settings.logo_url} alt="Logo" className="w-full h-full object-cover" />
+              </div>
+            )}
+            <div>
+              <h1 className="font-serif-brand text-lg sm:text-2xl font-bold tracking-tight text-[#3A2E26] block leading-none">
+                Hausmade<span className="text-xs align-top font-sans text-[#C97C5D]">™</span>
+              </h1>
+              <p className="text-[9px] uppercase tracking-widest text-[#7A8B6F] font-bold mt-1 hidden sm:block">Secure SSL Encrypted Checkout Gate</p>
+            </div>
           </div>
         </div>
 
-        {/* Exit Checkout Button Hidden */}
+        <div className="hidden sm:flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#7A8B6F] bg-[#7A8B6F]/5 border border-[#7A8B6F]/10 px-3 py-1.5 rounded-full select-none shrink-0">
+          <ShieldCheck className="w-3.5 h-3.5" />
+          <span>Secure Checkout</span>
+        </div>
       </div>
 
       {/* Main Grid Container */}
@@ -591,11 +609,11 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
             <div className="flex-1 space-y-6">
               
               {/* Progress Indicator */}
-              <div className="bg-[#FDFBF7] border border-[#3A2E26]/10 rounded-none p-4 flex items-center justify-center gap-6 text-xs font-bold shadow-xs">
+              <div className="bg-[#FDFBF7] border border-[#3A2E26]/10 rounded-none p-3.5 sm:p-4 flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-[11px] sm:text-xs font-bold shadow-xs">
                 <span className={`flex items-center gap-1.5 ${step === 'shipping' ? 'text-[#C97C5D]' : 'text-gray-400'}`}>
                   <Truck className="w-4 h-4" /> 1. Shipping Address
                 </span>
-                <span className="text-gray-300">|</span>
+                <span className="text-gray-300 hidden sm:inline">|</span>
                 <span className={`flex items-center gap-1.5 ${step === 'payment' ? 'text-[#C97C5D]' : 'text-gray-400'}`}>
                   <CreditCard className="w-4 h-4" /> 2. Payment Option
                 </span>
@@ -603,7 +621,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
 
               {/* STEP 1: SHIPPING */}
               {step === 'shipping' && (
-                <form onSubmit={handleProceedToPayment} className="bg-[#FDFBF7] border border-[#3A2E26]/10 rounded-none p-6 sm:p-8 space-y-5 ">
+                <form onSubmit={handleProceedToPayment} className="bg-[#FDFBF7] border border-[#3A2E26]/10 rounded-none p-4 sm:p-8 space-y-5 ">
                   <h3 className="font-serif-brand text-lg font-bold text-[#3A2E26]">Delivery Address</h3>
 
                   {/* Saved Address Book Selection */}
@@ -741,7 +759,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
 
               {/* STEP 2: PAYMENT METHOD */}
               {step === 'payment' && (
-                <div className="bg-[#FDFBF7] border border-[#3A2E26]/10 rounded-none p-6 sm:p-8 space-y-6 ">
+                <div className="bg-[#FDFBF7] border border-[#3A2E26]/10 rounded-none p-4 sm:p-8 space-y-6 ">
                   <div className="flex justify-between items-center border-b pb-3">
                     <h3 className="font-serif-brand text-lg font-bold text-[#3A2E26]">Choose Payment Option</h3>
                     <button
@@ -828,7 +846,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
 
             {/* Right Side: Order Summary Card */}
             <div className="w-full lg:w-96 shrink-0 space-y-6">
-              <div className="bg-[#FDFBF7] border border-[#3A2E26]/10 rounded-none p-6  space-y-5 sticky top-24">
+              <div className="bg-[#FDFBF7] border border-[#3A2E26]/10 rounded-none p-4 sm:p-6 space-y-5 sticky top-24">
                 <h3 className="font-serif-brand text-lg font-bold text-[#3A2E26] border-b pb-3">Order Summary</h3>
 
                 {/* Items loop */}

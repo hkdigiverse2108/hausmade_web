@@ -62,7 +62,7 @@ export default function SocialProofToast() {
       setToast({
         name: randomOrder.name,
         city: randomOrder.city,
-        pack: randomOrder.pack,
+        pack: "Single Soap Bar (75g)",
         time: getRelativeTime(randomOrder.created_at)
       });
       setVisible(true);

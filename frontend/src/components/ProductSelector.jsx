@@ -272,18 +272,18 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
             </div>
 
             {/* Reassurance Icons */}
-            <div className="pt-4 grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-4 text-center sm:text-left text-[9px] uppercase tracking-[0.1em] text-[#3A2E26]/60">
-              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2">
+            <div className="pt-4 grid grid-cols-3 gap-2 sm:gap-4 text-center sm:text-left text-[8px] sm:text-[9px] uppercase tracking-[0.05em] sm:tracking-[0.1em] text-[#3A2E26]/60">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-1 sm:gap-2">
                 <Truck className="w-3.5 h-3.5 shrink-0 opacity-70" />
-                <span className="leading-relaxed">Free Shipping over ₹499</span>
+                <span className="leading-tight sm:leading-relaxed">Free Shipping over ₹499</span>
               </div>
-              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-1 sm:gap-2">
                 <RotateCcw className="w-3.5 h-3.5 shrink-0 opacity-70" />
-                <span className="leading-relaxed">30-Day Happiness Guarantee</span>
+                <span className="leading-tight sm:leading-relaxed">30-Day Happiness Guarantee</span>
               </div>
-              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-1 sm:gap-2">
                 <ShieldCheck className="w-3.5 h-3.5 shrink-0 opacity-70" />
-                <span className="leading-relaxed">Plastic-Free Delivery</span>
+                <span className="leading-tight sm:leading-relaxed">Plastic-Free Delivery</span>
               </div>
             </div>
             </div>

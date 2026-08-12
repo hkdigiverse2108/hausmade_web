@@ -50,10 +50,12 @@ export default function Header({ cartCount, onOpenCart, user, isAuthenticated, o
   return (
     <div className={`fixed ${user?.is_admin ? 'top-10' : 'top-0'} left-0 right-0 z-50 flex justify-center px-4 pointer-events-none transition-all duration-500 ${scrolled ? 'mt-4' : 'mt-2'}`}>
       <header 
-        className={`pointer-events-auto rounded-full transition-all duration-500 w-full max-w-6xl ${
-          scrolled 
-            ? 'bg-[#F5F1E8]/80 backdrop-blur-xl border border-[#3A2E26]/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] py-3 px-6' 
-            : 'bg-transparent py-4 px-2 sm:px-6'
+        className={`pointer-events-auto transition duration-500 w-full max-w-6xl ${
+          mobileMenuOpen
+            ? 'bg-[#FDFBF7] border border-[#3A2E26]/10 shadow-2xl py-4 px-6 rounded-[2rem]'
+            : scrolled 
+              ? 'bg-[#F5F1E8]/80 backdrop-blur-xl border border-[#3A2E26]/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] py-3 px-6 rounded-full' 
+              : 'bg-transparent py-4 px-2 sm:px-6 rounded-full'
         }`}
       >
         <div className="flex items-center justify-between">
@@ -177,7 +179,7 @@ export default function Header({ cartCount, onOpenCart, user, isAuthenticated, o
                   key={link.name}
                   href={link.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="px-4 py-3 text-base font-medium text-[#3A2E26] hover:bg-[#7A8B6F]/10 rounded-xl transition-colors active:bg-[#7A8B6F]/15"
+                  className="px-4 py-3 text-xs uppercase tracking-widest font-bold text-[#3A2E26]/80 hover:text-[#3A2E26] hover:bg-[#3A2E26]/5 rounded-xl transition-all"
                 >
                   {link.name}
                 </a>
@@ -189,13 +191,13 @@ export default function Header({ cartCount, onOpenCart, user, isAuthenticated, o
                 <>
                   <button
                     onClick={() => { setMobileMenuOpen(false); onOpenProfile(); }}
-                    className="px-4 py-3 text-left text-base font-medium text-[#3A2E26] hover:bg-[#7A8B6F]/10 rounded-xl transition-colors"
+                    className="px-4 py-3 text-left text-xs uppercase tracking-widest font-bold text-[#3A2E26]/80 hover:text-[#3A2E26] hover:bg-[#3A2E26]/5 rounded-xl transition-all"
                   >
                     Profile Settings
                   </button>
                   <button
                     onClick={() => { setMobileMenuOpen(false); onLogout(); }}
-                    className="px-4 py-3 text-left text-base font-medium text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                    className="px-4 py-3 text-left text-xs uppercase tracking-widest font-bold text-red-600 hover:bg-red-50 rounded-xl transition-all"
                   >
                     Log Out
                   </button>
@@ -203,7 +205,7 @@ export default function Header({ cartCount, onOpenCart, user, isAuthenticated, o
               ) : (
                 <button
                   onClick={() => { setMobileMenuOpen(false); onOpenLogin(); }}
-                  className="px-4 py-3 text-left text-base font-medium text-[#7A8B6F] hover:bg-[#7A8B6F]/10 rounded-xl transition-colors"
+                  className="px-4 py-3 text-left text-xs uppercase tracking-widest font-bold text-[#7A8B6F] hover:bg-[#7A8B6F]/10 rounded-xl transition-all"
                 >
                   Sign In / Sign Up
                 </button>
