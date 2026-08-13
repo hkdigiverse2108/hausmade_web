@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Star, ArrowRight } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 
-export default function Hero({ settings }) {
+export default function Hero({ settings, onNavigate }) {
   const [isOverDark, setIsOverDark] = useState(false);
 
   useEffect(() => {
@@ -97,8 +97,12 @@ export default function Hero({ settings }) {
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
               {primary_button_text && (
                 <a
-                  href={primary_button_link}
-                  className="group relative inline-flex items-center justify-center bg-[#3A2E26] text-[#FDFBF7] px-8 py-4 text-[10px] uppercase tracking-[0.2em] font-bold overflow-hidden transition-all duration-500 hover:bg-[#C97C5D]"
+                  href="/products"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onNavigate('/products');
+                  }}
+                  className="group relative inline-flex items-center justify-center bg-[#3A2E26] text-[#FDFBF7] px-8 py-4 text-[10px] uppercase tracking-[0.2em] font-bold overflow-hidden transition-all duration-500 hover:bg-[#C97C5D] cursor-pointer"
                 >
                   <span className="relative z-10 flex items-center gap-3">
                     {primary_button_text}
@@ -110,7 +114,13 @@ export default function Hero({ settings }) {
               {secondary_button_text && (
                 <a
                   href={secondary_button_link}
-                  className="group inline-flex items-center justify-center text-[#3A2E26] px-2 py-4 text-[10px] uppercase tracking-[0.2em] font-bold relative"
+                  onClick={(e) => {
+                    if (secondary_button_link.startsWith('#')) {
+                      e.preventDefault();
+                      onNavigate('/', secondary_button_link);
+                    }
+                  }}
+                  className="group inline-flex items-center justify-center text-[#3A2E26] px-2 py-4 text-[10px] uppercase tracking-[0.2em] font-bold relative cursor-pointer"
                 >
                   {secondary_button_text}
                   <span className="absolute bottom-3 left-2 w-0 h-[1px] bg-[#3A2E26] transition-all duration-500 group-hover:w-[calc(100%-16px)]"></span>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ShoppingBag, Menu, X, Sparkles, User } from 'lucide-react';
 
-export default function Header({ cartCount, onOpenCart, user, isAuthenticated, onLogout, onOpenLogin, onOpenOrderHistory, onOpenProfile, settings }) {
+export default function Header({ cartCount, onOpenCart, user, isAuthenticated, onLogout, onOpenLogin, onOpenOrderHistory, onOpenProfile, settings, onNavigate, currentView }) {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -39,7 +39,7 @@ export default function Header({ cartCount, onOpenCart, user, isAuthenticated, o
   }, []);
 
   const navLinks = [
-    { name: 'Shop', href: '#product-selector' },
+    { name: 'Product', href: '#product-selector' },
     { name: 'Our Story', href: '#story' },
     { name: 'Ingredients', href: '#ingredients' },
     { name: 'Reviews', href: '#reviews' },
@@ -63,18 +63,22 @@ export default function Header({ cartCount, onOpenCart, user, isAuthenticated, o
           {/* Brand Logo */}
           <a 
             href="/" 
-            className="flex items-center gap-2 sm:gap-2.5 group shrink-0 cursor-default"
+            onClick={(e) => {
+              e.preventDefault();
+              onNavigate('/');
+            }}
+            className="flex items-center gap-2 sm:gap-2.5 group shrink-0 cursor-pointer"
           >
             {settings?.logo_url && (
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#C97C5D] flex items-center justify-center text-white transition-transform group-hover:scale-105 shadow-sm cursor-default overflow-hidden shrink-0">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#C97C5D] flex items-center justify-center text-white transition-transform group-hover:scale-105 shadow-sm overflow-hidden shrink-0">
                 <img src={settings.logo_url} alt="Logo" className="w-full h-full object-cover" />
               </div>
             )}
             <div>
-              <span className="font-serif-brand text-lg sm:text-2xl font-bold tracking-tight text-[#3A2E26] block leading-none cursor-default">
-                Hausmade<span className="text-xs align-top font-sans text-[#C97C5D] cursor-default">™</span>
+              <span className="font-serif-brand text-lg sm:text-2xl font-bold tracking-tight text-[#3A2E26] block leading-none">
+                Hausmade<span className="text-xs align-top font-sans text-[#C97C5D]">™</span>
               </span>
-              <span className="text-[9px] sm:text-[10px] uppercase tracking-widest text-[#7A8B6F] font-semibold block mt-0.5 hidden xs:block cursor-default">
+              <span className="text-[9px] sm:text-[10px] uppercase tracking-widest text-[#7A8B6F] font-semibold block mt-0.5 hidden xs:block">
                 Reveal Your Artisanal Beauty
               </span>
             </div>
@@ -83,16 +87,35 @@ export default function Header({ cartCount, onOpenCart, user, isAuthenticated, o
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-10">
-            {navLinks.map((link) => (
-              <a
-                key={link.name}
-                href={link.href}
-                className="group relative text-[11px] uppercase tracking-widest font-bold text-[#3A2E26]/80 hover:text-[#3A2E26] transition-colors py-2"
-              >
-                {link.name}
-                <span className="absolute bottom-0 left-0 w-0 h-[1.5px] bg-[#C97C5D] transition-all duration-300 ease-out group-hover:w-full"></span>
-              </a>
-            ))}
+            {navLinks.map((link) => {
+              const isShop = link.name === 'Product';
+              const isActive = (isShop && currentView === 'products') || (!isShop && currentView === 'home' && window.location.hash === link.href);
+              return (
+                <a
+                  key={link.name}
+                  href={link.href}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (isShop) {
+                      onNavigate('/products');
+                    } else if (link.href === '#track') {
+                      onNavigate('/', '#track');
+                      window.dispatchEvent(new HashChangeEvent('hashchange'));
+                    } else {
+                      onNavigate('/', link.href);
+                    }
+                  }}
+                  className={`group relative text-[11px] uppercase tracking-widest font-bold transition-colors py-2 ${
+                    isActive ? 'text-[#C97C5D]' : 'text-[#3A2E26]/80 hover:text-[#3A2E26]'
+                  }`}
+                >
+                  {link.name}
+                  <span className={`absolute bottom-0 left-0 h-[1.5px] bg-[#C97C5D] transition-all duration-300 ease-out ${
+                    isActive ? 'w-full' : 'w-0 group-hover:w-full'
+                  }`}></span>
+                </a>
+              );
+            })}
           </nav>
 
           {/* Wishlist, Cart & User Login Buttons */}
@@ -174,16 +197,35 @@ export default function Header({ cartCount, onOpenCart, user, isAuthenticated, o
         {mobileMenuOpen && (
           <div className="md:hidden pt-4 pb-6 border-t border-[#3A2E26]/10 mt-3 animate-fadeIn">
             <div className="flex flex-col space-y-1">
-              {navLinks.map((link) => (
-                <a
-                  key={link.name}
-                  href={link.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="px-4 py-3 text-xs uppercase tracking-widest font-bold text-[#3A2E26]/80 hover:text-[#3A2E26] hover:bg-[#3A2E26]/5 rounded-xl transition-all"
-                >
-                  {link.name}
-                </a>
-              ))}
+              {navLinks.map((link) => {
+                const isShop = link.name === 'Product';
+                const isActive = (isShop && currentView === 'products') || (!isShop && currentView === 'home' && window.location.hash === link.href);
+                return (
+                  <a
+                    key={link.name}
+                    href={link.href}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setMobileMenuOpen(false);
+                      if (isShop) {
+                        onNavigate('/products');
+                      } else if (link.href === '#track') {
+                        onNavigate('/', '#track');
+                        window.dispatchEvent(new HashChangeEvent('hashchange'));
+                      } else {
+                        onNavigate('/', link.href);
+                      }
+                    }}
+                    className={`px-4 py-3 text-xs uppercase tracking-widest font-bold rounded-xl transition-all ${
+                      isActive 
+                        ? 'text-[#C97C5D] bg-[#3A2E26]/5' 
+                        : 'text-[#3A2E26]/80 hover:text-[#3A2E26] hover:bg-[#3A2E26]/5'
+                    }`}
+                  >
+                    {link.name}
+                  </a>
+                );
+              })}
             </div>
             {/* Mobile user actions */}
             <div className="mt-4 pt-4 border-t border-[#3A2E26]/10 flex flex-col space-y-1">

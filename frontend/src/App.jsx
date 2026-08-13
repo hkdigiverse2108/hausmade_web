@@ -3,6 +3,7 @@ import AnnouncementBanner from './components/AnnouncementBanner';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import ProductSelector, { PACK_OPTIONS } from './components/ProductSelector';
+import ProductsPage from './components/ProductsPage';
 import Ingredients from './components/Ingredients';
 import Story from './components/Story';
 import Reviews from './components/Reviews';
@@ -50,6 +51,12 @@ export default function App() {
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
+
+  useEffect(() => {
+    if (window.location.pathname === '/' && !window.location.search.includes('preview=true')) {
+      window.history.replaceState(null, '', '/products' + window.location.search + window.location.hash);
+    }
+  }, []);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isPoliciesOpen, setIsPoliciesOpen] = useState(false);
@@ -71,6 +78,20 @@ export default function App() {
   const [openCheckoutAfterLogin, setOpenCheckoutAfterLogin] = useState(false);
   const [notification, setNotification] = useState(null);
   const [products, setProducts] = useState(PACK_OPTIONS);
+  const [currentView, setCurrentView] = useState(() => {
+    if (window.location.pathname === '/admin') return 'admin';
+    if (window.location.pathname === '/products') return 'products';
+    if (window.location.pathname === '/' && !window.location.search.includes('preview=true')) {
+      return 'products';
+    }
+    if (window.location.search.includes('preview=true')) {
+      const hash = window.location.hash;
+      if (hash === '#product_selector' || hash === '#products' || hash === '#subscription') {
+        return 'products';
+      }
+    }
+    return 'home';
+  });
   const [showAdminView, setShowAdminView] = useState(() => {
     return window.location.pathname === '/admin';
   });
@@ -169,14 +190,21 @@ export default function App() {
         }
         if (event.data.type === 'scroll-to-section') {
           let sectionId = event.data.section;
+          if (sectionId === 'product_selector' || sectionId === 'products' || sectionId === 'subscription') {
+            setCurrentView('products');
+            window.history.replaceState(null, '', '/products' + window.location.search);
+          } else {
+            setCurrentView('home');
+            window.history.replaceState(null, '', '/' + window.location.search);
+          }
           // Map admin panel setting tabs to DOM IDs
           const idMap = {
             'identity': 'header',
             'hero': 'hero',
-            'product_selector': 'products',
+            'product_selector': 'product-selector',
             'trust_badges': 'hero', // Usually in hero
             'story': 'story',
-            'subscription': 'products', // Removed mostly, but fallback to products
+            'subscription': 'product-selector',
             'ingredients': 'ingredients',
             'difference': 'difference',
             'faqs': 'faqs',
@@ -186,10 +214,12 @@ export default function App() {
             'delhivery': 'footer'
           };
           const targetId = idMap[sectionId] || sectionId;
-          const el = document.getElementById(targetId);
-          if (el) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }
+          setTimeout(() => {
+            const el = document.getElementById(targetId);
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          }, 150);
         }
       }
     };
@@ -207,13 +237,6 @@ export default function App() {
   useEffect(() => {
     const handleHashScroll = () => {
       let hash = window.location.hash;
-      
-      // Auto-redirect to product selector if no hash is present on the homepage
-      if (!hash && window.location.pathname === '/') {
-        window.history.replaceState(null, '', '/#product-selector');
-        hash = '#product-selector';
-        setActiveHash(hash);
-      }
 
       if (hash) {
         const id = hash.replace('#', '');
@@ -232,6 +255,18 @@ export default function App() {
     const handlePopState = () => {
       const params = new URLSearchParams(window.location.search);
       setIsProfileOpen(params.get('view') === 'profile');
+      
+      const path = window.location.pathname;
+      if (path === '/admin') {
+        setCurrentView('admin');
+        setShowAdminView(true);
+      } else if (path === '/products') {
+        setCurrentView('products');
+        setShowAdminView(false);
+      } else {
+        setCurrentView('home');
+        setShowAdminView(false);
+      }
     };
     window.addEventListener('popstate', handlePopState);
 
@@ -265,10 +300,37 @@ export default function App() {
   useEffect(() => {
     if (showAdminView && window.location.pathname !== '/admin') {
       window.history.replaceState(null, '', '/admin' + window.location.search + window.location.hash);
+      if (currentView !== 'admin') setCurrentView('admin');
     } else if (!showAdminView && window.location.pathname === '/admin') {
       window.history.replaceState(null, '', '/' + window.location.search + window.location.hash);
+      if (currentView !== 'home') setCurrentView('home');
     }
-  }, [showAdminView]);
+  }, [showAdminView, currentView]);
+
+  const handleNavigate = useCallback((path, hash = '') => {
+    if (path === '/admin') {
+      setCurrentView('admin');
+      setShowAdminView(true);
+      window.history.pushState(null, '', '/admin' + window.location.search + hash);
+    } else if (path === '/products') {
+      setCurrentView('products');
+      setShowAdminView(false);
+      window.history.pushState(null, '', '/products' + window.location.search + hash);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      setCurrentView('home');
+      setShowAdminView(false);
+      window.history.pushState(null, '', '/' + window.location.search + hash);
+      if (hash) {
+        setTimeout(() => {
+          const el = document.getElementById(hash.replace('#', ''));
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 150);
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+  }, []);
 
 
 
@@ -605,70 +667,67 @@ export default function App() {
                   onOpenOrderHistory={() => setIsOrderHistoryOpen(true)}
                   onOpenProfile={() => setIsProfileOpen(true)}
                   settings={siteSettings}
+                  onNavigate={handleNavigate}
+                  currentView={currentView}
                 />
               </>
             )}
 
             <main className="flex-1">
-              {activeHash === '#track' ? (
+              {currentView === 'products' ? (
+                <ProductsPage
+                  products={products}
+                  selectedPack={selectedPack}
+                  setSelectedPack={setSelectedPack}
+                  onAddToCart={handleAddToCart}
+                  onBuyNow={handleBuyNow}
+                  quantity={quantity}
+                  setQuantity={setQuantity}
+                  activeImageIndex={activeImageIndex}
+                  setActiveImageIndex={setActiveImageIndex}
+                  settings={siteSettings}
+                />
+              ) : activeHash === '#track' ? (
                 <OrderTracking />
               ) : (
                 <>
                   {shouldShowSection('hero') && (
                     <div id="hero" className={getSectionClass('hero')} onClick={() => handleSectionClick('hero')}>
-                      <Hero settings={{ ...siteSettings.hero, trust_badges: siteSettings.trust_badges, social_links: siteSettings.social_links, contact: siteSettings.contact }} />
+                      <Hero settings={{ ...siteSettings.hero, trust_badges: siteSettings.trust_badges, social_links: siteSettings.social_links, contact: siteSettings.contact }} onNavigate={handleNavigate} />
                     </div>
                   )}
-              {/* Subscription section removed */}
-              {shouldShowSection('products') && (
-                <div id="products" className={getSectionClass('products')} onClick={() => handleSectionClick('products')}>
-                  <ProductSelector
-                    products={products}
-                    onAddToCart={handleAddToCart}
-                    onBuyNow={handleBuyNow}
-
-                    selectedPack={selectedPack}
-
-                    quantity={quantity}
-                    setQuantity={setQuantity}
-                    activeImageIndex={activeImageIndex}
-                    setActiveImageIndex={setActiveImageIndex}
-                    settings={siteSettings}
-                  />
-                </div>
-              )}
-              {shouldShowSection('ingredients') && siteSettings.ingredients_active !== false && (
-                <div id="ingredients" className={getSectionClass('ingredients')} onClick={() => handleSectionClick('ingredients')}>
-                  <Ingredients settings={siteSettings} />
-                </div>
-              )}
-              {shouldShowSection('story') && (
-                <div id="story" className={getSectionClass('story')} onClick={() => handleSectionClick('story')}>
-                  <Story settings={siteSettings.story} />
-                </div>
-              )}
-              {shouldShowSection('reviews') && (
-                <div id="reviews" className={getSectionClass('reviews')} onClick={() => handleSectionClick('reviews')}>
-                  <Reviews settings={siteSettings} />
-                </div>
-              )}
-              {shouldShowSection('faqs') && (
-                <div id="faqs" className={getSectionClass('faqs')} onClick={() => handleSectionClick('faqs')}>
-                  <FAQ settings={siteSettings} />
-                </div>
-              )}
-              {shouldShowSection('instagram_feed') && (
-                <div id="instagram_feed" className={getSectionClass('instagram_feed')} onClick={() => handleSectionClick('instagram_feed')}>
-                  <InstagramFeed settings={siteSettings} />
-                </div>
-              )}
+                  {shouldShowSection('ingredients') && siteSettings.ingredients_active !== false && (
+                    <div id="ingredients" className={getSectionClass('ingredients')} onClick={() => handleSectionClick('ingredients')}>
+                      <Ingredients settings={siteSettings} />
+                    </div>
+                  )}
+                  {shouldShowSection('story') && (
+                    <div id="story" className={getSectionClass('story')} onClick={() => handleSectionClick('story')}>
+                      <Story settings={siteSettings.story} />
+                    </div>
+                  )}
+                  {shouldShowSection('reviews') && (
+                    <div id="reviews" className={getSectionClass('reviews')} onClick={() => handleSectionClick('reviews')}>
+                      <Reviews settings={siteSettings} />
+                    </div>
+                  )}
+                  {shouldShowSection('faqs') && (
+                    <div id="faqs" className={getSectionClass('faqs')} onClick={() => handleSectionClick('faqs')}>
+                      <FAQ settings={siteSettings} />
+                    </div>
+                  )}
+                  {shouldShowSection('instagram_feed') && (
+                    <div id="instagram_feed" className={getSectionClass('instagram_feed')} onClick={() => handleSectionClick('instagram_feed')}>
+                      <InstagramFeed settings={siteSettings} />
+                    </div>
+                  )}
                 </>
               )}
             </main>
 
             {shouldShowSection('contact') && (
               <div id="contact" className={getSectionClass('contact')} onClick={() => handleSectionClick('contact')}>
-                <Footer settings={siteSettings} onOpenPolicy={handleOpenPolicy} />
+                <Footer settings={siteSettings} onOpenPolicy={handleOpenPolicy} onNavigate={handleNavigate} />
               </div>
             )}
           </div>

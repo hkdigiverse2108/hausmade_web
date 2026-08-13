@@ -120,16 +120,16 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
   };
 
   return (
-    <section id="product-selector" className="py-16 lg:py-24 bg-[#F5F1E8] border-t border-b border-[#3A2E26]/10 scroll-mt-20 overflow-x-hidden">
+    <section id="product-selector" className="py-16 lg:py-24 bg-transparent scroll-mt-20 overflow-x-hidden">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         
         <div className="text-center max-w-3xl mx-auto mb-12">
-          <span className="text-[#C97C5D] font-bold text-xs uppercase tracking-widest">{headerSettings.badge || "Choose Your Ritual"}</span>
+          <span className="text-[#C97C5D] font-bold text-xs uppercase tracking-widest">{headerSettings.badge || "CHOOSE YOUR RITUAL"}</span>
           <h2 className="font-serif-brand text-2xl sm:text-4xl lg:text-5xl font-normal text-[#3A2E26] mt-2">
-            {headerSettings.title || "Select Your Handmade Batch"}
+            {headerSettings.title || "Select Your Artisanal Cleansing Ritual"}
           </h2>
           <p className="text-[#3A2E26]/70 mt-3 text-base sm:text-lg">
-            {headerSettings.description || "Handcrafted with organic botanical butter and essential oils. Stock up and save more per bar."}
+            {headerSettings.description || "Handcrafted with pure saffron extract (Kesar), aromatic camphor, and cold-pressed coconut oil. Choose a larger pack size to enjoy significant savings."}
           </p>
         </div>
 

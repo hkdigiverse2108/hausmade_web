@@ -2,7 +2,7 @@ import React from 'react';
 import { Sparkles, Heart } from 'lucide-react';
 
 
-export default function Footer({ settings, onOpenPolicy }) {
+export default function Footer({ settings, onOpenPolicy, onNavigate }) {
   const contactEmail = settings?.contact?.email || "info@hausmade.in";
   const contactPhone = settings?.contact?.phone || "+91 76000 81431";
   const contactAddress = settings?.contact?.address || "305 Muktidham Society, Near Sitanagar Chowk, Surat - 395 010 (Guj.)";
@@ -15,7 +15,14 @@ export default function Footer({ settings, onOpenPolicy }) {
           
           {/* Brand Col */}
           <div className="sm:col-span-2 md:col-span-4 space-y-4">
-            <a href="#" className="flex items-center gap-2.5">
+            <a 
+              href="/" 
+              onClick={(e) => {
+                e.preventDefault();
+                onNavigate('/');
+              }} 
+              className="flex items-center gap-2.5 cursor-pointer"
+            >
               {settings?.logo_url ? (
                 <img src={settings.logo_url} alt="Hausmade Logo" className="h-9 w-auto object-contain max-h-12" />
               ) : (
@@ -43,12 +50,79 @@ export default function Footer({ settings, onOpenPolicy }) {
             <div>
               <h4 className="font-serif-brand font-bold text-sm text-white uppercase tracking-wider mb-4">Quick Links</h4>
               <ul className="space-y-2.5 text-sm text-[#F5F1E8]/70">
-                <li><a href="#product-selector" className="hover:text-[#C97C5D] transition-colors">Shop</a></li>
-                <li><a href="#story" className="hover:text-[#C97C5D] transition-colors">Our Story</a></li>
-                <li><a href="#ingredients" className="hover:text-[#C97C5D] transition-colors">Ingredients</a></li>
-                <li><a href="#reviews" className="hover:text-[#C97C5D] transition-colors">Reviews</a></li>
-                <li><a href="#faq" className="hover:text-[#C97C5D] transition-colors">FAQ</a></li>
-                <li><a href="#track" className="hover:text-[#C97C5D] transition-colors font-semibold">Track Order</a></li>
+                <li>
+                  <a 
+                    href="/products" 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onNavigate('/products');
+                    }} 
+                    className="hover:text-[#C97C5D] transition-colors"
+                  >
+                    Shop
+                  </a>
+                </li>
+                <li>
+                  <a 
+                    href="#story" 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onNavigate('/', '#story');
+                    }} 
+                    className="hover:text-[#C97C5D] transition-colors"
+                  >
+                    Our Story
+                  </a>
+                </li>
+                <li>
+                  <a 
+                    href="#ingredients" 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onNavigate('/', '#ingredients');
+                    }} 
+                    className="hover:text-[#C97C5D] transition-colors"
+                  >
+                    Ingredients
+                  </a>
+                </li>
+                <li>
+                  <a 
+                    href="#reviews" 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onNavigate('/', '#reviews');
+                    }} 
+                    className="hover:text-[#C97C5D] transition-colors"
+                  >
+                    Reviews
+                  </a>
+                </li>
+                <li>
+                  <a 
+                    href="#faq" 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onNavigate('/', '#faqs');
+                    }} 
+                    className="hover:text-[#C97C5D] transition-colors"
+                  >
+                    FAQ
+                  </a>
+                </li>
+                <li>
+                  <a 
+                    href="#track" 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onNavigate('/', '#track');
+                      window.dispatchEvent(new HashChangeEvent('hashchange'));
+                    }} 
+                    className="hover:text-[#C97C5D] transition-colors font-semibold"
+                  >
+                    Track Order
+                  </a>
+                </li>
               </ul>
             </div>
             <div>
