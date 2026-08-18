@@ -934,6 +934,13 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       }
     } catch (err) {
       console.error("Admin data fetch error:", err);
+      
+      // If token expired or invalid, force logout and prevent toast loop
+      if (err.message === 'Authentication required' || err.message.includes('expired')) {
+        window.dispatchEvent(new Event('force-logout'));
+        return;
+      }
+      
       if (showNotification) {
         showNotification(err.message || 'Failed to retrieve admin dashboard records', 'error');
       }

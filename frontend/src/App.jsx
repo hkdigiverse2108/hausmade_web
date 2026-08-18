@@ -489,6 +489,15 @@ export default function App() {
     }
   }, [isAuth0Authenticated, auth0Logout]);
 
+  // Listen for force-logout from failed API calls
+  useEffect(() => {
+    const onForceLogout = () => {
+      handleLogout();
+    };
+    window.addEventListener('force-logout', onForceLogout);
+    return () => window.removeEventListener('force-logout', onForceLogout);
+  }, [handleLogout]);
+
   const handleOpenCheckout = () => {
     setIsCheckoutOpen(true);
   };
