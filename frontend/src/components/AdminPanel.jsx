@@ -1310,23 +1310,8 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   };
 
   const handleFetchLabel = async (awb) => {
-    setSaving(true);
-    try {
-      const data = await getDelhiveryLabel(awb, token);
-      if (data.url) {
-        window.open(data.url, '_blank');
-      } else if (data.html) {
-        const newWin = window.open('', '_blank');
-        newWin.document.write(data.html);
-        newWin.document.close();
-      } else {
-        showNotification('Label could not be displayed.', 'error');
-      }
-    } catch (err) {
-      showNotification(err.message || 'Failed to fetch label', 'error');
-    } finally {
-      setSaving(false);
-    }
+    // Open the custom label route which handles rendering the HTML template
+    window.open(`${API_URL}/api/orders/label/${encodeURIComponent(awb)}`, '_blank');
   };
 
   const handleDeleteOrder = async (orderId) => {

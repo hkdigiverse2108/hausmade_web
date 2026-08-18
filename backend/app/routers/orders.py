@@ -1207,7 +1207,8 @@ async def generate_delhivery_shipping_label(awb: str):
     shipper_pin = str(config.get("pickup_pincode") or "395010")
     shipper_phone = config.get("pickup_phone") or "7600081431"
     
-    shipped_date = datetime.utcnow().strftime("%d %b %Y")
+    shipped_date = datetime.utcnow().strftime("%Y-%m-%d")
+    shipped_time = datetime.utcnow().strftime("%H:%M:%S")
     mode_tag = (config.get("mode", "test") if config else "TEST").upper()
     
     html_content = f"""<!DOCTYPE html>
@@ -1218,295 +1219,212 @@ async def generate_delhivery_shipping_label(awb: str):
     <title>Delhivery Express Label - {clean_awb}</title>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <style>
-        @page {{
-            size: 4in 6in;
-            margin: 0;
-        }}
-        * {{
-            box-sizing: border-box;
-            font-family: Arial, Helvetica, sans-serif;
-            margin: 0;
-            padding: 0;
-        }}
         body {{
-            background-color: #e2e8f0;
+            font-family: 'Times New Roman', Times, serif;
+            margin: 0;
+            background: #f3f4f6;
             display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 24px;
-        }}
-        .no-print-bar {{
-            width: 100%;
-            max-width: 4.2in;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: #0f172a;
-            color: #ffffff;
-            padding: 12px 18px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
-        }}
-        .no-print-bar button {{
-            background: #7A8B6F;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            font-size: 13px;
-            font-weight: bold;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }}
-        .no-print-bar button:hover {{
-            background: #68785c;
-        }}
-        .label-card {{
-            width: 4in;
-            min-height: 6in;
-            background: #ffffff;
-            border: 2px solid #000000;
-            padding: 12px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            position: relative;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-        }}
-        .header {{
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 2px solid #000;
-            padding-bottom: 6px;
-        }}
-        .logo-main {{
-            font-size: 22px;
-            font-weight: 900;
-            letter-spacing: 1px;
-            color: #000000;
-        }}
-        .logo-sub {{
-            font-size: 10px;
-            font-weight: 800;
-            background: #000000;
-            color: #ffffff;
-            padding: 2px 5px;
-            border-radius: 2px;
-            margin-left: 4px;
-        }}
-        .badge-mode {{
-            font-size: 9px;
-            font-weight: bold;
-            border: 1px solid #000;
-            padding: 2px 6px;
-            border-radius: 4px;
-        }}
-        .routing-box {{
-            display: flex;
-            border-bottom: 2px solid #000;
-            padding: 8px 0;
-            background: #fafafa;
-        }}
-        .routing-left {{
-            flex: 1.2;
-            padding-right: 8px;
-            border-right: 1px dashed #000;
-        }}
-        .routing-left .pincode {{
-            font-size: 24px;
-            font-weight: 900;
-            letter-spacing: 1px;
-        }}
-        .routing-left .city {{
-            font-size: 13px;
-            font-weight: bold;
-            text-transform: uppercase;
-        }}
-        .routing-right {{
-            flex: 0.8;
-            display: flex;
-            flex-direction: column;
             justify-content: center;
-            align-items: center;
+            padding: 20px;
         }}
-        .hub-code {{
-            font-size: 22px;
-            font-weight: 900;
-            border: 2px solid #000;
-            padding: 2px 10px;
-        }}
-        .barcode-box {{
-            text-align: center;
-            padding: 10px 0 6px 0;
-            border-bottom: 2px solid #000;
-        }}
-        #barcode {{
-            width: 95%;
-            height: 58px;
-        }}
-        .awb-num {{
-            font-size: 15px;
-            font-weight: 900;
-            letter-spacing: 2px;
-            margin-top: 2px;
-        }}
-        .payment-box {{
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 2px solid #000;
-            padding: 8px 0;
-        }}
-        .payment-tag {{
-            font-size: 17px;
-            font-weight: 900;
-            padding: 4px 12px;
-            border: 2px solid #000;
-        }}
-        .payment-tag.cod {{
-            background: #000;
-            color: #fff;
-        }}
-        .payment-tag.prepaid {{
+        #pdf-wrapper {{
+            padding: 15px;
             background: #fff;
-            color: #000;
+            width: 410px;
+            box-sizing: border-box;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }}
-        .order-info {{
-            font-size: 10px;
-            text-align: right;
-            line-height: 1.3;
+        .label-container {{
+            width: 380px;
+            border: 2px solid #000;
+            background: #fff;
+            box-sizing: border-box;
+            overflow: hidden;
         }}
-        .address-box {{
-            padding: 6px 0;
-            border-bottom: 1px dashed #000;
-            font-size: 10px;
-            line-height: 1.3;
+        .row {{
+            display: flex;
+            border-bottom: 2px solid #000;
+            box-sizing: border-box;
         }}
-        .addr-title {{
-            font-weight: 900;
-            font-size: 9px;
-            text-transform: uppercase;
-            color: #333;
-            margin-bottom: 2px;
+        .row:last-child {{
+            border-bottom: none;
         }}
-        .consignee-name {{
-            font-size: 12px;
-            font-weight: 800;
+        .col {{
+            padding: 6px;
+            box-sizing: border-box;
         }}
-        .shipper-box {{
-            padding-top: 6px;
-            font-size: 9px;
-            line-height: 1.25;
-            color: #222;
+        .border-right {{
+            border-right: 2px solid #000;
         }}
-        .footer-note {{
-            font-size: 8px;
-            text-align: center;
-            color: #555;
-            margin-top: 8px;
-            padding-top: 4px;
-            border-top: 1px solid #ddd;
-        }}
+        
+        /* Top Row */
+        .top-row {{ height: 42px; align-items: center; padding: 0; }}
+        .seller-name {{ font-size: 15px; font-weight: bold; width: 33%; text-align: center; height: 100%; display: flex; align-items: center; justify-content: center; padding: 0; color: #002B49; }}
+        .delhivery-logo {{ width: 67%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 0; overflow: hidden; }}
+        .delhivery-logo img {{ width: 170px; height: auto; mix-blend-mode: multiply; }}
+        
+        /* Barcode Row */
+        .barcode-row {{ flex-direction: column; align-items: center; padding: 12px 0 8px 0; }}
+        #awb-barcode {{ width: 85%; height: auto; margin-bottom: 0px; }}
+        .awb-text {{ font-size: 13px; font-family: Arial, sans-serif; margin-top: 5px; margin-bottom: 4px; }}
+        
+        /* Routing Row */
+        .routing-row {{ justify-content: space-between; padding: 3px 8px; font-size: 15px; font-weight: bold; font-family: Arial, sans-serif; }}
+        
+        /* Ship To Row */
+        .ship-to-row {{ min-height: 115px; }}
+        .ship-left {{ width: 75%; font-size: 12px; line-height: 1.25; padding: 5px; }}
+        .ship-right {{ width: 25%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; text-align: center; }}
+        .ship-to-title {{ font-weight: bold; margin-bottom: 2px; }}
+        .consignee-name {{ font-size: 14px; font-weight: bold; text-transform: uppercase; margin-bottom: 3px; }}
+        
+        /* Seller Info Row */
+        .seller-info-row {{ min-height: 55px; font-size: 11px; }}
+        .seller-left {{ width: 75%; line-height: 1.3; padding: 5px; }}
+        .seller-right {{ width: 25%; padding: 5px; line-height: 1.3; }}
+        
+        /* Table Rows */
+        .table-row {{ font-size: 11px; align-items: stretch; }}
+        .col-prod {{ width: 60%; display: flex; align-items: center; padding: 3px 5px; }}
+        .col-price {{ width: 20%; text-align: center; display: flex; align-items: center; justify-content: center; padding: 3px; }}
+        .col-total {{ width: 20%; text-align: center; display: flex; align-items: center; justify-content: center; padding: 3px; }}
+        
+        /* Table Body */
+        .product-list {{ min-height: 55px; }}
+        
+        /* Table Total */
+        .total-row {{ height: 22px; font-size: 12px; }}
+        
+        /* Small Barcode Row */
+        .small-barcode-row {{ flex-direction: column; align-items: center; padding: 6px 0 2px 0; }}
+        #order-barcode {{ height: 35px; width: 50%; }}
+        .order-text {{ font-size: 9px; font-family: Arial, sans-serif; font-weight: bold; margin-top: 4px; margin-bottom: 3px; }}
+        
+        /* Return Address */
+        .return-addr-row {{ font-size: 10px; padding: 4px 8px; line-height: 1.2; }}
+        
         @media print {{
-            body {{
-                background: white;
-                padding: 0;
-            }}
-            .no-print-bar {{
-                display: none !important;
-            }}
-            .label-card {{
-                box-shadow: none;
-                border: 2px solid #000;
-                width: 100vw;
+            body {{ 
+                background: #fff; 
+                padding: 0; 
+                display: flex; 
+                justify-content: center; 
+                align-items: flex-start;
+                margin: 0; 
                 height: 100vh;
             }}
+            #pdf-wrapper {{ 
+                box-shadow: none; 
+                padding: 0; 
+                margin: 0 auto; 
+            }}
+            .label-container {{ 
+                border: 2px solid #000; 
+                box-shadow: none; 
+                width: 380px; 
+                margin: 0 auto; 
+            }}
+            .no-print {{ display: none !important; }}
         }}
     </style>
 </head>
 <body>
-    <div class="no-print-bar">
-        <div>
-            <strong style="font-size: 14px; display: block;">Delhivery Shipping Label</strong>
-            <span style="font-size: 11px; opacity: 0.85;">AWB: {clean_awb}</span>
+    <div id="pdf-wrapper">
+        <div class="label-container">
+            <div class="row top-row">
+                <div class="col border-right seller-name">{shipper_name}</div>
+                <div class="col delhivery-logo">
+                    <img src="data:image/png;base64,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" alt="DELHIVERY">
+                </div>
+            </div>
+            
+            <div class="row barcode-row">
+                <svg id="awb-barcode"></svg>
+            </div>
+            
+            <div class="row routing-row">
+                <div>{shipper_pin}</div>
+                <div>{pincode[:3]}/GCI</div>
+            </div>
+            
+            <div class="row ship-to-row">
+                <div class="col border-right ship-left">
+                    <div class="ship-to-title">Ship To:</div>
+                    <div class="consignee-name">{customer_name}</div>
+                    <div>{address}</div>
+                    <div>{city}_{state} (Gujarat)</div>
+                    <div><strong>PIN:{pincode}</strong></div>
+                </div>
+                <div class="col ship-right">
+                    <div style="font-weight: 900; margin-bottom: 2px;">{'COD' if is_cod else 'PREPAID'}</div>
+                    <div style="font-weight: normal;">Surface</div>
+                    <div style="margin-top: 10px; font-weight: 900;">INR</div>
+                    <div style="font-weight: 900;">{int(grand_total)}</div>
+                </div>
+            </div>
+            
+            <div class="row seller-info-row">
+                <div class="col border-right seller-left">
+                    <div><strong>Seller:</strong> {shipper_name}</div>
+                    <div><strong>Address:</strong> {shipper_add},</div>
+                    <div style="padding-left: 55px;">{shipper_city}, {shipper_state}</div>
+                    <div><strong>GST:</strong> 24-UR</div>
+                </div>
+                <div class="col seller-right">
+                    <div><strong>Date:</strong><br>{shipped_date}<br>{shipped_time}</div>
+                </div>
+            </div>
+            
+            <div class="row table-row">
+                <div class="col border-right col-prod">Product(Qty)</div>
+                <div class="col border-right col-price">Price</div>
+                <div class="col col-total">Total</div>
+            </div>
+            
+            <div class="row table-row product-list">
+                <div class="col border-right col-prod">{items_desc}</div>
+                <div class="col border-right col-price">INR {int(grand_total)}</div>
+                <div class="col col-total">INR {int(grand_total)}</div>
+            </div>
+            
+            <div class="row table-row total-row">
+                <div class="col border-right col-prod">Total</div>
+                <div class="col border-right col-price">INR {int(grand_total)}</div>
+                <div class="col col-total">INR {int(grand_total)}</div>
+            </div>
+            
+            <div class="row small-barcode-row">
+                <svg id="order-barcode"></svg>
+                <div class="order-text">{order_id}</div>
+            </div>
+            
+            <div class="return-addr-row">
+                Return Address: {shipper_add}, {shipper_city}, {shipper_state}, Gujarat
+            </div>
         </div>
-        <button onclick="window.print()">🖨️ Print Label</button>
     </div>
-
-    <div class="label-card">
-        <div class="header">
-            <div>
-                <span class="logo-main">DELHIVERY</span>
-                <span class="logo-sub">EXPRESS</span>
-            </div>
-            <div class="badge-mode">{mode_tag} ACCOUNT</div>
-        </div>
-
-        <div class="routing-box">
-            <div class="routing-left">
-                <div style="font-size: 8px; font-weight: bold; text-transform: uppercase;">DESTINATION PINCODE</div>
-                <div class="pincode">{pincode}</div>
-                <div class="city">{city}, {state}</div>
-            </div>
-            <div class="routing-right">
-                <div style="font-size: 8px; font-weight: bold; margin-bottom: 2px;">SORT CENTER</div>
-                <div class="hub-code">{pincode[:3]}</div>
-            </div>
-        </div>
-
-        <div class="barcode-box">
-            <svg id="barcode"></svg>
-            <div class="awb-num">AWB: {clean_awb}</div>
-        </div>
-
-        <div class="payment-box">
-            <div class="payment-tag {'cod' if is_cod else 'prepaid'}">
-                {'COD: ₹' + str(int(grand_total)) if is_cod else 'PREPAID'}
-            </div>
-            <div class="order-info">
-                <div><strong>Order ID:</strong> {order_id}</div>
-                <div><strong>Date:</strong> {shipped_date}</div>
-                <div><strong>Weight:</strong> 500g | Qty: {total_qty}</div>
-            </div>
-        </div>
-
-        <div class="address-box">
-            <div class="addr-title">DELIVER TO (CONSIGNEE):</div>
-            <div class="consignee-name">{customer_name}</div>
-            <div>{address}</div>
-            <div><strong>{city}, {state} - {pincode}</strong></div>
-            <div><strong>Phone:</strong> {phone}</div>
-        </div>
-
-        <div class="address-box">
-            <div class="addr-title">ITEMS & PACKAGE DESC:</div>
-            <div style="font-weight: 600;">{items_desc}</div>
-        </div>
-
-        <div class="shipper-box">
-            <div class="addr-title">RETURN / SHIPPER WAREHOUSE:</div>
-            <div style="font-weight: bold;">{shipper_name}</div>
-            <div>{shipper_add}, {shipper_city}, {shipper_state} - {shipper_pin}</div>
-            <div>Phone: {shipper_phone}</div>
-        </div>
-
-        <div class="footer-note">
-            Handcrafted Botanical Cleanse & Bath Rituals. Please handle with care. Official Delhivery Express Logistics Partner.
-        </div>
-    </div>
-
     <script>
         window.onload = function() {{
             try {{
-                JsBarcode("#barcode", "{clean_awb}", {{
+                JsBarcode("#awb-barcode", "{clean_awb}", {{
                     format: "CODE128",
-                    width: 2,
-                    height: 58,
-                    displayValue: false,
-                    margin: 0
+                    displayValue: true,
+                    fontSize: 14,
+                    textMargin: 4,
+                    margin: 0,
+                    height: 50,
+                    width: 2.2
                 }});
+                JsBarcode("#order-barcode", "{order_id}", {{
+                    format: "CODE128",
+                    displayValue: false,
+                    margin: 0,
+                    height: 35,
+                    width: 1.5
+                }});
+                
+                // Automatically open the print dialog (Print to PDF)
+                setTimeout(() => window.print(), 500);
             }} catch(e) {{
                 console.error("Barcode error:", e);
             }}

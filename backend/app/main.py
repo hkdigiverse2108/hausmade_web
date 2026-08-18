@@ -101,7 +101,7 @@ async def add_security_headers(request: Request, call_next):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://res.cloudinary.com;"
+    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://res.cloudinary.com;"
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
     return response
 
@@ -151,6 +151,8 @@ def liveness_probe():
     # Confirm app process is alive
     return {"status": "alive"}
 
+from fastapi.staticfiles import StaticFiles
+
 # Include modular routers
 app.include_router(auth.router)
 app.include_router(products.router)
@@ -161,4 +163,7 @@ app.include_router(reviews.router)
 app.include_router(users.router)
 app.include_router(subscriptions.router)
 app.include_router(targets.router)
+
+# Mount images directory to serve static images (like the Delhivery logo) directly from backend HTML responses
+app.mount("/images", StaticFiles(directory=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "frontend", "public", "images")), name="images")
 
