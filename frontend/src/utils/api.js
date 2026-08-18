@@ -11,7 +11,7 @@ const getApiUrl = () => {
   }
   return window.location.origin;
 };
-const API_URL = getApiUrl();
+export const API_URL = getApiUrl();
 
 export async function registerUser(name, email, mobile, password) {
   const response = await fetch(`${API_URL}/api/auth/register`, {

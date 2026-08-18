@@ -71,8 +71,8 @@ import {
   bookDelhiveryShipment,
   scheduleDelhiveryPickup,
   cancelDelhiveryShipment,
-  getDelhiveryLabel,
-  deleteAdminOrder
+  deleteAdminOrder,
+  API_URL
 } from '../utils/api';
 import ConfirmModal from './ConfirmModal';
 import { defaultTerms, defaultPrivacy, defaultShipping, defaultRefund } from '../utils/policyDefaults';
