@@ -1206,33 +1206,86 @@ async def generate_delhivery_shipping_label(awb: str):
     shipper_state = config.get("pickup_state") or "Gujarat"
     shipper_pin = str(config.get("pickup_pincode") or "395010")
     shipper_phone = config.get("pickup_phone") or "7600081431"
-    
     shipped_date = datetime.utcnow().strftime("%Y-%m-%d")
     shipped_time = datetime.utcnow().strftime("%H:%M:%S")
     mode_tag = (config.get("mode", "test") if config else "TEST").upper()
+
+    import os
+    import base64
     
+    logo_path = r"D:\hausmade_web\frontend\public\images\delhivery-logo.png"
+    logo_html = '<h1>DELHIVERY</h1>'
+    try:
+        if os.path.exists(logo_path):
+            with open(logo_path, "rb") as f:
+                logo_b64 = base64.b64encode(f.read()).decode('utf-8')
+                logo_html = f'<img src="data:image/png;base64,{logo_b64}" style="width: 170px; height: auto; mix-blend-mode: multiply;" alt="DELHIVERY" />'
+    except Exception as e:
+        print(f"Error loading logo: {e}")
+
     html_content = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Delhivery Express Label - {clean_awb}</title>
+    <title>Shipping Label - {clean_awb}</title>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <style>
         body {{
             font-family: 'Times New Roman', Times, serif;
             margin: 0;
-            background: #f3f4f6;
+            background: #e9ecef;
+            padding-top: 80px;
             display: flex;
             justify-content: center;
-            padding: 20px;
         }}
-        #pdf-wrapper {{
-            padding: 15px;
+        .pdf-toolbar {{
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 60px;
             background: #fff;
-            width: 410px;
+            padding: 0 24px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 10001;
             box-sizing: border-box;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-bottom: 1px solid #ddd;
+        }}
+        .toolbar-title {{
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+        }}
+        .toolbar-actions {{
+            display: flex;
+            gap: 12px;
+        }}
+        .pdf-toolbar button {{
+            background: #000;
+            color: #fff;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.2s;
+        }}
+        .pdf-toolbar button:hover {{ background: #333; }}
+        
+        #pdf-wrapper {{
+            background: #fff;
+            padding: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 40px;
         }}
         .label-container {{
             width: 380px;
@@ -1246,27 +1299,19 @@ async def generate_delhivery_shipping_label(awb: str):
             border-bottom: 2px solid #000;
             box-sizing: border-box;
         }}
-        .row:last-child {{
-            border-bottom: none;
-        }}
-        .col {{
-            padding: 6px;
-            box-sizing: border-box;
-        }}
-        .border-right {{
-            border-right: 2px solid #000;
-        }}
+        .row:last-child {{ border-bottom: none; }}
+        .col {{ padding: 6px; box-sizing: border-box; }}
+        .border-right {{ border-right: 2px solid #000; }}
         
         /* Top Row */
         .top-row {{ height: 42px; align-items: center; padding: 0; }}
         .seller-name {{ font-size: 15px; font-weight: bold; width: 33%; text-align: center; height: 100%; display: flex; align-items: center; justify-content: center; padding: 0; color: #002B49; }}
         .delhivery-logo {{ width: 67%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 0; overflow: hidden; }}
-        .delhivery-logo img {{ width: 170px; height: auto; mix-blend-mode: multiply; }}
+        .delhivery-logo h1 {{ margin: 0; font-family: Arial, sans-serif; letter-spacing: 2px; }}
         
         /* Barcode Row */
         .barcode-row {{ flex-direction: column; align-items: center; padding: 12px 0 8px 0; }}
         #awb-barcode {{ width: 85%; height: auto; margin-bottom: 0px; }}
-        .awb-text {{ font-size: 13px; font-family: Arial, sans-serif; margin-top: 5px; margin-bottom: 4px; }}
         
         /* Routing Row */
         .routing-row {{ justify-content: space-between; padding: 3px 8px; font-size: 15px; font-weight: bold; font-family: Arial, sans-serif; }}
@@ -1275,7 +1320,6 @@ async def generate_delhivery_shipping_label(awb: str):
         .ship-to-row {{ min-height: 115px; }}
         .ship-left {{ width: 75%; font-size: 12px; line-height: 1.25; padding: 5px; }}
         .ship-right {{ width: 25%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; text-align: center; }}
-        .ship-to-title {{ font-weight: bold; margin-bottom: 2px; }}
         .consignee-name {{ font-size: 14px; font-weight: bold; text-transform: uppercase; margin-bottom: 3px; }}
         
         /* Seller Info Row */
@@ -1288,11 +1332,7 @@ async def generate_delhivery_shipping_label(awb: str):
         .col-prod {{ width: 60%; display: flex; align-items: center; padding: 3px 5px; }}
         .col-price {{ width: 20%; text-align: center; display: flex; align-items: center; justify-content: center; padding: 3px; }}
         .col-total {{ width: 20%; text-align: center; display: flex; align-items: center; justify-content: center; padding: 3px; }}
-        
-        /* Table Body */
         .product-list {{ min-height: 55px; }}
-        
-        /* Table Total */
         .total-row {{ height: 22px; font-size: 12px; }}
         
         /* Small Barcode Row */
@@ -1304,37 +1344,29 @@ async def generate_delhivery_shipping_label(awb: str):
         .return-addr-row {{ font-size: 10px; padding: 4px 8px; line-height: 1.2; }}
         
         @media print {{
-            body {{ 
-                background: #fff; 
-                padding: 0; 
-                display: flex; 
-                justify-content: center; 
-                align-items: flex-start;
-                margin: 0; 
-                height: 100vh;
-            }}
-            #pdf-wrapper {{ 
-                box-shadow: none; 
-                padding: 0; 
-                margin: 0 auto; 
-            }}
-            .label-container {{ 
-                border: 2px solid #000; 
-                box-shadow: none; 
-                width: 380px; 
-                margin: 0 auto; 
-            }}
-            .no-print {{ display: none !important; }}
+            body {{ background: #fff; padding: 0; height: 100vh; }}
+            .pdf-toolbar {{ display: none !important; }}
+            #pdf-wrapper {{ box-shadow: none; margin: 0; padding: 0; }}
         }}
     </style>
 </head>
 <body>
+    <div class="pdf-toolbar">
+        <div class="toolbar-title">Shipping Label</div>
+        <div class="toolbar-actions">
+            <button onclick="window.print()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                Print Label
+            </button>
+        </div>
+    </div>
+    
     <div id="pdf-wrapper">
         <div class="label-container">
             <div class="row top-row">
                 <div class="col border-right seller-name">{shipper_name}</div>
                 <div class="col delhivery-logo">
-                    <img src="data:image/png;base64,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" alt="DELHIVERY">
+                    {logo_html}
                 </div>
             </div>
             
@@ -1349,7 +1381,7 @@ async def generate_delhivery_shipping_label(awb: str):
             
             <div class="row ship-to-row">
                 <div class="col border-right ship-left">
-                    <div class="ship-to-title">Ship To:</div>
+                    <div><b>Ship To:</b></div>
                     <div class="consignee-name">{customer_name}</div>
                     <div>{address}</div>
                     <div>{city}_{state} (Gujarat)</div>
@@ -1405,31 +1437,20 @@ async def generate_delhivery_shipping_label(awb: str):
     </div>
     <script>
         window.onload = function() {{
-            try {{
-                JsBarcode("#awb-barcode", "{clean_awb}", {{
-                    format: "CODE128",
-                    displayValue: true,
-                    fontSize: 14,
-                    textMargin: 4,
-                    margin: 0,
-                    height: 50,
-                    width: 2.2
-                }});
-                JsBarcode("#order-barcode", "{order_id}", {{
-                    format: "CODE128",
-                    displayValue: false,
-                    margin: 0,
-                    height: 35,
-                    width: 1.5
-                }});
-                
-                // Automatically open the print dialog (Print to PDF)
-                setTimeout(() => window.print(), 500);
-            }} catch(e) {{
-                console.error("Barcode error:", e);
-            }}
+            JsBarcode("#awb-barcode", "{clean_awb}", {{
+                format: "CODE128", displayValue: true, fontSize: 14, textMargin: 4, margin: 0, height: 50, width: 2.2
+            }});
+            JsBarcode("#order-barcode", "{order_id}", {{
+                format: "CODE128", displayValue: false, margin: 0, height: 35, width: 1.5
+            }});
+            
+            // Auto-trigger print dialog after a brief moment so barcodes render
+            setTimeout(() => {{
+                window.print();
+            }}, 500);
         }};
     </script>
 </body>
 </html>"""
+    
     return HTMLResponse(content=html_content)
