@@ -1194,7 +1194,10 @@ async def generate_delhivery_shipping_label(awb: str):
     
     pmode = str(order.get("paymentMethod", "")).upper() if order else "PREPAID"
     is_cod = pmode in ["COD", "CASH ON DELIVERY"]
-    grand_total = order.get("grandTotal", 0.0) if order else 0.0
+    try:
+        grand_total = float(order.get("grandTotal", 0.0) or 0.0) if order else 0.0
+    except (ValueError, TypeError):
+        grand_total = 0.0
     
     cart_items = order.get("cartItems", []) if order else []
     items_desc = ", ".join([f"{item.get('title', 'Botanical Soap')} (x{item.get('quantity', 1)})" for item in cart_items]) if cart_items else "Botanical Cleanse Bars (75g)"
