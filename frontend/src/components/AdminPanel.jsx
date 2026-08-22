@@ -2662,7 +2662,10 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                            <button
                                               onClick={() => {
                                                 if (order.fulfillment.label_url) {
-                                                  window.open(order.fulfillment.label_url, '_blank');
+                                                  const fullLabelUrl = order.fulfillment.label_url.startsWith('/')
+                                                    ? `${API_URL}${order.fulfillment.label_url}`
+                                                    : order.fulfillment.label_url;
+                                                  window.open(fullLabelUrl, '_blank');
                                                 } else {
                                                   handleFetchLabel(order.fulfillment.awb);
                                                 }
