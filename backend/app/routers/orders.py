@@ -1216,7 +1216,11 @@ async def generate_delhivery_shipping_label(awb: str):
     import os
     import base64
     
-    logo_path = r"D:\hausmade_web\frontend\public\images\delhivery-logo.png"
+    # Dynamically find the logo path relative to this file's location
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    root_dir = os.path.abspath(os.path.join(current_dir, "..", "..", ".."))
+    logo_path = os.path.join(root_dir, "frontend", "public", "images", "delhivery-logo.png")
+    
     logo_html = '<h1>DELHIVERY</h1>'
     try:
         if os.path.exists(logo_path):
