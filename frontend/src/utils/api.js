@@ -1,13 +1,13 @@
 const getApiUrl = () => {
+  if (window.location.hostname === 'hausmade.in' || window.location.hostname === 'www.hausmade.in') {
+    return 'https://api.hausmade.in';
+  }
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     return `${window.location.protocol}//${window.location.hostname}:8005`;
   }
   const envUrl = import.meta.env.VITE_API_URL;
   if (envUrl) {
     return envUrl;
-  }
-  if (window.location.hostname === 'hausmade.in' || window.location.hostname === 'www.hausmade.in') {
-    return 'https://api.hausmade.in';
   }
   return window.location.origin;
 };
