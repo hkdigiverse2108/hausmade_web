@@ -132,6 +132,11 @@ async def get_site_settings():
                         {"image_url": "/images/pack-5.png", "post_url": "https://instagram.com/"},
                         {"image_url": "/images/soap-hero.png", "post_url": "https://instagram.com/"}
                     ]
+                },
+                "login_modal": {
+                    "image_url": "/botanical_soap.png",
+                    "title": "Botanical Simplicity.",
+                    "description": "Pure ingredients, hand-poured and slow-cured for 6 weeks. Access your VIP benefits, subscription discounts, and early releases."
                 }
             }
             await settings_collection.insert_one(settings)
@@ -405,6 +410,15 @@ async def get_site_settings():
                 ]
                 settings["product_selector_images"] = default_ps_images
                 await settings_collection.update_one({"key": "site_settings"}, {"$set": {"product_selector_images": default_ps_images}})
+            
+            if "login_modal" not in settings:
+                default_login_modal = {
+                    "image_url": "/botanical_soap.png",
+                    "title": "Botanical Simplicity.",
+                    "description": "Pure ingredients, hand-poured and slow-cured for 6 weeks. Access your VIP benefits, subscription discounts, and early releases."
+                }
+                settings["login_modal"] = default_login_modal
+                await settings_collection.update_one({"key": "site_settings"}, {"$set": {"login_modal": default_login_modal}})
             
         if "_id" in settings:
             settings["_id"] = str(settings["_id"])

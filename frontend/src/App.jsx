@@ -129,6 +129,11 @@ export default function App() {
       email: "info@hausmade.in",
       phone: "+91 76000 81431",
       address: "305 Muktidham Society, Near Sitanagar Chowk, Surat - 395 010 (Guj.)"
+    },
+    login_modal: {
+      image_url: '/botanical_soap.png',
+      title: 'Botanical Simplicity.',
+      description: 'Pure ingredients, hand-poured and slow-cured for 6 weeks. Access your VIP benefits, subscription discounts, and early releases.'
     }
   });
 
@@ -190,6 +195,12 @@ export default function App() {
         }
         if (event.data.type === 'scroll-to-section') {
           let sectionId = event.data.section;
+          if (sectionId === 'login_modal') {
+            setIsLoginOpen(true);
+            return;
+          } else {
+            setIsLoginOpen(false);
+          }
           if (sectionId === 'product_selector' || sectionId === 'products' || sectionId === 'subscription') {
             setCurrentView('products');
             window.history.replaceState(null, '', '/products' + window.location.search);
@@ -240,6 +251,10 @@ export default function App() {
 
       if (hash) {
         const id = hash.replace('#', '');
+        if (id === 'login_modal') {
+          setIsLoginOpen(true);
+          return;
+        }
         const el = document.getElementById(id);
         if (el) {
           el.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -780,6 +795,7 @@ export default function App() {
         isOpen={isLoginOpen}
         onClose={() => setIsLoginOpen(false)}
         showNotification={showNotification}
+        settings={siteSettings}
         onLoginSuccess={(userData) => {
           setLocalUser(userData);
           setLocalToken(localStorage.getItem('hausmade_token'));
@@ -799,6 +815,7 @@ export default function App() {
         }}
         showNotification={showNotification}
         isAdminOnly={true}
+        settings={siteSettings}
         onLoginSuccess={(userData) => {
           setLocalUser(userData);
           setLocalToken(localStorage.getItem('hausmade_token'));

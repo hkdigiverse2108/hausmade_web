@@ -276,11 +276,17 @@ class InstagramFeedSettings(BaseModel):
     subtitle: str = "A glimpse into our world"
     posts: List[InstagramPostItem] = []
 
+class LoginModalSettings(BaseModel):
+    image_url: str = "/botanical_soap.png"
+    title: str = "Botanical Simplicity."
+    description: str = "Pure ingredients, hand-poured and slow-cured for 6 weeks. Access your VIP benefits, subscription discounts, and early releases."
+
 class SiteSettingsModel(BaseModel):
     logo_url: str = ""
     announcement: AnnouncementSettings
     hero: HeroSettings
     story: StorySettings
+    login_modal: Optional[LoginModalSettings] = LoginModalSettings()
     contact: ContactSettings
     subscription: SubscriptionSettings
     social_links: SocialLinksSettings = SocialLinksSettings()

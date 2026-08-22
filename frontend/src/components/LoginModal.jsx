@@ -100,7 +100,8 @@ function OtpBoxes({ value, onChange }) {
   );
 }
 
-export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotification, isAdminOnly = false }) {
+export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotification, isAdminOnly = false, settings }) {
+  const isPreview = new URLSearchParams(window.location.search).get('preview') === 'true';
   const { loginWithPopup } = useAuth0();
 
   const handleGoogleLogin = async () => {
@@ -294,7 +295,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotifi
       {/* Backdrop click to close */}
       <div className="absolute inset-0 cursor-default" onClick={onClose} />
 
-      <div className="relative w-full max-w-4xl bg-[#FDFBF7] rounded-none border border-[#3A2E26]/10  overflow-hidden text-[#3A2E26] flex flex-col md:flex-row min-h-[520px] animate-scaleUp z-10">
+      <div className={`relative w-full max-w-4xl bg-[#FDFBF7] rounded-none border border-[#3A2E26]/10  overflow-hidden text-[#3A2E26] flex ${isPreview ? 'flex-row' : 'flex-col md:flex-row'} min-h-[520px] animate-scaleUp z-10`}>
         
         {/* Close Button */}
         <button
@@ -306,10 +307,10 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotifi
         </button>
 
         {/* Left Column - Image Section (Hidden on mobile) */}
-        <div className="hidden md:flex md:w-1/2 relative bg-[#3A2E26] text-white flex-col justify-between p-10 overflow-hidden select-none">
+        <div className={`${isPreview ? 'flex w-1/2' : 'hidden md:flex md:w-1/2'} relative bg-[#3A2E26] text-white flex-col justify-between p-10 overflow-hidden select-none`}>
             {/* Background Image */}
             <img 
-              src="/botanical_soap.png" 
+              src={settings?.login_modal?.image_url || "/botanical_soap.png"} 
               alt="Handcrafted Botanical Soap" 
               className="absolute inset-0 w-full h-full object-cover opacity-75 hover:scale-105 transition-transform duration-1000"
             />
@@ -324,16 +325,16 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, showNotifi
             
             <div className="relative z-10 mt-auto">
               <h4 className="font-serif-brand text-2xl font-bold leading-tight mb-2 text-white">
-                Botanical Simplicity.
+                {settings?.login_modal?.title || "Botanical Simplicity."}
               </h4>
               <p className="text-xs text-white/90 leading-relaxed max-w-sm">
-                Pure ingredients, hand-poured and slow-cured for 6 weeks. Access your VIP benefits, subscription discounts, and early releases.
+                {settings?.login_modal?.description || "Pure ingredients, hand-poured and slow-cured for 6 weeks. Access your VIP benefits, subscription discounts, and early releases."}
               </p>
             </div>
           </div>
 
           {/* Right Column - Form Section */}
-          <div className="w-full md:w-1/2 p-6 sm:p-8 flex flex-col justify-center overflow-y-auto overflow-x-hidden relative z-10">
+          <div className={`${isPreview ? 'w-1/2 p-6' : 'w-full md:w-1/2 p-6 sm:p-8'} flex flex-col justify-center overflow-y-auto overflow-x-hidden relative z-10`}>
 
             {/* Brand Header */}
             <div className="text-center mb-4">

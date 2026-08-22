@@ -10,6 +10,7 @@ import {
   Calendar, 
   CreditCard, 
   ArrowLeft, 
+  ArrowRight,
   Mail, 
   Phone, 
   MapPin, 
@@ -32,6 +33,7 @@ import {
   Sliders,
   MessageSquare,
   Star,
+  Sparkles,
   Menu,
   Maximize2,
   Minimize2,
@@ -306,6 +308,11 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     social_links: { instagram: '', facebook: '', whatsapp: '', twitter: '', youtube: '' },
     cashfree: { app_id_test: '', secret_key_test: '', app_id_live: '', secret_key_live: '', mode: 'test', active: false },
     delhivery: { api_token: '', mode: 'test', active: false, warehouse_name: '', pickup_name: '', pickup_phone: '', pickup_email: '', pickup_pincode: '', pickup_state: '', pickup_city: '', pickup_address: '' },
+    login_modal: {
+      image_url: '/botanical_soap.png',
+      title: 'Botanical Simplicity.',
+      description: 'Pure ingredients, hand-poured and slow-cured for 6 weeks. Access your VIP benefits, subscription discounts, and early releases.'
+    },
     faqs: [],
     ingredients: [],
     ingredients_header: {
@@ -448,6 +455,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
         settingsForm.policies_privacy !== (settings.policies_privacy || '') ||
         settingsForm.policies_shipping !== (settings.policies_shipping || '') ||
         settingsForm.policies_refund !== (settings.policies_refund || '') ||
+        JSON.stringify(settingsForm.login_modal || {}) !== JSON.stringify(settings.login_modal || {}) ||
         settingsForm.ingredients_active !== (settings.ingredients_active !== undefined ? settings.ingredients_active : true);
         
       if (hasChanged) {
@@ -548,6 +556,11 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
           policies_privacy: settings.policies_privacy || defaultPrivacy,
           policies_shipping: settings.policies_shipping || defaultShipping,
           policies_refund: settings.policies_refund || defaultRefund,
+          login_modal: settings.login_modal || {
+            image_url: '/botanical_soap.png',
+            title: 'Botanical Simplicity.',
+            description: 'Pure ingredients, hand-poured and slow-cured for 6 weeks. Access your VIP benefits, subscription discounts, and early releases.'
+          },
           ingredients_active: settings.ingredients_active !== undefined ? settings.ingredients_active : true,
           product_selector_header: settings.product_selector_header || {
             badge: "Choose Your Ritual",
@@ -2068,7 +2081,8 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                   { id: 'instagram_feed', label: 'Instagram Feed', num: '10' },
                   { id: 'contact', label: 'Footer & Socials', num: '11' },
                   { id: 'policies', label: 'Store Policies', num: '12' },
-                  { id: 'delhivery', label: 'Delhivery Shipping', num: '13' }
+                  { id: 'delhivery', label: 'Delhivery Shipping', num: '13' },
+                  { id: 'login_modal', label: 'Login Popup', num: '14' }
                 ].map((sub) => {
                   const isActive = settingsSubTab === sub.id;
                   return (
@@ -4852,6 +4866,71 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                             {saving ? 'Saving...' : 'Save Delhivery Settings'}
                           </button>
                         </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {settingsSubTab === 'login_modal' && (
+                <>
+                  {/* Login Popup Settings Section */}
+                  <div className="bg-white rounded-3xl p-6 border border-[#3A2E26]/10 shadow-sm space-y-4">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70 border-b border-[#3A2E26]/10 pb-2">Login Popup Customization</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <ImageUploader
+                          label="Login Banner Image"
+                          value={settingsForm.login_modal?.image_url}
+                          onChange={(url) => setSettingsForm({
+                            ...settingsForm,
+                            login_modal: { ...settingsForm.login_modal, image_url: url }
+                          })}
+                          showNotification={showNotification}
+                          isSaving={saving}
+                          setIsSaving={setSaving}
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Headline Title</label>
+                        <input
+                          type="text"
+                          required
+                          value={settingsForm.login_modal?.title || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            login_modal: { ...settingsForm.login_modal, title: e.target.value }
+                          })}
+                          placeholder="e.g., Botanical Simplicity."
+                          className="w-full pl-4 pr-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-semibold text-[#3A2E26]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Description Text</label>
+                        <textarea
+                          required
+                          rows={4}
+                          value={settingsForm.login_modal?.description || ''}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            login_modal: { ...settingsForm.login_modal, description: e.target.value }
+                          })}
+                          placeholder="Describe the login benefits, discounts, etc."
+                          className="w-full pl-4 pr-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-medium text-[#3A2E26] resize-none"
+                        />
+                      </div>
+
+                      <div className="pt-3 border-t border-[#3A2E26]/10 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={handleSaveSettings}
+                          disabled={saving}
+                          className="px-6 py-2.5 bg-[#7A8B6F] hover:bg-[#68785c] text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
+                        >
+                          {saving ? 'Saving...' : 'Save Login Settings'}
+                        </button>
                       </div>
                     </div>
                   </div>
