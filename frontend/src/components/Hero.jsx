@@ -144,9 +144,10 @@ export default function Hero({ settings, onNavigate }) {
            {/* Secondary Overlapping Image */}
            <div className="absolute bottom-[12%] left-[5%] md:left-0 lg:left-[5%] w-48 lg:w-60 aspect-[4/3] rounded-[1.5rem] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.15)] border-[8px] border-white/80 animate-float-reverse z-20" style={{ animationDelay: '0.5s' }}>
               <img 
-                 src="/images/soap-stack.png"
+                 src={settings?.secondary_image_url || "/images/soap-stack.png"}
                  alt="Soap Stack"
                  className="w-full h-full object-cover origin-center transition-transform duration-[10s] ease-out hover:scale-105"
+                 onError={(e) => { e.target.onerror = null; e.target.src = "/images/soap-stack.png"; }}
               />
            </div>
 

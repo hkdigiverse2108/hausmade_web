@@ -267,7 +267,8 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       card_subtitle: '',
       card_title: '',
       card_badge: '',
-      image_url: ''
+      image_url: '',
+      secondary_image_url: ''
     },
     story: {
       title: "From our kitchen counter to your daily sanctuary.",
@@ -469,6 +470,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
             card_title: settings.hero?.card_title || '',
             card_badge: settings.hero?.card_badge || '',
             image_url: settings.hero?.image_url || '',
+            secondary_image_url: settings.hero?.secondary_image_url || '',
             rotating_text: settings.hero?.rotating_text || ''
           },
           story: {
@@ -3755,17 +3757,30 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                     <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70 border-b border-[#3A2E26]/10 pb-2">Hero Image & Right Overlay Card</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="md:col-span-2">
-                        <ImageUploader
-                          label="Hero Main Image"
-                          value={settingsForm.hero.image_url || ''}
-                          onChange={(url) => setSettingsForm({
-                            ...settingsForm,
-                            hero: { ...settingsForm.hero, image_url: url }
-                          })}
-                          showNotification={showNotification}
-                          isSaving={saving}
-                          setIsSaving={setSaving}
-                        />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <ImageUploader
+                            label="Hero Main Image (Large)"
+                            value={settingsForm.hero.image_url || ''}
+                            onChange={(url) => setSettingsForm({
+                              ...settingsForm,
+                              hero: { ...settingsForm.hero, image_url: url }
+                            })}
+                            showNotification={showNotification}
+                            isSaving={saving}
+                            setIsSaving={setSaving}
+                          />
+                          <ImageUploader
+                            label="Hero Overlapping Image (Small)"
+                            value={settingsForm.hero.secondary_image_url || ''}
+                            onChange={(url) => setSettingsForm({
+                              ...settingsForm,
+                              hero: { ...settingsForm.hero, secondary_image_url: url }
+                            })}
+                            showNotification={showNotification}
+                            isSaving={saving}
+                            setIsSaving={setSaving}
+                          />
+                        </div>
                       </div>
                       <div>
                         <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Overlay Card Subtitle / Category Tag</label>

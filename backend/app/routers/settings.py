@@ -39,6 +39,7 @@ async def get_site_settings():
             "card_title": "Pure Kesar Artisanal Shaving Puck",
             "card_badge": "100% Pure",
             "image_url": "/images/soap-hero.png",
+            "secondary_image_url": "/images/soap-stack.png",
             "rotating_text": "HANDCRAFTED • 100% PURE ART •"
         }
         if not settings:
