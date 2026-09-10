@@ -18,7 +18,7 @@ export default function ProductsPage({
 }) {
 
   return (
-    <div className="bg-[#FDFBF7] min-h-screen pt-20 lg:pt-28 pb-16 selection:bg-[#7A8B6F] selection:text-white">
+    <div className="bg-[#FDFBF7] min-h-screen pt-10 lg:pt-14 pb-16 selection:bg-[#7A8B6F] selection:text-white">
       <Helmet>
         {/* Primary SEO Tags */}
         <title>Kesar Soap | Handmade Natural Soap by Hausmade</title>
@@ -50,6 +50,7 @@ export default function ProductsPage({
           onAddToCart={onAddToCart}
           onBuyNow={onBuyNow}
           selectedPack={selectedPack}
+          setSelectedPack={setSelectedPack}
           quantity={quantity}
           setQuantity={setQuantity}
           activeImageIndex={activeImageIndex}
