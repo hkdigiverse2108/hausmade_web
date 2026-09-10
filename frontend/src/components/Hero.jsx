@@ -76,7 +76,7 @@ export default function Hero({ settings, onNavigate }) {
         <div className="w-full max-w-7xl mx-auto flex flex-col md:flex-row items-center relative z-10">
           
           {/* Left Side: Typography & CTA */}
-          <div className="w-full md:w-1/2 flex flex-col justify-center px-6 sm:px-12 lg:px-16 pt-24 pb-12 md:py-32 relative z-10">
+          <div className="w-full md:w-1/2 flex flex-col justify-center px-6 sm:px-12 lg:px-16 pt-24 pb-4 md:py-32 relative z-10">
             
             <div className="mb-8">
               <span className="inline-block border-b border-[#3A2E26] pb-1 text-[9px] uppercase tracking-[0.25em] font-bold text-[#3A2E26]">
@@ -90,11 +90,11 @@ export default function Hero({ settings, onNavigate }) {
               {title_normal_2 && <><br/>{title_normal_2}</>}
             </h1>
 
-            <p className="text-sm sm:text-base text-[#3A2E26]/70 max-w-md font-light leading-relaxed mb-12">
+            <p className="text-sm sm:text-base text-[#3A2E26]/70 max-w-md font-light leading-relaxed mb-8 sm:mb-12">
               {description}
             </p>
 
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+            <div className="flex flex-col sm:flex-row items-center sm:items-center gap-3 sm:gap-6 w-full sm:w-auto">
               {primary_button_text && (
                 <a
                   href="/products"
@@ -102,7 +102,7 @@ export default function Hero({ settings, onNavigate }) {
                     e.preventDefault();
                     onNavigate('/products');
                   }}
-                  className="group relative inline-flex items-center justify-center bg-[#3A2E26] text-[#FDFBF7] px-8 py-4 text-[10px] uppercase tracking-[0.2em] font-bold overflow-hidden transition-all duration-500 hover:bg-[#C97C5D] cursor-pointer"
+                  className="w-full sm:w-auto group relative inline-flex items-center justify-center bg-[#3A2E26] text-[#FDFBF7] px-8 py-4 text-[10px] uppercase tracking-[0.2em] font-bold overflow-hidden transition-all duration-500 hover:bg-[#C97C5D] cursor-pointer"
                 >
                   <span className="relative z-10 flex items-center gap-3">
                     {primary_button_text}
@@ -120,17 +120,17 @@ export default function Hero({ settings, onNavigate }) {
                       onNavigate('/', secondary_button_link);
                     }
                   }}
-                  className="group inline-flex items-center justify-center text-[#3A2E26] px-2 py-4 text-[10px] uppercase tracking-[0.2em] font-bold relative cursor-pointer"
+                  className="w-full sm:w-auto group inline-flex items-center justify-center text-[#3A2E26] px-2 py-3 sm:py-4 text-[10px] uppercase tracking-[0.2em] font-bold relative cursor-pointer"
                 >
                   {secondary_button_text}
-                  <span className="absolute bottom-3 left-2 w-0 h-[1px] bg-[#3A2E26] transition-all duration-500 group-hover:w-[calc(100%-16px)]"></span>
+                  <span className="absolute bottom-1 sm:bottom-3 left-1/2 sm:left-2 -translate-x-1/2 sm:translate-x-0 w-0 h-[1px] bg-[#3A2E26] transition-all duration-500 group-hover:w-[calc(100%-16px)]"></span>
                 </a>
               )}
             </div>
           </div>
 
           {/* Right Side: Imagery with Soft Shadows */}
-          <div className="w-full md:w-1/2 min-h-[50vh] md:h-screen relative flex items-center justify-center p-8 lg:p-12 overflow-hidden">
+          <div className="w-full md:w-1/2 min-h-[50vh] md:h-screen relative flex items-center justify-center p-4 pt-8 lg:p-12 overflow-hidden">
            {/* Main Image - Soft Professional Rectangle */}
            <div className="relative w-full max-w-[380px] aspect-[4/5] rounded-[2rem] overflow-hidden shadow-2xl animate-float z-10 border-4 border-white/60 backdrop-blur-sm">
               <img 

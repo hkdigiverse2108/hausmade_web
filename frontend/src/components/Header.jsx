@@ -65,6 +65,7 @@ export default function Header({ cartCount, onOpenCart, user, isAuthenticated, o
             href="/" 
             onClick={(e) => {
               e.preventDefault();
+              setMobileMenuOpen(false);
               onNavigate('/');
             }}
             className="flex items-center gap-2 sm:gap-2.5 group shrink-0 cursor-pointer"
