@@ -120,10 +120,10 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
   };
 
   return (
-    <section id="product-selector" className="py-16 lg:py-24 bg-transparent scroll-mt-20 overflow-x-hidden">
+    <section id="product-selector" className="py-8 lg:py-24 bg-transparent scroll-mt-20 overflow-x-hidden">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         
-        <div className="text-center max-w-3xl mx-auto mb-12">
+        <div className="text-center max-w-3xl mx-auto mb-8 lg:mb-12">
           <span className="text-[#C97C5D] font-bold text-xs uppercase tracking-widest">{headerSettings.badge || "CHOOSE YOUR RITUAL"}</span>
           <h1 className="font-serif-brand text-2xl sm:text-4xl lg:text-5xl font-normal text-[#3A2E26] mt-2">
             {headerSettings.title || "Select Your Artisanal Cleansing Ritual"}
@@ -133,7 +133,7 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
           </p>
         </div>
 
-        <div className="flex flex-col lg:flex-row items-stretch lg:items-start lg:gap-0 mt-8 relative max-w-6xl mx-auto lg:translate-x-12">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-start lg:gap-0 mt-6 lg:mt-8 relative max-w-6xl mx-auto lg:translate-x-12">
           
           {/* Left Side: Product Gallery */}
           <div className="w-full lg:w-7/12 relative">
@@ -171,8 +171,9 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
           <div className={`w-full lg:w-5/12 z-20 relative lg:-ml-24 lg:mt-16 transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${isMainHovered ? 'lg:translate-x-24' : ''}`}>
             <div className="bg-[#FDFBF7] p-6 sm:p-8 lg:p-10 border border-[#3A2E26]/5 shadow-[0_20px_50px_rgba(58,46,38,0.05)] rounded-sm space-y-8">
             
-            <div className="space-y-6">
-              <div>
+            <div className="flex flex-col">
+              {/* Badges and Title */}
+              <div className="order-1">
                 <div className="flex items-center justify-between border-b border-[#3A2E26]/10 pb-4">
                   <span className="text-[10px] uppercase tracking-[0.2em] text-[#C97C5D] font-bold block">
                     {headerSettings.product_badge || "Luxury Bath Element"}
@@ -187,7 +188,7 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
               </div>
 
               {/* Star Rating summary */}
-              <div className="flex items-center gap-3">
+              <div className="order-2 flex items-center gap-3 mt-6">
                 <a href="#reviews" className="flex items-center text-[#C97C5D] hover:opacity-70 transition-opacity">
                   {[...Array(5)].map((_, i) => (
                     <Star key={i} className="w-3.5 h-3.5 fill-current" />
@@ -198,88 +199,91 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
                 </a>
               </div>
 
-              <p className="text-[#3A2E26]/90 text-sm sm:text-base leading-[1.8] font-medium">
-                {headerSettings.product_description || "A purely handmade cleansing bar infused with real saffron extract, camphor, and 100% coconut oil. Helps remove sun tanning, fade dark spots, and deeply nourish skin for natural daily glow care. Suitable for all skins."}
-              </p>
+              {/* Description */}
+              <div className="order-5 lg:order-3 mt-8 lg:mt-6 pt-6 lg:pt-0 border-t border-[#3A2E26]/10 lg:border-none">
+                <p className="text-[#3A2E26]/90 text-sm sm:text-base leading-[1.8] font-medium">
+                  {headerSettings.product_description || "A purely handmade cleansing bar infused with real saffron extract, camphor, and 100% coconut oil. Helps remove sun tanning, fade dark spots, and deeply nourish skin for natural daily glow care. Suitable for all skins."}
+                </p>
+              </div>
 
               {/* Pricing & Stock Status */}
-              <div className="flex items-baseline justify-between mt-8">
+              <div className="order-3 lg:order-4 flex items-baseline justify-between mt-8 lg:mt-8">
                 <div className="flex items-baseline gap-2">
                   <span className="font-serif-brand text-3xl sm:text-4xl text-[#3A2E26]">₹{pack.basePrice.toFixed(2)}</span>
                   <span className="text-xs text-[#3A2E26]/50 uppercase tracking-widest font-mono">/ bar</span>
                 </div>
               </div>
-            </div>
 
-            {/* Stepper, Add to Cart, Buy Now Row */}
-            <div className="pt-4 space-y-3">
-              <div className="flex flex-col sm:flex-row gap-3">
-                {/* Stepper */}
-                <div className="flex items-center justify-between border border-[#3A2E26] bg-transparent p-1 h-14 w-full sm:w-32 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      className="w-10 h-10 flex items-center justify-center text-[#3A2E26]/70 hover:text-[#3A2E26] transition-colors cursor-pointer"
-                      aria-label="Decrease quantity"
-                    >
-                      <Minus className="w-3.5 h-3.5" />
-                    </button>
-                    <span className="font-mono text-xs text-[#3A2E26] min-w-[1.25rem] text-center select-none">
-                      {quantity}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setQuantity(quantity + 1)}
-                      className="w-10 h-10 flex items-center justify-center text-[#3A2E26]/70 hover:text-[#3A2E26] transition-colors cursor-pointer"
-                      aria-label="Increase quantity"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+              {/* Stepper, Add to Cart, Buy Now Row */}
+              <div className="order-4 lg:order-5 pt-4 space-y-3">
+                <div className="flex flex-row gap-3">
+                  {/* Stepper */}
+                  <div className="flex items-center justify-between border border-[#3A2E26] bg-transparent p-1 h-14 w-[120px] sm:w-32 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                        className="w-10 h-10 flex items-center justify-center text-[#3A2E26]/70 hover:text-[#3A2E26] transition-colors cursor-pointer"
+                        aria-label="Decrease quantity"
+                      >
+                        <Minus className="w-3.5 h-3.5" />
+                      </button>
+                      <span className="font-mono text-xs text-[#3A2E26] min-w-[1.25rem] text-center select-none">
+                        {quantity}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setQuantity(quantity + 1)}
+                        className="w-10 h-10 flex items-center justify-center text-[#3A2E26]/70 hover:text-[#3A2E26] transition-colors cursor-pointer"
+                        aria-label="Increase quantity"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
 
-                {/* Add to Cart Outline Button */}
+                  {/* Add to Cart Outline Button */}
+                  <button
+                    type="button"
+                    onClick={handleAdd}
+                    disabled={isPackOutOfStock}
+                    className={`flex-1 h-14 border text-xs font-bold uppercase tracking-[0.2em] transition-all duration-300 flex items-center justify-center ${
+                      isPackOutOfStock
+                        ? 'bg-transparent border-[#3A2E26]/20 text-[#3A2E26]/40 cursor-not-allowed'
+                        : 'bg-transparent border-[#3A2E26] text-[#3A2E26] hover:bg-[#3A2E26] hover:text-[#FDFBF7] cursor-pointer'
+                    }`}
+                  >
+                    {isPackOutOfStock ? 'OUT OF STOCK' : 'ADD TO CART'}
+                  </button>
+                </div>
+
+                {/* Buy Now Solid Button */}
                 <button
                   type="button"
-                  onClick={handleAdd}
+                  onClick={handleBuy}
                   disabled={isPackOutOfStock}
-                  className={`flex-1 w-full sm:w-auto h-14 border text-xs font-bold uppercase tracking-[0.2em] transition-all duration-300 flex items-center justify-center ${
+                  className={`w-full h-14 text-xs font-bold uppercase tracking-[0.2em] transition-all duration-500 flex items-center justify-center gap-3 ${
                     isPackOutOfStock
-                      ? 'bg-transparent border-[#3A2E26]/20 text-[#3A2E26]/40 cursor-not-allowed'
-                      : 'bg-transparent border-[#3A2E26] text-[#3A2E26] hover:bg-[#3A2E26] hover:text-[#FDFBF7] cursor-pointer'
+                      ? 'bg-[#3A2E26]/5 text-[#3A2E26]/40 cursor-not-allowed'
+                      : 'bg-[#C97C5D] text-[#FDFBF7] hover:bg-[#A96348] cursor-pointer hover:shadow-md'
                   }`}
                 >
-                  {isPackOutOfStock ? 'OUT OF STOCK' : 'ADD TO CART'}
+                  <span>{isPackOutOfStock ? 'UNAVAILABLE' : 'BUY NOW'}</span>
+                  <span className="opacity-50">|</span>
+                  <span className="font-mono tracking-wider">
+                    ₹{totalPrice}
+                  </span>
                 </button>
               </div>
 
-              {/* Buy Now Solid Button */}
-              <button
-                type="button"
-                onClick={handleBuy}
-                disabled={isPackOutOfStock}
-                className={`w-full h-14 text-xs font-bold uppercase tracking-[0.2em] transition-all duration-500 flex items-center justify-center gap-3 ${
-                  isPackOutOfStock
-                    ? 'bg-[#3A2E26]/5 text-[#3A2E26]/40 cursor-not-allowed'
-                    : 'bg-[#C97C5D] text-[#FDFBF7] hover:bg-[#A96348] cursor-pointer hover:shadow-md'
-                }`}
-              >
-                <span>{isPackOutOfStock ? 'UNAVAILABLE' : 'BUY NOW'}</span>
-                <span className="opacity-50">|</span>
-                <span className="font-mono tracking-wider">
-                  ₹{totalPrice}
-                </span>
-              </button>
-            </div>
-
-            {/* Reassurance Icons */}
-            <div className="pt-4 grid grid-cols-2 gap-2 sm:gap-4 text-center sm:text-left text-[8px] sm:text-[9px] uppercase tracking-[0.05em] sm:tracking-[0.1em] text-[#3A2E26]/60">
-              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-1 sm:gap-2">
-                <Truck className="w-3.5 h-3.5 shrink-0 opacity-70" />
-                <span className="leading-tight sm:leading-relaxed">Free Shipping over ₹499</span>
-              </div>
-              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-1 sm:gap-2">
-                <RotateCcw className="w-3.5 h-3.5 shrink-0 opacity-70" />
-                <span className="leading-tight sm:leading-relaxed">30-Day Happiness Guarantee</span>
+              {/* Reassurance Icons */}
+              <div className="order-6 pt-4 grid grid-cols-2 gap-2 sm:gap-4 text-center sm:text-left text-[8px] sm:text-[9px] uppercase tracking-[0.05em] sm:tracking-[0.1em] text-[#3A2E26]/60 mt-4">
+                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-1 sm:gap-2">
+                  <Truck className="w-3.5 h-3.5 shrink-0 opacity-70" />
+                  <span className="leading-tight sm:leading-relaxed">Free Shipping over ₹499</span>
+                </div>
+                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-1 sm:gap-2">
+                  <RotateCcw className="w-3.5 h-3.5 shrink-0 opacity-70" />
+                  <span className="leading-tight sm:leading-relaxed">30-Day Happiness Guarantee</span>
+                </div>
               </div>
             </div>
             </div>

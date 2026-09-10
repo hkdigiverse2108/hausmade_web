@@ -76,7 +76,7 @@ export default function Hero({ settings, onNavigate }) {
         <div className="w-full max-w-7xl mx-auto flex flex-col md:flex-row items-center relative z-10">
           
           {/* Left Side: Typography & CTA */}
-          <div className="w-full md:w-1/2 flex flex-col justify-center px-6 sm:px-12 lg:px-16 pt-32 pb-16 md:py-32 relative z-10">
+          <div className="w-full md:w-1/2 flex flex-col justify-center px-6 sm:px-12 lg:px-16 pt-24 pb-12 md:py-32 relative z-10">
             
             <div className="mb-8">
               <span className="inline-block border-b border-[#3A2E26] pb-1 text-[9px] uppercase tracking-[0.25em] font-bold text-[#3A2E26]">
