@@ -58,6 +58,10 @@ export const formatTitle = (title) => {
     }
   }
 
+  if (clean.toLowerCase().includes('single') || clean.toLowerCase().includes('1 soap')) {
+    return 'SINGLE\nSOAP';
+  }
+
   return clean;
 };
 
@@ -227,63 +231,71 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
                   </div>
 
                   {/* Grid */}
-                  <div className={`grid ${items.length === 3 ? 'grid-cols-3' : 'grid-cols-2'} gap-3`}>
+                  <div className={`grid ${items.length === 3 ? 'grid-cols-3' : 'grid-cols-2'} gap-1.5 sm:gap-3`}>
                     {items.map((item, index) => {
                       const isSelected = item.id === pack.id;
                       const pricePerBar = (item.basePrice / item.count).toFixed(0);
-                      let badgeBg = "bg-[#C97C5D]";
+                      const themeColor = item.bestValue ? '#7A8B6F' : '#C97C5D';
+                      const badgeBg = item.bestValue ? 'bg-[#7A8B6F]' : 'bg-[#C97C5D]';
+                      
                       let badgeText = item.savingsBadge;
                       if (item.popular) badgeText = "Most Popular";
-                      if (item.bestValue) {
-                        badgeBg = "bg-[#7A8B6F]";
-                        badgeText = "Best Value";
-                      }
+                      if (item.bestValue) badgeText = "Best Value";
                       if (item.id === 'pack-2') badgeText = "Save 8%";
+
+                      const formattedTitle = formatTitle(item.title);
 
                       return (
                         <button
                           key={item.id}
                           type="button"
                           onClick={() => setSelectedPack && setSelectedPack(item.id)}
-                          className={`relative p-3 rounded-xl transition-all duration-300 cursor-pointer text-left border ${
+                          className={`relative p-1.5 sm:p-3 rounded-xl transition-all duration-300 cursor-pointer text-left border ${
                             isSelected
-                              ? 'border-[#C97C5D] bg-[#FDFBF7] shadow-sm ring-1 ring-[#C97C5D]'
+                              ? 'bg-[#FDFBF7] shadow-sm'
                               : 'border-[#3A2E26]/15 bg-white text-[#3A2E26] hover:border-[#C97C5D]/50'
                           }`}
+                          style={isSelected ? { borderColor: themeColor, boxShadow: `0 0 0 1px ${themeColor}` } : {}}
                         >
                           {/* Top Right Badge */}
                           {item.id !== 'single' && (
-                            <span className={`absolute -top-2.5 right-2 sm:right-3 text-[10px] font-bold text-white px-2 py-0.5 rounded-full shadow-sm ${badgeBg}`}>
+                            <span 
+                              className={`absolute -top-2.5 right-0 text-[8px] sm:text-[9.5px] font-bold text-white px-2 sm:px-2.5 py-0.5 rounded-full shadow-sm ${badgeBg} whitespace-nowrap`}
+                            >
                               {badgeText}
                             </span>
                           )}
 
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-all ${
-                                isSelected ? 'border-[#C97C5D] bg-[#C97C5D]' : 'border-[#3A2E26]/30 bg-transparent'
-                              }`}>
-                                {isSelected && <Check className="w-2.5 h-2.5 text-white stroke-[3]" />}
+                          <div className="flex items-start justify-between gap-1 sm:gap-2">
+                            <div className="flex items-start gap-1 sm:gap-2 min-w-0">
+                              <div 
+                                className="w-3.5 h-3.5 sm:w-4 sm:h-4 mt-0.5 rounded-full border flex items-center justify-center shrink-0 transition-all"
+                                style={isSelected ? { borderColor: themeColor, backgroundColor: themeColor } : { borderColor: 'rgba(58,46,38,0.3)', backgroundColor: 'transparent' }}
+                              >
+                                {isSelected && <Check className="w-2 sm:w-2.5 h-2 sm:h-2.5 text-white stroke-[3]" />}
                               </div>
-                              <div>
-                                <span className="block text-[11px] font-bold text-[#3A2E26] uppercase tracking-wide whitespace-pre-line leading-tight">
-                                  {formatTitle(item.title)}
+                              <div className="min-w-0">
+                                <span className="block text-[9.5px] sm:text-[11px] font-bold text-[#3A2E26] uppercase tracking-tight sm:tracking-wide whitespace-pre-line leading-normal sm:leading-relaxed">
+                                  {formattedTitle}
                                 </span>
-                                <span className="block text-[10px] text-[#3A2E26]/60 mt-0.5">
+                                <span className="block text-[8px] sm:text-[10px] text-[#3A2E26]/60 mt-0.5 whitespace-nowrap">
                                   ₹{pricePerBar} / bar
                                 </span>
                               </div>
                             </div>
-                            <div className="text-right">
-                              <span className="block font-serif-brand text-[15px] font-bold text-[#3A2E26]">
+                            <div className="text-right shrink-0">
+                              <span className="block font-serif-brand text-[11px] sm:text-[15px] font-bold text-[#3A2E26]">
                                 ₹{item.basePrice.toFixed(0)}
                               </span>
                               {item.id === 'single' ? (
-                                <span className="block text-[10px] text-[#3A2E26]/40 mt-0.5">
+                                <span className="block text-[8px] sm:text-[10px] text-[#3A2E26]/40 mt-0.5 whitespace-nowrap">
                                   Standard
                                 </span>
                               ) : (
-                                <span className="block text-[10px] font-bold text-[#C97C5D] mt-0.5">
+                                <span 
+                                  className="block text-[8px] sm:text-[10px] font-bold mt-0.5 whitespace-nowrap"
+                                  style={{ color: themeColor }}
+                                >
                                   {item.savingsBadge}
                                 </span>
                               )}
