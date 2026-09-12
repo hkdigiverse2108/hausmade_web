@@ -65,7 +65,7 @@ export const formatTitle = (title) => {
   return clean;
 };
 
-export default function ProductSelector({ products = [], onAddToCart, onBuyNow, selectedPack, setSelectedPack, quantity, setQuantity, activeImageIndex, setActiveImageIndex, settings }) {
+export default function ProductSelector({ products = [], onAddToCart, onBuyNow, selectedPack, setSelectedPack, quantity, setQuantity, activeImageIndex, setActiveImageIndex, settings, onNavigate }) {
   const [isMainHovered, setIsMainHovered] = useState(false);
   const isSubscription = false;
 
@@ -80,6 +80,15 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
     weight_badge: "75g Bar",
     rating_text: "4.9 ★ · 480+ Happy Glow Reviews",
     product_description: "A purely handmade cleansing bar infused with real saffron extract, camphor, and 100% coconut oil. Helps remove sun tanning, fade dark spots, and deeply nourish skin for natural daily glow care. Suitable for all skins."
+  };
+
+  const handleRatingClick = (e) => {
+    e.preventDefault();
+    if (onNavigate) {
+      onNavigate('/', '#reviews');
+    } else {
+      window.location.href = '/#reviews';
+    }
   };
 
   const customImages = (settings?.product_selector_images && settings.product_selector_images.length > 0)
@@ -205,13 +214,19 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
 
                   {/* Rating */}
                   <div className="flex items-center gap-3">
-                    <a href="#reviews" className="flex items-center text-[#C97C5D] hover:opacity-70 transition-opacity">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} className="w-4 h-4 fill-current" />
-                      ))}
-                    </a>
-                    <a href="#reviews" className="text-sm text-[#3A2E26]/80 hover:underline">
-                      {headerSettings.rating_text || "4.9 ★ · 480+ Happy Glow Reviews"}
+                    <a
+                      href="/#reviews"
+                      onClick={handleRatingClick}
+                      className="flex items-center gap-2 text-[#C97C5D] hover:opacity-80 transition-opacity cursor-pointer group"
+                    >
+                      <div className="flex items-center">
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} className="w-4 h-4 fill-current text-[#C97C5D]" />
+                        ))}
+                      </div>
+                      <span className="text-sm text-[#3A2E26]/80 group-hover:underline">
+                        {headerSettings.rating_text || "4.9 ★ · 480+ Happy Glow Reviews"}
+                      </span>
                     </a>
                   </div>
 

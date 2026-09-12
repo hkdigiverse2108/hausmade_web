@@ -714,6 +714,7 @@ export default function App() {
                   activeImageIndex={activeImageIndex}
                   setActiveImageIndex={setActiveImageIndex}
                   settings={siteSettings}
+                  onNavigate={handleNavigate}
                 />
               ) : activeHash === '#track' ? (
                 <OrderTracking />

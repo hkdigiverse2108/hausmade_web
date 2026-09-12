@@ -14,7 +14,8 @@ export default function ProductsPage({
   setQuantity,
   activeImageIndex,
   setActiveImageIndex,
-  settings
+  settings,
+  onNavigate
 }) {
 
   return (
@@ -56,6 +57,7 @@ export default function ProductsPage({
           activeImageIndex={activeImageIndex}
           setActiveImageIndex={setActiveImageIndex}
           settings={settings}
+          onNavigate={onNavigate}
         />
       </div>
 
