@@ -120,16 +120,16 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
 
   return (
     <section id="product-selector" className="pt-2 pb-6 lg:pt-4 lg:pb-12 bg-transparent scroll-mt-20 overflow-x-hidden">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+      <div className="max-w-[1400px] mx-auto px-3 sm:px-6 lg:px-12">
         
-        <div className="text-center max-w-3xl mx-auto mb-2 lg:mb-6 pt-4 sm:pt-8 lg:pt-10">
+        <div className="text-center max-w-3xl mx-auto mb-6 lg:mb-10 pt-4 sm:pt-8 lg:pt-10">
           <span className="text-[#C97C5D] font-bold text-[10px] sm:text-xs uppercase tracking-widest">{headerSettings.badge || "CHOOSE YOUR RITUAL"}</span>
           <h1 className="font-serif-brand text-xl sm:text-4xl lg:text-5xl font-normal text-[#3A2E26] mt-0.5 sm:mt-2">
             {headerSettings.title || "Select Your Artisanal Cleansing Ritual"}
           </h1>
         </div>
 
-        <div className="flex flex-col lg:flex-row items-stretch lg:items-start lg:gap-0 mt-2 lg:mt-4 relative max-w-6xl mx-auto lg:translate-x-12">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-start lg:gap-0 mt-2 lg:mt-4 relative max-w-[1300px] mx-auto lg:translate-x-10">
           
           {/* Left Side: Product Gallery */}
           <div className="w-full lg:w-7/12 relative">
@@ -194,8 +194,8 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
                     </a>
                   </div>
 
-                  {/* Description */}
-                  <p className="text-[#3A2E26]/80 text-[13px] sm:text-[14px] leading-relaxed mt-5">
+                  {/* Description (Desktop) */}
+                  <p className="hidden sm:block text-[#3A2E26]/80 text-[13px] sm:text-[14px] leading-relaxed mt-5">
                     {headerSettings.product_description || "A purely handmade cleansing bar infused with real Kesar (Saffron) extract, camphor, and 100% coconut oil. Helps remove sun tanning, reduce the appearance of dark spots, and deeply nourish the skin for a natural, healthy-looking glow. Suitable for all skin types."}
                   </p>
                 </div>
@@ -328,6 +328,13 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
                     {isPackOutOfStock ? 'OUT OF STOCK' : 'ADD TO CART'}
                   </button>
+                </div>
+
+                {/* Mobile Description */}
+                <div className="mt-5 block sm:hidden border-t border-[#3A2E26]/10 pt-4">
+                  <p className="text-[#3A2E26]/80 text-[13px] leading-relaxed">
+                    {headerSettings.product_description || "A purely handmade cleansing bar infused with real Kesar (Saffron) extract, camphor, and 100% coconut oil. Helps remove sun tanning, reduce the appearance of dark spots, and deeply nourish the skin for a natural, healthy-looking glow. Suitable for all skin types."}
+                  </p>
                 </div>
 
                 {/* 5. Trust Badges */}
