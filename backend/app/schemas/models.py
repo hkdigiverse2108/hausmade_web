@@ -160,7 +160,6 @@ class SubscriptionSettings(BaseModel):
 class ProductSelectorHeaderSettings(BaseModel):
     badge: str = "Choose Your Ritual"
     title: str = "Select Your Handmade Batch"
-    description: str = "Handcrafted with organic botanical butter and essential oils. Stock up and save more per bar."
     product_badge: str = "LUXURY BATH ELEMENT"
     product_title: str = "Hausmade™ Kesar Soap"
     weight_badge: str = "75g Bar"

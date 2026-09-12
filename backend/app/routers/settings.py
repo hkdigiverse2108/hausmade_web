@@ -394,7 +394,6 @@ async def get_site_settings():
                 default_ps_header = {
                     "badge": "Choose Your Ritual",
                     "title": "Select Your Handmade Batch",
-                    "description": "Handcrafted with organic botanical butter and essential oils. Stock up and save more per bar.",
                     "product_badge": "LUXURY BATH ELEMENT",
                     "product_title": "Hausmade™ Kesar Soap",
                     "weight_badge": "75g Bar",

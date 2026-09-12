@@ -372,7 +372,6 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     product_selector_header: {
       badge: "Choose Your Ritual",
       title: "Select Your Handmade Batch",
-      description: "Handcrafted with organic botanical butter and essential oils. Stock up and save more per bar.",
       product_badge: "LUXURY BATH ELEMENT",
       product_title: "Hausmade™ Kesar Soap",
       weight_badge: "75g Bar",
@@ -616,7 +615,6 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
           product_selector_header: settings.product_selector_header || {
             badge: "Choose Your Ritual",
             title: "Select Your Handmade Batch",
-            description: "Handcrafted with organic botanical butter and essential oils. Stock up and save more per bar.",
             product_badge: "LUXURY BATH ELEMENT",
             product_title: "Hausmade™ Kesar Soap",
             weight_badge: "75g Bar",
@@ -3978,18 +3976,6 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                           })}
                           className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
                           placeholder="e.g. Select Your Handmade Batch"
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Section Description</label>
-                        <AutoResizeTextarea
-                          value={settingsForm.product_selector_header?.description || ''}
-                          onChange={(e) => setSettingsForm({
-                            ...settingsForm,
-                            product_selector_header: { ...settingsForm.product_selector_header, description: e.target.value }
-                          })}
-                          className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26]"
-                          placeholder="e.g. Handcrafted with organic botanical butter..."
                         />
                       </div>
                     </div>

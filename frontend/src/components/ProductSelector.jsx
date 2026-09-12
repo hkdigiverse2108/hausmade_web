@@ -16,8 +16,8 @@ export const PACK_OPTIONS = [
     id: 'pack-2',
     title: 'Combo of 2',
     count: 2,
-    basePrice: 538.00, // ~10% off
-    savingsBadge: 'Save 10%',
+    basePrice: 550.00, // ~8% off
+    savingsBadge: 'Save 8%',
     popular: false,
     bestValue: false,
     image: '/images/pack-2.png'
@@ -54,7 +54,6 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
   const headerSettings = settings?.product_selector_header || {
     badge: "Choose Your Ritual",
     title: "Select Your Handmade Batch",
-    description: "Handcrafted with organic botanical butter and essential oils. Stock up and save more per bar.",
     product_badge: "LUXURY BATH ELEMENT",
     product_title: "Hausmade™ Kesar Soap",
     weight_badge: "75g Bar",
@@ -128,9 +127,6 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
           <h1 className="font-serif-brand text-xl sm:text-4xl lg:text-5xl font-normal text-[#3A2E26] mt-0.5 sm:mt-2">
             {headerSettings.title || "Select Your Artisanal Cleansing Ritual"}
           </h1>
-          <p className="text-[#3A2E26]/70 mt-1 sm:mt-2 text-xs sm:text-base hidden sm:block">
-            {headerSettings.description || "Handcrafted with pure saffron extract (Kesar), aromatic camphor, and cold-pressed coconut oil. Choose a larger pack size to enjoy significant savings."}
-          </p>
         </div>
 
         <div className="flex flex-col lg:flex-row items-stretch lg:items-start lg:gap-0 mt-2 lg:mt-4 relative max-w-6xl mx-auto lg:translate-x-12">
@@ -171,10 +167,10 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
           <div className={`w-full lg:w-5/12 z-20 relative mt-3 lg:-ml-24 lg:mt-16 transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${isMainHovered ? 'lg:translate-x-24' : ''}`}>
             <div className="bg-[#FDFBF7] p-4 sm:p-7 lg:p-8 border border-[#3A2E26]/10 shadow-[0_20px_50px_rgba(58,46,38,0.06)] rounded-xl sm:rounded-2xl">
             
-              <div className="flex flex-col space-y-4 sm:space-y-6">
+              <div className="flex flex-col space-y-0">
                 {/* 1. Header Badges & Title */}
                 <div>
-                  <div className="flex items-center justify-between border-b border-[#3A2E26]/10 pb-3">
+                  <div className="flex items-center justify-between border-y border-[#3A2E26]/10 py-3 mb-5">
                     <span className="text-[10px] uppercase tracking-[0.2em] text-[#C97C5D] font-bold">
                       {headerSettings.product_badge || "Luxury Bath Element"}
                     </span>
@@ -182,96 +178,96 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
                       {headerSettings.weight_badge || "75g Bar"}
                     </span>
                   </div>
-                  <h1 className="font-serif-brand text-3xl sm:text-4xl font-normal text-[#3A2E26] mt-4 leading-tight">
+                  <h1 className="font-serif-brand text-3xl sm:text-[2.5rem] font-normal text-[#3A2E26] leading-tight mb-3">
                     {headerSettings.product_title || "Hausmade™ Kesar Soap"}
                   </h1>
 
                   {/* Rating */}
-                  <div className="flex items-center gap-3 mt-3">
+                  <div className="flex items-center gap-3">
                     <a href="#reviews" className="flex items-center text-[#C97C5D] hover:opacity-70 transition-opacity">
                       {[...Array(5)].map((_, i) => (
-                        <Star key={i} className="w-3.5 h-3.5 fill-current" />
+                        <Star key={i} className="w-4 h-4 fill-current" />
                       ))}
                     </a>
-                    <a href="#reviews" className="text-xs text-[#3A2E26]/80 font-mono tracking-wide hover:underline">
-                      {headerSettings.rating_text || "4.9 ★ · 480+ Reviews"}
+                    <a href="#reviews" className="text-sm text-[#3A2E26]/80 hover:underline">
+                      {headerSettings.rating_text || "4.9 ★ · 480+ Happy Glow Reviews"}
                     </a>
                   </div>
+
+                  {/* Description */}
+                  <p className="text-[#3A2E26]/80 text-[13px] sm:text-[14px] leading-relaxed mt-5">
+                    {headerSettings.product_description || "A purely handmade cleansing bar infused with real Kesar (Saffron) extract, camphor, and 100% coconut oil. Helps remove sun tanning, reduce the appearance of dark spots, and deeply nourish the skin for a natural, healthy-looking glow. Suitable for all skin types."}
+                  </p>
                 </div>
 
-                {/* 2. Unique Luxury Pack / Combo Selector */}
-                <div className="pt-4 border-t border-[#3A2E26]/10">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-[11px] uppercase tracking-[0.2em] font-bold text-[#3A2E26] flex items-center gap-2">
-                      <Sparkles className="w-3.5 h-3.5 text-[#C97C5D]" />
+                {/* 2. Bundle Selector */}
+                <div className="pt-6">
+                  <div className="flex items-center mb-3">
+                    <span className="text-[11px] uppercase tracking-[0.15em] font-bold text-[#3A2E26] flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-[#C97C5D]" />
                       Select Bundle & Save
                     </span>
                   </div>
 
-                  {/* 2x2 Luxury Grid */}
+                  {/* 2x2 Grid */}
                   <div className="grid grid-cols-2 gap-3">
                     {items.map((item) => {
                       const isSelected = item.id === pack.id;
-                      const singlePrice = singleSoap.basePrice || 299;
-                      const originalTotal = singlePrice * item.count;
-                      const hasDiscount = originalTotal > item.basePrice;
                       const pricePerBar = (item.basePrice / item.count).toFixed(0);
+                      let badgeBg = "bg-[#C97C5D]";
+                      let badgeText = item.savingsBadge;
+                      if (item.popular) badgeText = "Most Popular";
+                      if (item.bestValue) {
+                        badgeBg = "bg-[#7A8B6F]";
+                        badgeText = "Best Value";
+                      }
+                      if (item.id === 'pack-2') badgeText = "Save 8%";
 
                       return (
                         <button
                           key={item.id}
                           type="button"
                           onClick={() => setSelectedPack && setSelectedPack(item.id)}
-                          className={`relative p-3.5 sm:p-4 rounded-xl sm:rounded-2xl transition-all duration-300 cursor-pointer text-left border ${
+                          className={`relative p-3 rounded-xl transition-all duration-300 cursor-pointer text-left border ${
                             isSelected
-                              ? 'border-2 border-[#C97C5D] bg-[#F7F3EB] shadow-[0_6px_20px_rgba(58,46,38,0.08)] translate-y-[-1px]'
-                              : 'border border-[#3A2E26]/15 bg-white/80 text-[#3A2E26] hover:border-[#C97C5D]/50 hover:bg-white'
+                              ? 'border-[#C97C5D] bg-[#FDFBF7] shadow-sm ring-1 ring-[#C97C5D]'
+                              : 'border-[#3A2E26]/15 bg-white text-[#3A2E26] hover:border-[#C97C5D]/50'
                           }`}
                         >
-                          {/* Floating Top Badges */}
-                          {item.popular && (
-                            <span className="absolute -top-2.5 right-3 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#C97C5D] text-white shadow-xs">
-                              ★ Most Popular
-                            </span>
-                          )}
-                          {item.bestValue && (
-                            <span className="absolute -top-2.5 right-3 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#7A8B6F] text-white shadow-xs">
-                              🔥 Best Value
+                          {/* Top Right Badge */}
+                          {item.id !== 'single' && (
+                            <span className={`absolute -top-2.5 right-2 sm:right-3 text-[10px] font-bold text-white px-2 py-0.5 rounded-full shadow-sm ${badgeBg}`}>
+                              {badgeText}
                             </span>
                           )}
 
-                          <div className="flex items-start justify-between gap-2 pt-0.5">
-                            <div className="flex items-start gap-2">
-                              {/* Custom Terracotta Check Indicator */}
-                              <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 mt-0.5 transition-all ${
-                                isSelected ? 'border-[#C97C5D] bg-[#C97C5D]' : 'border-[#3A2E26]/25 bg-transparent'
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-all ${
+                                isSelected ? 'border-[#C97C5D] bg-[#C97C5D]' : 'border-[#3A2E26]/30 bg-transparent'
                               }`}>
-                                {isSelected ? (
-                                  <Check className="w-2.5 h-2.5 text-white stroke-[3]" />
-                                ) : null}
+                                {isSelected && <Check className="w-2.5 h-2.5 text-white stroke-[3]" />}
                               </div>
-
                               <div>
-                                <span className="block text-xs font-bold text-[#3A2E26] uppercase tracking-wider">
+                                <span className="block text-[11px] font-bold text-[#3A2E26] uppercase tracking-wide">
                                   {item.count === 1 ? '1 Soap Bar' : `Combo of ${item.count}`}
                                 </span>
-                                <span className="block text-[10px] font-mono text-[#3A2E26]/60 mt-0.5">
+                                <span className="block text-[10px] text-[#3A2E26]/60 mt-0.5">
                                   ₹{pricePerBar} / bar
                                 </span>
                               </div>
                             </div>
-
                             <div className="text-right">
-                              <span className="block font-serif-brand text-sm sm:text-base font-bold text-[#3A2E26]">
+                              <span className="block font-serif-brand text-[15px] font-bold text-[#3A2E26]">
                                 ₹{item.basePrice.toFixed(0)}
                               </span>
-                              {hasDiscount ? (
-                                <span className="block text-[9px] font-bold text-[#C97C5D] font-mono mt-0.5">
-                                  {item.savingsBadge}
+                              {item.id === 'single' ? (
+                                <span className="block text-[10px] text-[#3A2E26]/40 mt-0.5">
+                                  Standard
                                 </span>
                               ) : (
-                                <span className="block text-[9px] text-[#3A2E26]/40 font-mono mt-0.5">
-                                  Standard
+                                <span className="block text-[10px] font-bold text-[#C97C5D] mt-0.5">
+                                  {item.savingsBadge}
                                 </span>
                               )}
                             </div>
@@ -282,100 +278,75 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
                   </div>
                 </div>
 
-                {/* 3. Live Price & Savings Banner */}
-                <div className="flex items-center justify-between p-3.5 bg-[#F5F1E8]/70 border border-[#3A2E26]/10 rounded-xl">
+                {/* 3. Live Price Banner */}
+                <div className="mt-5 p-3.5 bg-[#F9F7F3] border border-[#3A2E26]/10 rounded-xl flex items-center justify-between">
                   <div>
-                    <span className="text-[9px] uppercase tracking-widest text-[#3A2E26]/60 font-mono block">
+                    <span className="text-[9px] uppercase tracking-widest text-[#3A2E26]/50 font-bold block mb-1">
                       Selected Price
                     </span>
-                    <div className="flex items-baseline gap-2">
-                      <span className="font-serif-brand text-2xl font-bold text-[#3A2E26]">
-                        ₹{pack.basePrice.toFixed(2)}
-                      </span>
-                      {pack.count > 1 && (
-                        <span className="text-xs text-[#3A2E26]/60 font-mono">
-                          (₹{unitPrice}/bar)
-                        </span>
-                      )}
+                    <div className="font-serif-brand text-2xl sm:text-3xl font-bold text-[#3A2E26]">
+                      ₹{pack.basePrice.toFixed(2)}
                     </div>
                   </div>
-
-                  {pack.count > 1 ? (
-                    <span className="bg-[#C97C5D] text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-sm shadow-xs">
-                      {pack.savingsBadge ? pack.savingsBadge : `Save ₹${(singleSoap.basePrice * pack.count - pack.basePrice).toFixed(0)}`}
+                  <div>
+                    <span className="text-[10px] uppercase tracking-widest text-[#3A2E26]/40 font-bold block">
+                      {pack.count > 1 ? `COMBO OF ${pack.count}` : 'STANDARD BAR'}
                     </span>
-                  ) : (
-                    <span className="text-[10px] font-mono text-[#3A2E26]/50 uppercase tracking-wider">
-                      Standard Bar
-                    </span>
-                  )}
+                  </div>
                 </div>
 
-                {/* 4. Action Row (Stepper, Add to Cart, Buy Now) */}
-                <div className="space-y-2.5">
-                  <div className="flex flex-row gap-2.5">
-                    {/* Stepper */}
-                    <div className="flex items-center justify-between border border-[#3A2E26] bg-transparent p-1 h-12 w-28 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                        className="w-8 h-8 flex items-center justify-center text-[#3A2E26]/70 hover:text-[#3A2E26] cursor-pointer"
-                        aria-label="Decrease quantity"
-                      >
-                        <Minus className="w-3.5 h-3.5" />
-                      </button>
-                      <span className="font-mono text-xs text-[#3A2E26] select-none">
-                        {quantity}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setQuantity(quantity + 1)}
-                        className="w-8 h-8 flex items-center justify-center text-[#3A2E26]/70 hover:text-[#3A2E26] cursor-pointer"
-                        aria-label="Increase quantity"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-
-                    {/* Add to Cart Outline */}
+                {/* 4. Action Row */}
+                <div className="mt-4 flex gap-3 h-[50px]">
+                  {/* Stepper */}
+                  <div className="flex items-center justify-between border border-[#3A2E26]/20 bg-white rounded-md p-1 w-[100px] shrink-0">
                     <button
                       type="button"
-                      onClick={handleAdd}
-                      disabled={isPackOutOfStock}
-                      className="flex-1 h-12 border border-[#3A2E26] text-[#3A2E26] hover:bg-[#3A2E26] hover:text-[#FDFBF7] text-xs font-bold uppercase tracking-[0.18em] transition-all cursor-pointer flex items-center justify-center"
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      className="w-8 h-8 flex items-center justify-center text-[#3A2E26]/70 hover:text-[#3A2E26]"
                     >
-                      {isPackOutOfStock ? 'OUT OF STOCK' : 'ADD TO CART'}
+                      <Minus className="w-3 h-3" />
+                    </button>
+                    <span className="font-bold text-[13px] text-[#3A2E26] select-none">
+                      {quantity}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setQuantity(quantity + 1)}
+                      className="w-8 h-8 flex items-center justify-center text-[#3A2E26]/70 hover:text-[#3A2E26]"
+                    >
+                      <Plus className="w-3 h-3" />
                     </button>
                   </div>
 
-                  {/* Buy Now Solid Button */}
+                  {/* Add to Cart */}
                   <button
                     type="button"
-                    onClick={handleBuy}
+                    onClick={handleAdd}
                     disabled={isPackOutOfStock}
-                    className="w-full h-12 bg-[#C97C5D] hover:bg-[#A96348] text-[#FDFBF7] text-xs font-bold uppercase tracking-[0.18em] transition-all cursor-pointer flex items-center justify-center gap-2 shadow-sm"
+                    className="flex-1 bg-[#C97C5D] hover:bg-[#B76F53] rounded-md text-white text-[13px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2"
                   >
-                    <span>BUY NOW</span>
-                    <span className="opacity-50">•</span>
-                    <span className="font-mono">₹{totalPrice}</span>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+                    {isPackOutOfStock ? 'OUT OF STOCK' : 'ADD TO CART'}
                   </button>
                 </div>
 
-                {/* 5. Short Description & Reassurance Chips */}
-                <div className="pt-3 border-t border-[#3A2E26]/10 space-y-3">
-                  <p className="text-[#3A2E26]/80 text-xs leading-relaxed">
-                    {headerSettings.product_description || "Infused with real saffron extract, camphor, and 100% coconut oil to remove sun tan and deeply nourish skin."}
-                  </p>
-
-                  <div className="grid grid-cols-2 gap-2 text-[9px] uppercase tracking-wider text-[#3A2E26]/70">
-                    <div className="flex items-center gap-1.5">
-                      <Truck className="w-3.5 h-3.5 text-[#C97C5D] shrink-0" />
-                      <span>Free Shipping &gt; ₹499</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <RotateCcw className="w-3.5 h-3.5 text-[#C97C5D] shrink-0" />
-                      <span>30-Day Guarantee</span>
-                    </div>
+                {/* 5. Trust Badges */}
+                <div className="mt-5 grid grid-cols-4 gap-1 text-[9px] leading-tight text-[#3A2E26]/70 text-center">
+                  <div className="flex flex-col items-center gap-1.5">
+                    <Truck className="w-4 h-4 text-[#C97C5D]" strokeWidth={1.5} />
+                    <span>Free Shipping<br/>over ₹499</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-[#C97C5D]" strokeWidth={1.5} />
+                    <span>Secure<br/>Payment</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1.5">
+                    <svg className="w-4 h-4 text-[#C97C5D]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>
+                    <span>100% Authentic<br/>& Handmade</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1.5">
+                    <Heart className="w-4 h-4 text-[#C97C5D]" strokeWidth={1.5} />
+                    <span>Loved by<br/>Happy Customers</span>
                   </div>
                 </div>
               </div>
