@@ -4,7 +4,7 @@ import { Star, Check, Plus, Minus, ShieldCheck, Truck, RotateCcw, Sparkles, Refr
 export const PACK_OPTIONS = [
   {
     id: 'single',
-    title: 'Single Soap Bar (75g)',
+    title: '1 SOAP BAR',
     count: 1,
     basePrice: 299.00,
     savingsBadge: null,
@@ -13,36 +13,53 @@ export const PACK_OPTIONS = [
     image: '/images/pack-single.png'
   },
   {
-    id: 'pack-2',
-    title: 'Combo of 2',
-    count: 2,
-    basePrice: 550.00, // ~8% off
-    savingsBadge: 'Save 8%',
-    popular: false,
-    bestValue: false,
-    image: '/images/pack-2.png'
-  },
-  {
     id: 'pack-3',
-    title: 'Combo of 3',
+    title: 'COMBO\nOF 3\nSOAP',
     count: 3,
-    basePrice: 717.00, // ~20% off
-    savingsBadge: 'Save 20%',
+    basePrice: 799.00, // ~11% off
+    savingsBadge: 'Save 11%',
     popular: true,
     bestValue: false,
     image: '/images/pack-3.png'
   },
   {
     id: 'pack-5',
-    title: 'Combo of 5',
+    title: 'COMBO\nOF 5\nSOAP',
     count: 5,
-    basePrice: 1046.00, // ~30% off
-    savingsBadge: 'Save 30%',
+    basePrice: 1249.00, // ~16% off
+    savingsBadge: 'Save 16%',
     popular: false,
     bestValue: true,
     image: '/images/pack-5.png'
-  },
+  }
 ];
+
+export const formatTitle = (title) => {
+  if (!title) return '';
+  let clean = String(title).replace(/\\n/g, '\n');
+
+  if (/combo\s*of\s*(\d+)/i.test(clean)) {
+    const match = clean.match(/combo\s*of\s*(\d+)\s*(.*)/i);
+    if (match) {
+      const count = match[1];
+      let rest = match[2].trim();
+      if (!rest || rest.toUpperCase() === 'SOAP') rest = 'SOAP';
+      return `COMBO\nOF ${count}\n${rest}`;
+    }
+  }
+
+  if (/pack\s*of\s*(\d+)/i.test(clean)) {
+    const match = clean.match(/pack\s*of\s*(\d+)\s*(.*)/i);
+    if (match) {
+      const count = match[1];
+      let rest = match[2].trim();
+      if (!rest || rest.toUpperCase() === 'SOAP') rest = 'SOAP';
+      return `COMBO\nOF ${count}\n${rest}`;
+    }
+  }
+
+  return clean;
+};
 
 export default function ProductSelector({ products = [], onAddToCart, onBuyNow, selectedPack, setSelectedPack, quantity, setQuantity, activeImageIndex, setActiveImageIndex, settings }) {
   const [isMainHovered, setIsMainHovered] = useState(false);
@@ -209,9 +226,9 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
                     </span>
                   </div>
 
-                  {/* 2x2 Grid */}
-                  <div className="grid grid-cols-2 gap-3">
-                    {items.map((item) => {
+                  {/* Grid */}
+                  <div className={`grid ${items.length === 3 ? 'grid-cols-3' : 'grid-cols-2'} gap-3`}>
+                    {items.map((item, index) => {
                       const isSelected = item.id === pack.id;
                       const pricePerBar = (item.basePrice / item.count).toFixed(0);
                       let badgeBg = "bg-[#C97C5D]";
@@ -249,8 +266,8 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
                                 {isSelected && <Check className="w-2.5 h-2.5 text-white stroke-[3]" />}
                               </div>
                               <div>
-                                <span className="block text-[11px] font-bold text-[#3A2E26] uppercase tracking-wide">
-                                  {item.count === 1 ? '1 Soap Bar' : `Combo of ${item.count}`}
+                                <span className="block text-[11px] font-bold text-[#3A2E26] uppercase tracking-wide whitespace-pre-line leading-tight">
+                                  {formatTitle(item.title)}
                                 </span>
                                 <span className="block text-[10px] text-[#3A2E26]/60 mt-0.5">
                                   ₹{pricePerBar} / bar
@@ -290,7 +307,7 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
                   </div>
                   <div>
                     <span className="text-[10px] uppercase tracking-widest text-[#3A2E26]/40 font-bold block">
-                      {pack.count > 1 ? `COMBO OF ${pack.count}` : 'STANDARD BAR'}
+                      {formatTitle(pack.title).replace(/\n/g, ' ')}
                     </span>
                   </div>
                 </div>
