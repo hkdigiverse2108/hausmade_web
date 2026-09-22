@@ -843,16 +843,9 @@ async def schedule_delhivery_pickup(order_id: str, admin: dict = Depends(get_adm
     ist = timezone(timedelta(hours=5, minutes=30))
     now_ist = datetime.now(ist)
     
-    # Delhivery cutoff: If requested after 1:00 PM (13:00 IST), schedule for TOMORROW morning at 10:00 AM IST.
-    # Same-day pickups requested late in the day are rejected by Delhivery.
-    if now_ist.hour >= 13:
-        pickup_dt = now_ist + timedelta(days=1)
-        pickup_date_str = pickup_dt.strftime("%Y-%m-%d")
-        pickup_time_str = "10:00:00"
-    else:
-        pickup_dt = now_ist + timedelta(hours=2)
-        pickup_date_str = pickup_dt.strftime("%Y-%m-%d")
-        pickup_time_str = pickup_dt.strftime("%H:%M:%S")
+    # Always set pickup_date to TODAY so Delhivery moves the order to "Ready for Pickup" immediately
+    pickup_date_str = now_ist.strftime("%Y-%m-%d")
+    pickup_time_str = (now_ist + timedelta(minutes=15)).strftime("%H:%M:%S")
     
     pickup_payload = {
         "pickup_location": pickup_location_name,
