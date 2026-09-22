@@ -320,7 +320,12 @@ class LoginModalSettings(BaseModel):
     title: str = "Botanical Simplicity."
     description: str = "Pure ingredients, hand-poured and slow-cured for 6 weeks. Access your VIP benefits, subscription discounts, and early releases."
 
+class ShippingSettings(BaseModel):
+    standard_fee: float = 49.0
+    free_shipping_threshold: float = 499.0
+
 class SiteSettingsModel(BaseModel):
+    shipping: Optional[ShippingSettings] = ShippingSettings()
     logo_url: str = ""
     announcement: AnnouncementSettings
     hero: HeroSettings

@@ -95,7 +95,11 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
   const rawSubtotal = cartItems.reduce((acc, item) => acc + parseFloat(item.totalPrice), 0);
   const discountAmount = (rawSubtotal * discount).toFixed(2);
   const isFreeShipping = appliedCoupon && (appliedCoupon.discount === 0 || appliedCoupon.code.toUpperCase().includes('FREE') || appliedCoupon.description?.toLowerCase().includes('free'));
-  const shippingFee = (rawSubtotal >= 499 || rawSubtotal === 0 || isFreeShipping) ? 0 : 49;
+  
+  const stdShippingFee = settings?.shipping?.standard_fee ?? 49;
+  const freeThreshold = settings?.shipping?.free_shipping_threshold ?? 499;
+  
+  const shippingFee = (rawSubtotal >= freeThreshold || rawSubtotal === 0 || isFreeShipping) ? 0 : stdShippingFee;
   const grandTotal = (rawSubtotal - parseFloat(discountAmount) + shippingFee).toFixed(2);
 
   const handleApplyCoupon = async (e) => {

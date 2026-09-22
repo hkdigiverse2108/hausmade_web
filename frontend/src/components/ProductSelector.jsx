@@ -385,7 +385,7 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
                 <div className="mt-5 grid grid-cols-4 gap-1 text-[9px] leading-tight text-[#3A2E26]/70 text-center">
                   <div className="flex flex-col items-center gap-1.5">
                     <Truck className="w-4 h-4 text-[#C97C5D]" strokeWidth={1.5} />
-                    <span>Free Shipping<br/>over ₹499</span>
+                    <span>Free Shipping<br/>over ₹{settings?.shipping?.free_shipping_threshold ?? 499}</span>
                   </div>
                   <div className="flex flex-col items-center gap-1.5">
                     <ShieldCheck className="w-4 h-4 text-[#C97C5D]" strokeWidth={1.5} />

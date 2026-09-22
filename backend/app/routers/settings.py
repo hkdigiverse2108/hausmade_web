@@ -270,6 +270,13 @@ async def get_site_settings():
             if "subscription_active" not in settings:
                 settings["subscription_active"] = True
                 await settings_collection.update_one({"key": "site_settings"}, {"$set": {"subscription_active": True}})
+            if "shipping" not in settings:
+                default_shipping = {
+                    "standard_fee": 49.0,
+                    "free_shipping_threshold": 499.0
+                }
+                settings["shipping"] = default_shipping
+                await settings_collection.update_one({"key": "site_settings"}, {"$set": {"shipping": default_shipping}})
             if "subscription_durations" not in settings:
                 settings["subscription_durations"] = [6, 12]
                 await settings_collection.update_one({"key": "site_settings"}, {"$set": {"subscription_durations": [6, 12]}})

@@ -328,6 +328,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     social_links: { instagram: '', facebook: '', whatsapp: '', twitter: '', youtube: '' },
     cashfree: { app_id_test: '', secret_key_test: '', app_id_live: '', secret_key_live: '', mode: 'test', active: false },
     delhivery: { api_token: '', mode: 'test', active: false, warehouse_name: '', pickup_name: '', pickup_phone: '', pickup_email: '', pickup_pincode: '', pickup_state: '', pickup_city: '', pickup_address: '' },
+    shipping: { standard_fee: 49, free_shipping_threshold: 499 },
     login_modal: {
       image_url: '/botanical_soap.png',
       title: 'Botanical Simplicity.',
@@ -553,7 +554,8 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
           subscription_offers: settings.subscription_offers || [],
           social_links: settings.social_links || { instagram: '', facebook: '', whatsapp: '', twitter: '', youtube: '' },
           cashfree: settings.cashfree || { app_id_test: '', secret_key_test: '', app_id_live: '', secret_key_live: '', mode: 'test', active: false },
-          delhivery: settings.delhivery || { api_token: '', mode: 'test', active: false, pickup_name: '', pickup_phone: '', pickup_email: '', pickup_pincode: '', pickup_state: '', pickup_city: '', pickup_address: '' },
+          delhivery: settings.delhivery || { api_token: '', mode: 'test', active: false, warehouse_name: '', pickup_name: '', pickup_phone: '', pickup_email: '', pickup_pincode: '', pickup_state: '', pickup_city: '', pickup_address: '' },
+          shipping: settings.shipping || { standard_fee: 49, free_shipping_threshold: 499 },
           faqs: settings.faqs || [],
           ingredients: settings.ingredients || [],
           ingredients_header: settings.ingredients_header || {
@@ -2183,7 +2185,8 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                   { id: 'contact', label: 'Footer & Socials', num: '11' },
                   { id: 'policies', label: 'Store Policies', num: '12' },
                   { id: 'delhivery', label: 'Delhivery Shipping', num: '13' },
-                  { id: 'login_modal', label: 'Login Popup', num: '14' }
+                  { id: 'shipping', label: 'Shipping Charges', num: '14' },
+                  { id: 'login_modal', label: 'Login Popup', num: '15' }
                 ].map((sub) => {
                   const isActive = settingsSubTab === sub.id;
                   return (
@@ -5078,6 +5081,54 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                             {saving ? 'Saving...' : 'Save Delhivery Settings'}
                           </button>
                         </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+              {settingsSubTab === 'shipping' && (
+                <>
+                  {/* Shipping Charges Section */}
+                  <div className="bg-white rounded-3xl p-6 border border-[#3A2E26]/10 shadow-sm space-y-4">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70 border-b border-[#3A2E26]/10 pb-2">Shipping Charges Configuration</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1">Standard Shipping Fee (₹)</label>
+                        <input
+                          type="number"
+                          value={settingsForm.shipping?.standard_fee || 0}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            shipping: { ...settingsForm.shipping, standard_fee: parseFloat(e.target.value) || 0 }
+                          })}
+                          placeholder="e.g. 49"
+                          className="w-full px-4 py-2.5 bg-[#F9F7F4] border-none rounded-xl focus:ring-2 focus:ring-[#3A2E26]/20 transition-all text-sm font-semibold text-[#3A2E26]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1">Free Shipping Threshold (₹)</label>
+                        <input
+                          type="number"
+                          value={settingsForm.shipping?.free_shipping_threshold || 0}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            shipping: { ...settingsForm.shipping, free_shipping_threshold: parseFloat(e.target.value) || 0 }
+                          })}
+                          placeholder="e.g. 499"
+                          className="w-full px-4 py-2.5 bg-[#F9F7F4] border-none rounded-xl focus:ring-2 focus:ring-[#3A2E26]/20 transition-all text-sm font-semibold text-[#3A2E26]"
+                        />
+                        <p className="text-[10px] text-gray-500 font-sans mt-1">Orders above this amount will have ₹0 shipping fee.</p>
+                      </div>
+
+                      <div className="pt-3 border-t border-[#3A2E26]/10 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={handleSaveSettings}
+                          disabled={saving}
+                          className="px-6 py-2.5 bg-[#7A8B6F] hover:bg-[#68785c] text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
+                        >
+                          {saving ? 'Saving...' : 'Save Shipping Settings'}
+                        </button>
                       </div>
                     </div>
                   </div>

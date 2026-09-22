@@ -1,5 +1,5 @@
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 import uuid
 import httpx
 import hmac
@@ -837,10 +837,14 @@ async def schedule_delhivery_pickup(order_id: str, admin: dict = Depends(get_adm
     base_url = "https://staging-express.delhivery.com" if mode == "test" else "https://track.delhivery.com"
     
     pickup_location_name = config.get("warehouse_name") or config.get("pickup_name") or "Hausmade Soaps"
+    
+    # Calculate 5 minutes from now
+    pickup_dt = datetime.now() + timedelta(minutes=5)
+    
     pickup_payload = {
         "pickup_location": pickup_location_name,
-        "pickup_date": datetime.utcnow().strftime("%Y-%m-%d"),
-        "pickup_time": "14:00:00",
+        "pickup_date": pickup_dt.strftime("%Y-%m-%d"),
+        "pickup_time": pickup_dt.strftime("%H:%M:%S"),
         "expected_package_count": 1
     }
     
