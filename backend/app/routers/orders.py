@@ -913,6 +913,13 @@ async def schedule_delhivery_pickup(order_id: str, admin: dict = Depends(get_adm
         except Exception as e:
             delhivery_error = f"Connection exception: {str(e)}"
 
+    # If Delhivery says a pickup request already exists/is scheduled for this location today, treat as success!
+    lower_err = delhivery_error.lower()
+    if not is_success and any(k in lower_err for k in ["already", "exist", "duplicate", "active", "present", "scheduled"]):
+        print(f"[DELHIVERY PICKUP NOTICE] Active pickup already exists for this location: {delhivery_error}")
+        is_success = True
+        delhivery_error = ""
+
     if not is_success:
         raise HTTPException(status_code=400, detail=f"Delhivery rejected pickup: {delhivery_error}")
 
