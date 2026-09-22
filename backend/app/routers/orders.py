@@ -838,8 +838,10 @@ async def schedule_delhivery_pickup(order_id: str, admin: dict = Depends(get_adm
     
     pickup_location_name = config.get("warehouse_name") or config.get("pickup_name") or "Hausmade Soaps"
     
-    # Calculate 5 minutes from now
-    pickup_dt = datetime.now() + timedelta(minutes=5)
+    # Calculate 5 minutes from now in IST
+    from datetime import timezone
+    ist = timezone(timedelta(hours=5, minutes=30))
+    pickup_dt = datetime.now(ist) + timedelta(minutes=5)
     
     pickup_payload = {
         "pickup_location": pickup_location_name,
