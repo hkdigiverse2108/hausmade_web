@@ -650,7 +650,7 @@ async def process_delhivery_shipment_booking(order_or_id, weight=500, length=15,
     pmode = "COD" if order.get("paymentMethod") in ["cod", "COD"] else "Prepaid"
     cod_amt = float(order.get("grandTotal", 0.0)) if pmode == "COD" else 0.0
     
-    warehouse_name = config.get("warehouse_name") or config.get("pickup_name") or "Hausmade Soaps"
+    warehouse_name = config.get("warehouse_name") or "Yogi Arcade"
 
     # Sanitize phone number (remove +91, leading 0, spaces)
     raw_phone = order.get("shippingAddress", {}).get("phone", "")
@@ -836,46 +836,89 @@ async def schedule_delhivery_pickup(order_id: str, admin: dict = Depends(get_adm
     mode = config.get("mode", "test")
     base_url = "https://staging-express.delhivery.com" if mode == "test" else "https://track.delhivery.com"
     
-    pickup_location_name = config.get("warehouse_name") or config.get("pickup_name") or "Hausmade Soaps"
+    pickup_location_name = config.get("warehouse_name") or "Yogi Arcade"
     
-    # Calculate 5 minutes from now in IST
+    # Calculate appropriate pickup date and time in IST (UTC+5:30)
     from datetime import timezone
     ist = timezone(timedelta(hours=5, minutes=30))
-    pickup_dt = datetime.now(ist) + timedelta(minutes=5)
+    now_ist = datetime.now(ist)
+    
+    # Delhivery cutoff: If requested after 1:00 PM (13:00 IST), schedule for TOMORROW morning at 10:00 AM IST.
+    # Same-day pickups requested late in the day are rejected by Delhivery.
+    if now_ist.hour >= 13:
+        pickup_dt = now_ist + timedelta(days=1)
+        pickup_date_str = pickup_dt.strftime("%Y-%m-%d")
+        pickup_time_str = "10:00:00"
+    else:
+        pickup_dt = now_ist + timedelta(hours=2)
+        pickup_date_str = pickup_dt.strftime("%Y-%m-%d")
+        pickup_time_str = pickup_dt.strftime("%H:%M:%S")
     
     pickup_payload = {
         "pickup_location": pickup_location_name,
-        "pickup_date": pickup_dt.strftime("%Y-%m-%d"),
-        "pickup_time": pickup_dt.strftime("%H:%M:%S"),
+        "pickup_date": pickup_date_str,
+        "pickup_time": pickup_time_str,
         "expected_package_count": 1
     }
     
     url = f"{base_url}/fm/request/new/"
     headers = {
         "Authorization": f"Token {token}",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Accept": "application/json"
     }
     
     delhivery_error = ""
     is_success = False
+    pr_id = None
+    
+    print(f"[DELHIVERY PICKUP REQUEST] URL: {url} | Payload: {pickup_payload}")
+    
     async with httpx.AsyncClient() as client:
         try:
-            resp = await client.post(url, json=pickup_payload, headers=headers, timeout=10.0)
+            resp = await client.post(url, json=pickup_payload, headers=headers, timeout=15.0)
+            print(f"[DELHIVERY PICKUP RESPONSE] Status: {resp.status_code} | Text: {resp.text}")
+            
+            try:
+                resp_json = resp.json()
+            except Exception:
+                resp_json = {}
+                
             if resp.status_code in [200, 201]:
-                is_success = True
-            else:
-                try:
-                    resp_json = resp.json()
-                    if isinstance(resp_json, dict):
-                        err_detail = resp_json.get("prepaid") or resp_json.get("error") or resp_json.get("detail") or resp_json.get("message")
-                        if err_detail:
-                            delhivery_error = str(err_detail)
+                if isinstance(resp_json, dict):
+                    pr_id = resp_json.get("pr_id") or resp_json.get("pickup_id") or resp_json.get("id")
+                    
+                    if resp_json.get("pickup_location") and isinstance(resp_json["pickup_location"], list):
+                        delhivery_error = f"Pickup location error: {', '.join(resp_json['pickup_location'])}"
+                    elif resp_json.get("error"):
+                        delhivery_error = str(resp_json["error"])
+                    elif resp_json.get("detail"):
+                        delhivery_error = str(resp_json["detail"])
+                    elif resp_json.get("prepaid") is False and resp_json.get("message"):
+                        delhivery_error = str(resp_json["message"])
+                    elif pr_id is not None or resp_json.get("status") in ["Success", "success", "OK", "ok"] or resp_json.get("success") is True:
+                        is_success = True
+                    else:
+                        remarks = resp_json.get("remark") or resp_json.get("remarks") or resp_json.get("data")
+                        if remarks:
+                            delhivery_error = str(remarks)
                         else:
-                            delhivery_error = f"Status {resp.status_code}"
-                except Exception:
-                    delhivery_error = f"Status {resp.status_code}"
+                            delhivery_error = f"Delhivery response missing pickup ID: {resp.text}"
+                else:
+                    is_success = True
+            else:
+                if isinstance(resp_json, dict):
+                    err_detail = resp_json.get("pickup_location") or resp_json.get("error") or resp_json.get("detail") or resp_json.get("message")
+                    if isinstance(err_detail, list):
+                        delhivery_error = ", ".join(map(str, err_detail))
+                    elif err_detail:
+                        delhivery_error = str(err_detail)
+                    else:
+                        delhivery_error = resp.text
+                else:
+                    delhivery_error = resp.text
         except Exception as e:
-            delhivery_error = f"Exception: {str(e)}"
+            delhivery_error = f"Connection exception: {str(e)}"
 
     if not is_success:
         raise HTTPException(status_code=400, detail=f"Delhivery rejected pickup: {delhivery_error}")
@@ -885,12 +928,19 @@ async def schedule_delhivery_pickup(order_id: str, admin: dict = Depends(get_adm
         {"_id": order["_id"]},
         {"$set": {
             "fulfillment.pickup_scheduled": True, 
+            "fulfillment.pickup_id": pr_id,
+            "fulfillment.pickup_date": pickup_date_str,
+            "fulfillment.pickup_time": pickup_time_str,
             "fulfillment.status": "Pickup Scheduled",
             "status": "shipped"
         }}
     )
 
-    return {"status": "success", "message": "Pickup scheduled successfully with Delhivery!"}
+    msg = f"Pickup scheduled successfully with Delhivery! (Pickup Date: {pickup_date_str} {pickup_time_str})"
+    if pr_id:
+        msg += f" [PR ID: {pr_id}]"
+
+    return {"status": "success", "message": msg}
 
 @router.delete("/api/admin/orders/{order_id}")
 async def delete_admin_order(order_id: str, admin: dict = Depends(get_admin_user)):
