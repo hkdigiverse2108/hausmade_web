@@ -186,6 +186,12 @@ async def get_admin_recent_users(admin: dict = Depends(get_admin_user)):
 
 @router.get("/api/admin/orders")
 async def get_admin_orders(admin: dict = Depends(get_admin_user)):
+    try:
+        from app.routers.orders import sync_delhivery_orders_live_status
+        asyncio.create_task(sync_delhivery_orders_live_status())
+    except Exception:
+        pass
+        
     orders = await orders_collection.find({"status": {"$ne": "pending_payment"}}).to_list(length=None)
     for order in orders:
         order["_id"] = str(order["_id"])

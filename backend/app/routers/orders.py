@@ -889,7 +889,7 @@ async def schedule_delhivery_pickup(order_id: str, admin: dict = Depends(get_adm
                         delhivery_error = str(resp_json["detail"])
                     elif resp_json.get("prepaid") is False and resp_json.get("message"):
                         delhivery_error = str(resp_json["message"])
-                    elif pr_id is not None or resp_json.get("status") in ["Success", "success", "OK", "ok"] or resp_json.get("success") is True:
+                    elif pr_id is not None or resp_json.get("status") in ["Success", "success", "OK", "ok", True] or resp_json.get("success") is True or resp_json.get("pr_exist") is True:
                         is_success = True
                     else:
                         remarks = resp_json.get("remark") or resp_json.get("remarks") or resp_json.get("data")
@@ -1040,10 +1040,50 @@ async def fetch_delhivery_label(awb: str, admin: dict = Depends(get_admin_user))
             elif html_content:
                 return {"html": html_content}
             else:
-                raise HTTPException(status_code=404, detail="Label data not found in response")
-                
+                raise HTTPException(status_code=404, detail="Label content unavailable")
         except Exception as e:
+            if isinstance(e, HTTPException):
+                raise e
             raise HTTPException(status_code=500, detail=str(e))
+
+async def sync_delhivery_orders_live_status():
+    try:
+        config = await get_delhivery_config_internal()
+        if not config or not config.get("active") or not config.get("api_token"):
+            return
+        token = config["api_token"]
+        mode = config.get("mode", "test")
+        base_url = "https://staging-express.delhivery.com" if mode == "test" else "https://track.delhivery.com"
+        
+        active_orders = await orders_collection.find({
+            "fulfillment.awb": {"$exists": True, "$ne": None},
+            "fulfillment.status": {"$nin": ["Delivered", "Cancelled", "RTO Delivered"]}
+        }).to_list(length=30)
+        
+        async with httpx.AsyncClient() as client:
+            for order in active_orders:
+                awb = order.get("fulfillment", {}).get("awb")
+                if not awb or awb.startswith("DELHIVERY"):
+                    continue
+                url = f"{base_url}/api/v1/packages/json/?waybill={awb}"
+                headers = {"Authorization": f"Token {token}"}
+                try:
+                    resp = await client.get(url, headers=headers, timeout=5.0)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        shipment_list = data.get("ShipmentData", [])
+                        if shipment_list and isinstance(shipment_list, list):
+                            st = shipment_list[0].get("Shipment", {}).get("Status", {})
+                            status_name = st.get("Status")
+                            if status_name and status_name != order.get("fulfillment", {}).get("status"):
+                                await orders_collection.update_one(
+                                    {"_id": order["_id"]},
+                                    {"$set": {"fulfillment.status": status_name}}
+                                )
+                except Exception:
+                    pass
+    except Exception as e:
+        print(f"Live status sync error: {e}")
 
 @router.get("/api/orders/track/{tracking_id}")
 async def track_order_shipment(tracking_id: str):
