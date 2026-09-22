@@ -76,7 +76,7 @@ export default function CartDrawer({ isOpen, onClose, cartItems, onUpdateQuantit
                       {item.isSubscription ? (
                         <span className="text-[#7A8B6F] font-semibold tracking-wide text-[10px] uppercase">Subscribe & Save (Every {item.deliveryFrequency?.replace('_', ' ') || 'Month'})</span>
                       ) : (
-                        `₹${item.price || item.unitPrice} each`
+                        `₹${item.price || item.unitPrice || item.packPrice} each`
                       )}
                     </p>
                     <div className="flex items-center justify-between mt-3">
