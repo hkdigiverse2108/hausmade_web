@@ -60,9 +60,9 @@ export default function CartDrawer({ isOpen, onClose, cartItems, onUpdateQuantit
               </div>
             ) : (
               cartItems.map((item, idx) => (
-                <div key={`${item.id}-${idx}`} className="flex gap-4 p-4 bg-white rounded-2xl border border-[#3A2E26]/10 relative group">
+                <div key={`${item.id || idx}-${idx}`} className="flex gap-4 p-4 bg-white rounded-2xl border border-[#3A2E26]/10 relative group">
                   <button 
-                    onClick={() => onRemoveItem(item.id)}
+                    onClick={() => onRemoveItem(idx)}
                     className="absolute -top-2 -right-2 w-7 h-7 bg-white border border-[#3A2E26]/10 rounded-full flex items-center justify-center text-red-400 hover:text-red-500 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100 shadow-sm"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -71,23 +71,23 @@ export default function CartDrawer({ isOpen, onClose, cartItems, onUpdateQuantit
                     <img src={item.image} alt={item.name} className="w-full h-full object-cover mix-blend-multiply opacity-90" />
                   </div>
                   <div className="flex-1 flex flex-col justify-center">
-                    <h4 className="font-bold text-[#3A2E26] text-sm leading-tight">{item.name}</h4>
+                    <h4 className="font-bold text-[#3A2E26] text-sm leading-tight">{item.name || item.title}</h4>
                     <p className="text-[#3A2E26]/60 text-xs mt-1">
                       {item.isSubscription ? (
-                        <span className="text-[#7A8B6F] font-semibold tracking-wide text-[10px] uppercase">Subscribe & Save (Every {item.deliveryFrequency.replace('_', ' ')})</span>
+                        <span className="text-[#7A8B6F] font-semibold tracking-wide text-[10px] uppercase">Subscribe & Save (Every {item.deliveryFrequency?.replace('_', ' ') || 'Month'})</span>
                       ) : (
-                        `₹${item.price} each`
+                        `₹${item.price || item.unitPrice} each`
                       )}
                     </p>
                     <div className="flex items-center justify-between mt-3">
                       <div className="flex items-center gap-3 bg-[#F5F1E8] rounded-lg px-2 py-1">
                         <button 
-                          onClick={() => onUpdateQuantity(item.id, -1)}
+                          onClick={() => onUpdateQuantity(idx, item.quantity - 1)}
                           className="w-5 h-5 flex items-center justify-center text-[#3A2E26]/70 hover:text-[#3A2E26]"
                         >−</button>
                         <span className="text-xs font-bold text-[#3A2E26] min-w-[12px] text-center">{item.quantity}</span>
                         <button 
-                          onClick={() => onUpdateQuantity(item.id, 1)}
+                          onClick={() => onUpdateQuantity(idx, item.quantity + 1)}
                           className="w-5 h-5 flex items-center justify-center text-[#3A2E26]/70 hover:text-[#3A2E26]"
                         >+</button>
                       </div>

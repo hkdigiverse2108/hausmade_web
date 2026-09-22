@@ -440,7 +440,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   }, [settingsSubTab]);
 
   const [selectedOrderForShipping, setSelectedOrderForShipping] = useState(null);
-  const [shippingWeight, setShippingWeight] = useState(500); // grams
+  const [shippingWeight, setShippingWeight] = useState(75); // grams
   const [shippingLength, setShippingLength] = useState(15); // cm
   const [shippingWidth, setShippingWidth] = useState(15); // cm
   const [shippingHeight, setShippingHeight] = useState(10); // cm
