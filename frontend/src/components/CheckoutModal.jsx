@@ -242,8 +242,13 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
 
   const handleProceedToPayment = (e) => {
     e.preventDefault();
-    if (!formData.fullName || !formData.phone || !formData.address || !formData.pincode) {
+    if (!formData.fullName || !formData.phone || !formData.email || !formData.address || !formData.pincode) {
       alert('Please fill in all required shipping fields.');
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email.trim())) {
+      alert('Please enter a valid email address.');
       return;
     }
     setStep('payment');
@@ -689,11 +694,12 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold text-[#3A2E26] uppercase tracking-widest mb-1.5">Email Address (Optional)</label>
+                    <label className="block text-[10px] font-bold text-[#3A2E26] uppercase tracking-widest mb-1.5">Email Address *</label>
                     <input
                       type="email"
                       name="email"
-                      placeholder="For receipt & shipping updates..."
+                      required
+                      placeholder="e.g. john@example.com"
                       value={formData.email}
                       onChange={handleFormChange}
                       className="w-full px-4 py-3 rounded-none bg-white border border-[#3A2E26]/20 text-sm text-[#3A2E26] focus:outline-none focus:border-[#C97C5D] focus:ring-2 focus:ring-[#C97C5D]/10 transition-all"
