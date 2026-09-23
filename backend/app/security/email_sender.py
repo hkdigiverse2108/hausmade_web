@@ -218,7 +218,9 @@ def _send_order_email_sync(order_dict: dict):
         custom_url = order_dict.get("frontend_url")
         if custom_url:
             base_url = custom_url.rstrip("/")
-        elif FRONTEND_URL:
+        elif ENV == "production":
+            base_url = FRONTEND_URL.rstrip("/") if (FRONTEND_URL and "localhost" not in FRONTEND_URL) else "https://www.hausmade.in"
+        elif FRONTEND_URL and "localhost" not in FRONTEND_URL:
             base_url = FRONTEND_URL.rstrip("/")
         else:
             base_url = "https://www.hausmade.in" if ENV == "production" else "http://localhost:5174"
