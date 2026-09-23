@@ -1172,6 +1172,10 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   useEffect(() => {
     if (token) {
       fetchAdminData();
+      const interval = setInterval(() => {
+        fetchAdminData(true);
+      }, 10000);
+      return () => clearInterval(interval);
     }
   }, [token]);
 
@@ -1181,11 +1185,12 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
 
   // Filter orders based on search and source
   const filteredOrders = orders.filter(order => {
+    const isCancelled = order.status === 'cancelled' || order.fulfillment?.status?.toLowerCase() === 'cancelled';
     const matchesSource = 
       orderSourceFilter === 'all' || 
-      (orderSourceFilter === 'online' && !order.isOffline && order.status !== 'cancelled') ||
+      (orderSourceFilter === 'online' && !order.isOffline) ||
       (orderSourceFilter === 'offline' && order.isOffline) ||
-      (orderSourceFilter === 'cancelled' && order.status === 'cancelled');
+      (orderSourceFilter === 'cancelled' && isCancelled);
       
     if (!matchesSource) return false;
 
@@ -2661,7 +2666,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                 <td className="p-4 pl-6 align-top">
                                   <div className="flex flex-col gap-1">
                                     <span className="font-bold text-[#3A2E26]">{order.orderId}</span>
-                                    {order.status === 'cancelled' ? (
+                                    {order.status === 'cancelled' || order.fulfillment?.status?.toLowerCase() === 'cancelled' ? (
                                       <span className="text-[8px] font-bold uppercase tracking-wider text-red-700 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded-md inline-block w-fit">CANCELLED</span>
                                     ) : order.isOffline ? (
                                       <span className="text-[8px] font-bold uppercase tracking-wider text-amber-850 bg-amber-50 border border-amber-200/50 px-1.5 py-0.5 rounded-md inline-block w-fit">Offline</span>
@@ -2711,14 +2716,14 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                   {formatCurrency(order.grandTotal)}
                                 </td>
                                 <td className="p-4 pr-6 align-top text-right">
-                                  {order.status === 'cancelled' ? (
+                                  {order.status === 'cancelled' || order.fulfillment?.status?.toLowerCase() === 'cancelled' ? (
                                     <div className="flex items-center justify-end gap-2">
                                       <div className="flex flex-col items-end gap-0.5">
                                         <span className="px-2.5 py-1 bg-red-50 text-red-600 border border-red-200 rounded-xl text-[10px] font-bold uppercase tracking-wider">
                                           Cancelled
                                         </span>
                                         {order.cancelled_by && (
-                                          <span className="text-[9px] text-gray-500 font-medium">By {order.cancelled_by}</span>
+                                          <span className="text-[9px] text-gray-500 font-medium">By {order.cancelled_by.replace(/\s*\(guest\)/gi, '')}</span>
                                         )}
                                       </div>
                                       <button

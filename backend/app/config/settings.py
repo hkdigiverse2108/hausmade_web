@@ -35,4 +35,8 @@ SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USER = os.getenv("SMTP_USER", "")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
 SMTP_FROM = os.getenv("SMTP_FROM", "")
+ENV = os.getenv("ENV", "development")
+PORT_FRONTEND = os.getenv("PORT_FRONTEND", "5174")
+DEFAULT_FRONTEND_URL = "https://www.hausmade.in" if ENV == "production" else f"http://localhost:{PORT_FRONTEND}"
+FRONTEND_URL = os.getenv("FRONTEND_URL", DEFAULT_FRONTEND_URL)
 

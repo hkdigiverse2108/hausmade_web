@@ -263,6 +263,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
         count: item.count,
         isSubscription: item.isSubscription,
         frequency: item.frequency || null,
+        price: String(item.unitPrice || item.packPrice || item.price || 0),
         unitPrice: String(item.unitPrice),
         packPrice: String(item.packPrice),
         quantity: item.quantity,

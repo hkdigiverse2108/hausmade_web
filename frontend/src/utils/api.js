@@ -893,6 +893,31 @@ export async function cancelUserOrder(orderId, token) {
   return response.json();
 }
 
+export async function cancelGuestOrder(orderId, emailOrPhone) {
+  const response = await fetch(`${API_URL}/api/guest/orders/cancel`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ orderId, emailOrPhone })
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    let msg = 'Failed to cancel order';
+    if (typeof errorData.detail === 'string') {
+      msg = errorData.detail;
+    } else if (Array.isArray(errorData.detail)) {
+      msg = errorData.detail.map(d => d.msg || d.detail || JSON.stringify(d)).join(', ');
+    } else if (errorData.detail) {
+      msg = JSON.stringify(errorData.detail);
+    } else if (errorData.message) {
+      msg = errorData.message;
+    }
+    throw new Error(msg);
+  }
+  return response.json();
+}
+
 
 
 

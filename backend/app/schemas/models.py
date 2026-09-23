@@ -42,6 +42,10 @@ class VerifyOtpRequest(BaseModel):
     email: Optional[str] = None
     otp: str
 
+class GuestOrderCancelRequest(BaseModel):
+    orderId: str
+    emailOrPhone: str
+
 class CartItem(BaseModel):
     packId: str
     title: str
@@ -53,6 +57,7 @@ class CartItem(BaseModel):
     quantity: int
     totalPrice: str
     image: str
+    price: Optional[str] = None
 
 class ShippingAddress(BaseModel):
     fullName: str

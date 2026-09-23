@@ -54,7 +54,8 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (window.location.pathname === '/' && !window.location.search.includes('preview=true')) {
+    const isTracking = window.location.hash.includes('#track') || window.location.search.includes('id=');
+    if (window.location.pathname === '/' && !window.location.search.includes('preview=true') && !isTracking) {
       window.history.replaceState(null, '', '/products' + window.location.search + window.location.hash);
     }
   }, []);
@@ -83,6 +84,8 @@ export default function App() {
     if (window.location.pathname === '/admin') return 'admin';
     if (window.location.pathname === '/products') return 'products';
     if (window.location.pathname === '/' && !window.location.search.includes('preview=true')) {
+      const isTracking = window.location.hash.includes('#track') || window.location.search.includes('id=');
+      if (isTracking) return 'home';
       return 'products';
     }
     if (window.location.search.includes('preview=true')) {
@@ -716,7 +719,7 @@ export default function App() {
                   settings={siteSettings}
                   onNavigate={handleNavigate}
                 />
-              ) : activeHash === '#track' ? (
+              ) : activeHash.includes('#track') || window.location.pathname.includes('/track') || (window.location.search.includes('id=') && !window.location.search.includes('cf_id')) ? (
                 <OrderTracking />
               ) : (
                 <>

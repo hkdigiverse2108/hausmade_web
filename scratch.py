@@ -1,15 +1,33 @@
-import asyncio
-from motor.motor_asyncio import AsyncIOMotorClient
+import os
+import sys
+from dotenv import load_dotenv, find_dotenv
 
-async def main():
-    client = AsyncIOMotorClient('mongodb+srv://HK_Digiverse:HK%40Digiverse%40123@cluster0.lcbyqbq.mongodb.net/hausmade_db?retryWrites=true&w=majority&appName=Cluster0')
-    db = client['hausmade_db']
-    orders = await db['orders'].find(sort=[('_id', -1)]).to_list(10)
-    for o in orders:
-        print("ORDER_ID:", o.get('orderId'))
-        print("STATUS:", o.get('status'))
-        print("PAYMENT_METHOD:", o.get('paymentMethod'))
-        print("PAYMENT_STATUS:", o.get('payment_status'))
-        print("---")
+load_dotenv(find_dotenv())
 
-asyncio.run(main())
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend'))
+
+from app.security.email_sender import _send_order_email_sync
+
+test_order = {
+    "orderId": "TEST-1234",
+    "grandTotal": 299.0,
+    "paymentMethod": "COD",
+    "shippingAddress": {
+        "fullName": "Test Customer",
+        "email": "devaniparth27@gmail.com",
+        "phone": "9876543210",
+        "address": "123 Test Street",
+        "city": "Surat",
+        "pincode": "395010"
+    },
+    "cartItems": [
+        {
+            "title": "Saffron Soap",
+            "quantity": 2,
+            "price": 149.5
+        }
+    ]
+}
+
+res = _send_order_email_sync(test_order)
+print("RESULT:", res)

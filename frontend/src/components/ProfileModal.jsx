@@ -194,14 +194,45 @@ export default function ProfileModal({
 
   const [cancellingOrderId, setCancellingOrderId] = useState(null);
 
+  const isOrderShippedOrClosed = (order) => {
+    const mainStatus = (order?.status || '').toLowerCase();
+    const fulfillmentStatus = (order?.fulfillment?.status || '').toLowerCase();
+    const shippedStatuses = [
+      'shipped', 'manifested', 'in transit', 'in_transit', 'dispatched',
+      'out for delivery', 'out_for_delivery', 'delivered', 'pickup scheduled',
+      'pickup_scheduled', 'rto delivered'
+    ];
+    if (mainStatus === 'cancelled' || fulfillmentStatus === 'cancelled') {
+      return 'cancelled';
+    }
+    const isShipped = 
+      shippedStatuses.includes(mainStatus) ||
+      shippedStatuses.includes(fulfillmentStatus) ||
+      Boolean(order?.fulfillment?.awb) ||
+      Boolean(order?.fulfillment?.pickup_scheduled);
+
+    return isShipped ? 'shipped' : 'cancellable';
+  };
+
   const handleCancelOrder = async (orderId) => {
+    const targetOrder = orders.find(o => o.orderId === orderId || o._id === orderId);
+    if (targetOrder && isOrderShippedOrClosed(targetOrder) === 'shipped') {
+      const msg = "Order has already been shipped and cannot be cancelled automatically. Please contact support for assistance.";
+      if (showNotification) {
+        showNotification(msg, 'error');
+      } else {
+        alert(msg);
+      }
+      return;
+    }
+
     if (!window.confirm(`Are you sure you want to cancel order ${orderId}?`)) {
       return;
     }
     setCancellingOrderId(orderId);
     try {
       await cancelUserOrder(orderId, token);
-      setOrders(prev => prev.map(o => (o.orderId === orderId || o._id === orderId) ? { ...o, status: 'cancelled' } : o));
+      setOrders(prev => prev.map(o => (o.orderId === orderId || o._id === orderId) ? { ...o, status: 'cancelled', fulfillment: { ...(o.fulfillment || {}), status: 'Cancelled' } } : o));
       if (showNotification) {
         showNotification('Order cancelled successfully!', 'success');
       }
@@ -971,7 +1002,11 @@ export default function ProfileModal({
                             </span>
                           </div>
                           <div className="flex items-center gap-2">
-                            {!['shipped', 'manifested', 'in transit', 'out for delivery', 'delivered', 'cancelled'].includes(order.status?.toLowerCase()) ? (
+                            {isOrderShippedOrClosed(order) === 'cancelled' ? (
+                              <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider bg-red-50 text-red-700 border-red-200">
+                                CANCELLED
+                              </span>
+                            ) : (
                               <button
                                 type="button"
                                 onClick={() => handleCancelOrder(order.orderId || order._id)}
@@ -985,11 +1020,7 @@ export default function ProfileModal({
                                 )}
                                 <span>Cancel Order</span>
                               </button>
-                            ) : order.status?.toLowerCase() === 'cancelled' ? (
-                              <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider bg-red-50 text-red-700 border-red-200">
-                                CANCELLED
-                              </span>
-                            ) : null}
+                            )}
                             <span className="text-sm font-bold text-[#3A2E26]">
                               {formatCurrency(order.grandTotal)}
                             </span>

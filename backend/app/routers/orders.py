@@ -5,11 +5,13 @@ import httpx
 import hmac
 import hashlib
 import base64
+import asyncio
 from fastapi import APIRouter, HTTPException, Depends, status
 from fastapi.responses import HTMLResponse, Response
-from app.schemas.models import OrderCreate, OfflineSaleCreate
+from app.schemas.models import OrderCreate, OfflineSaleCreate, GuestOrderCancelRequest
 from app.database.connection import orders_collection, products_collection, users_collection, settings_collection
 from app.dependencies.auth_deps import get_current_user_email, get_admin_user
+from app.security.email_sender import send_order_confirmation_email
 
 router = APIRouter(tags=["Orders"])
 
@@ -58,7 +60,8 @@ async def place_order(order_data: OrderCreate, current_user_email: Optional[str]
     order_dict = order_data.dict()
     order_dict["created_at"] = datetime.utcnow()
     order_dict["user_email"] = email_to_use
-    if order_data.paymentMethod in ["cod", "offline"]:
+    pm = str(order_data.paymentMethod or "cod").lower()
+    if pm in ["cod", "offline", "cash on delivery", "cash"]:
         order_dict["status"] = "confirmed"
         order_dict["payment_status"] = "COD"
     else:
@@ -67,6 +70,9 @@ async def place_order(order_data: OrderCreate, current_user_email: Optional[str]
     
     await orders_collection.insert_one(order_dict)
     order_dict["_id"] = str(order_dict["_id"])
+
+    # Trigger order confirmation email
+    asyncio.create_task(send_order_confirmation_email(order_dict))
 
     return order_dict
 
@@ -359,6 +365,9 @@ async def verify_payment(payload: dict):
                             {"subscriptionId": db_order.get("subscriptionId")},
                             {"$set": {"status": "active"}}
                         )
+
+                    updated_order = {**db_order, "status": "confirmed", "payment_status": "PAID"}
+                    asyncio.create_task(send_order_confirmation_email(updated_order))
             
             return {
                 "order_status": order_status,
@@ -506,6 +515,9 @@ async def verify_razorpay_payment(payload: dict):
                     {"subscriptionId": db_order.get("subscriptionId")},
                     {"$set": {"status": "active"}}
                 )
+
+            updated_order = {**db_order, "status": "confirmed", "payment_status": "PAID"}
+            asyncio.create_task(send_order_confirmation_email(updated_order))
         
     if not is_valid:
         raise HTTPException(status_code=400, detail="Invalid Razorpay signature")
@@ -1076,9 +1088,15 @@ async def sync_delhivery_orders_live_status():
                             st = shipment_list[0].get("Shipment", {}).get("Status", {})
                             status_name = st.get("Status")
                             if status_name and status_name != order.get("fulfillment", {}).get("status"):
+                                clean_status_name = status_name.lower()
+                                update_fields = {"fulfillment.status": status_name}
+                                if any(st_term in clean_status_name for st_term in ["shipped", "manifested", "dispatched", "in transit", "out for delivery"]):
+                                    update_fields["status"] = "shipped"
+                                elif "delivered" in clean_status_name:
+                                    update_fields["status"] = "delivered"
                                 await orders_collection.update_one(
                                     {"_id": order["_id"]},
-                                    {"$set": {"fulfillment.status": status_name}}
+                                    {"$set": update_fields}
                                 )
                 except Exception:
                     pass
@@ -1107,35 +1125,78 @@ async def track_order_shipment(tracking_id: str):
         # If not found in mongo, assume tracking_id itself might be the Delhivery AWB number
         awb = clean_id
 
+    order_info = None
+    if order:
+        current_status = str(order.get("status", "")).lower()
+        fulfillment_status = str(order.get("fulfillment", {}).get("status", "")).lower()
+        shipped_statuses = [
+            "shipped", "manifested", "in transit", "in_transit", 
+            "dispatched", "out for delivery", "out_for_delivery", 
+            "delivered", "pickup scheduled", "pickup_scheduled", "rto delivered"
+        ]
+        is_cancelled = current_status == "cancelled" or fulfillment_status == "cancelled"
+        is_shipped = (
+            current_status in shipped_statuses or
+            fulfillment_status in shipped_statuses or
+            bool(order.get("fulfillment", {}).get("awb")) or
+            bool(order.get("fulfillment", {}).get("pickup_scheduled"))
+        )
+        can_cancel = not is_shipped and not is_cancelled
+
+        def _format_utc_ts(val):
+            if not val:
+                val = datetime.utcnow()
+            if isinstance(val, datetime):
+                return val.isoformat() + "Z"
+            s = str(val).strip()
+            if not s.endswith("Z") and not s.endswith("+00:00"):
+                return s.replace(" ", "T") + "Z"
+            return s
+
+        order_info = {
+            "order_id": order.get("orderId"),
+            "order_status": "cancelled" if is_cancelled else (order.get("status") or "confirmed"),
+            "can_cancel": can_cancel,
+            "grand_total": order.get("grandTotal"),
+            "cart_items": order.get("cartItems", []),
+            "created_at": _format_utc_ts(order.get("created_at")),
+            "payment_method": order.get("paymentMethod"),
+            "shipping_address": order.get("shippingAddress", {})
+        }
+
     config = await get_delhivery_config_internal()
     
     if not awb:
         # Order exists in mongo but no shipment created yet
+        created_ts = _format_utc_ts(order.get("created_at") if order else None)
         return {
             "status": "success",
             "order_id": order_id,
-            "status_name": "Order Placed",
-            "status_time": str(order.get("created_at")) if order else datetime.utcnow().isoformat(),
+            "status_name": "Cancelled" if (order_info and order_info.get("order_status") == "cancelled") else "Order Placed",
+            "status_time": created_ts,
             "scans": [
-                {"time": str(order.get("created_at")) if order else datetime.utcnow().isoformat(), "activity": "Order Received & Confirmed. Preparing shipment.", "location": "Hausmade Soap Shop"}
+                {"time": created_ts, "activity": "Order Received & Confirmed. Preparing shipment.", "location": "Hausmade Soap Shop"}
             ],
-            "expected_date": "3-5 Business Days"
+            "expected_date": "3-5 Business Days",
+            "order_info": order_info
         }
 
     # If Delhivery is inactive / demo mode
     if not config or not config.get("active") or not config.get("api_token"):
-        status_time = (order.get("fulfillment", {}).get("shipped_at") if order else None) or datetime.utcnow().isoformat()
+        status_time = _format_utc_ts(order.get("fulfillment", {}).get("shipped_at") if order else None)
+        created_ts = _format_utc_ts(order.get("created_at") if order else None)
         return {
             "status": "success",
             "waybill": awb,
             "order_id": order_id,
-            "status_name": "In Transit",
+            "status_name": "Cancelled" if (order_info and order_info.get("order_status") == "cancelled") else "In Transit",
             "status_time": status_time,
             "scans": [
                 {"time": status_time, "activity": "Dispatched via Delhivery Express", "location": "Surat Hub"},
-                {"time": str(order.get("created_at")) if order else status_time, "activity": "Order Confirmed by Store", "location": "Hausmade Soap Shop"}
+                {"time": created_ts, "activity": "Order Confirmed by Store", "location": "Hausmade Soap Shop"}
             ],
-            "expected_date": "Within 3-4 Business Days"
+            "expected_date": "Within 3-4 Business Days",
+            "order_info": order_info
         }
 
     # Live Delhivery tracking API query
@@ -1192,6 +1253,9 @@ async def track_order_shipment(tracking_id: str):
                         "location": config.get("pickup_city") or "Surat Hub"
                     })
                     
+                if order_info and order_info.get("order_status") == "cancelled":
+                    status_name = "Cancelled"
+
                 return {
                     "status": "success",
                     "waybill": awb,
@@ -1199,7 +1263,8 @@ async def track_order_shipment(tracking_id: str):
                     "status_name": status_name,
                     "status_time": status_time,
                     "scans": scans,
-                    "expected_date": str(expected_date)
+                    "expected_date": str(expected_date),
+                    "order_info": order_info
                 }
             else:
                 if not order and not awb.startswith("DELHIVERY"):
@@ -1208,12 +1273,13 @@ async def track_order_shipment(tracking_id: str):
                     "status": "fallback",
                     "waybill": awb,
                     "order_id": order_id,
-                    "status_name": "Manifested",
+                    "status_name": "Cancelled" if (order_info and order_info.get("order_status") == "cancelled") else "Manifested",
                     "status_time": datetime.utcnow().isoformat(),
                     "scans": [
                         {"time": datetime.utcnow().isoformat(), "activity": "Shipment registered with Delhivery. Awaiting pickup.", "location": config.get("pickup_city") or "Origin Warehouse"}
                     ],
-                    "expected_date": "Awaiting pickup"
+                    "expected_date": "Awaiting pickup",
+                    "order_info": order_info
                 }
         except Exception as e:
             if isinstance(e, HTTPException):
@@ -1222,13 +1288,112 @@ async def track_order_shipment(tracking_id: str):
                 "status": "fallback",
                 "waybill": awb,
                 "order_id": order_id,
-                "status_name": "In Transit",
+                "status_name": "Cancelled" if (order_info and order_info.get("order_status") == "cancelled") else "In Transit",
                 "status_time": datetime.utcnow().isoformat(),
                 "scans": [
                     {"time": datetime.utcnow().isoformat(), "activity": "Dispatched via Delhivery Express", "location": config.get("pickup_city") or "Surat Hub"}
                 ],
-                "expected_date": "3-4 Business Days"
+                "expected_date": "3-4 Business Days",
+                "order_info": order_info
             }
+
+@router.post("/api/guest/orders/cancel")
+async def cancel_guest_order(req: GuestOrderCancelRequest):
+    clean_id = req.orderId.strip()
+    clean_contact = req.emailOrPhone.strip().lower()
+    
+    if not clean_id or not clean_contact:
+        raise HTTPException(status_code=400, detail="Order ID and Email/Phone are required.")
+        
+    order = await orders_collection.find_one({"orderId": clean_id})
+    if not order:
+        order = await orders_collection.find_one({"orderId": {"$regex": f"^{clean_id}$", "$options": "i"}})
+    if not order:
+        try:
+            from bson import ObjectId
+            order = await orders_collection.find_one({"_id": ObjectId(clean_id)})
+        except Exception:
+            pass
+            
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found. Please check your Order ID.")
+        
+    shipping = order.get("shippingAddress", {}) or {}
+    order_email = str(shipping.get("email") or order.get("user_email") or "").strip().lower()
+    order_phone = str(shipping.get("phone") or "").strip().lower()
+    
+    clean_digits = "".join(filter(str.isdigit, clean_contact))
+    phone_digits = "".join(filter(str.isdigit, order_phone))
+
+    email_match = bool(clean_contact and order_email and clean_contact == order_email)
+    phone_match = bool(clean_digits and phone_digits and (clean_digits in phone_digits or phone_digits in clean_digits))
+
+    if not email_match and not phone_match:
+        raise HTTPException(
+            status_code=400, 
+            detail="The Email ID or Phone number does not match the details registered with this order."
+        )
+        
+    current_status = str(order.get("status", "")).lower()
+    fulfillment = order.get("fulfillment", {}) or {}
+    fulfillment_status = str(fulfillment.get("status", "")).lower()
+    
+    if current_status == "cancelled" or fulfillment_status == "cancelled":
+        return {"status": "success", "message": "Order is already cancelled."}
+
+    shipped_statuses = [
+        "shipped", "manifested", "in transit", "in_transit", 
+        "dispatched", "out for delivery", "out_for_delivery", 
+        "delivered", "pickup scheduled", "pickup_scheduled", "rto delivered"
+    ]
+
+    is_shipped = (
+        current_status in shipped_statuses or
+        fulfillment_status in shipped_statuses or
+        bool(fulfillment.get("awb")) or
+        bool(fulfillment.get("pickup_scheduled"))
+    )
+
+    if is_shipped:
+        raise HTTPException(
+            status_code=400, 
+            detail="Order has already been shipped and cannot be cancelled automatically. Please contact customer support."
+        )
+
+    awb = fulfillment.get("awb")
+    if awb:
+        try:
+            config = await get_delhivery_config_internal()
+            if config and config.get("active") and config.get("api_token"):
+                token = config["api_token"]
+                mode = config.get("mode", "test")
+                base_url = "https://staging-express.delhivery.com" if mode == "test" else "https://express.delhivery.com"
+                url = f"{base_url}/api/p/edit"
+                payload = {"waybill": awb, "cancellation": "true"}
+                headers = {"Authorization": f"Token {token}", "Content-Type": "application/json"}
+                async with httpx.AsyncClient() as client:
+                    await client.post(url, json=payload, headers=headers, timeout=10.0)
+        except Exception as e:
+            print(f"Error voiding Delhivery AWB {awb}: {e}")
+
+    update_data = {
+        "status": "cancelled",
+        "cancelled_at": datetime.utcnow().isoformat(),
+        "cancelled_by": "customer"
+    }
+    if order.get("fulfillment"):
+        update_data["fulfillment.status"] = "Cancelled"
+
+    await orders_collection.update_one(
+        {"_id": order["_id"]},
+        {"$set": update_data}
+    )
+
+    return {
+        "status": "success",
+        "message": "Order has been cancelled successfully.",
+        "orderId": order.get("orderId")
+    }
 
 @router.post("/api/user/orders/{order_id}/cancel")
 async def cancel_user_order(order_id: str, current_user_email: str = Depends(get_current_user_email)):
@@ -1244,19 +1409,33 @@ async def cancel_user_order(order_id: str, current_user_email: str = Depends(get
         raise HTTPException(status_code=404, detail="Order not found")
         
     current_status = str(order.get("status", "")).lower()
+    fulfillment = order.get("fulfillment", {}) or {}
+    fulfillment_status = str(fulfillment.get("status", "")).lower()
     
+    if current_status == "cancelled" or fulfillment_status == "cancelled":
+        return {"status": "success", "message": "Order is already cancelled."}
+
+    shipped_statuses = [
+        "shipped", "manifested", "in transit", "in_transit", 
+        "dispatched", "out for delivery", "out_for_delivery", 
+        "delivered", "pickup scheduled", "pickup_scheduled", "rto delivered"
+    ]
+
+    is_shipped = (
+        current_status in shipped_statuses or
+        fulfillment_status in shipped_statuses or
+        bool(fulfillment.get("awb")) or
+        bool(fulfillment.get("pickup_scheduled"))
+    )
+
     # Block cancellation if already shipped or delivered
-    if current_status in ["shipped", "manifested", "in transit", "out for delivery", "delivered"]:
+    if is_shipped:
         raise HTTPException(
             status_code=400, 
             detail="Order has already been shipped and cannot be cancelled automatically. Please contact support for assistance."
         )
 
-    if current_status == "cancelled":
-        return {"status": "success", "message": "Order is already cancelled."}
-
     # Cancel Delhivery shipment if AWB exists
-    fulfillment = order.get("fulfillment", {})
     awb = fulfillment.get("awb")
     if awb:
         try:
@@ -1274,13 +1453,17 @@ async def cancel_user_order(order_id: str, current_user_email: str = Depends(get
             print(f"Error voiding Delhivery AWB {awb}: {e}")
 
     # Update order status to cancelled
+    update_data = {
+        "status": "cancelled",
+        "cancelled_at": datetime.utcnow().isoformat(),
+        "cancelled_by": "customer"
+    }
+    if order.get("fulfillment"):
+        update_data["fulfillment.status"] = "Cancelled"
+
     await orders_collection.update_one(
         {"_id": order["_id"]},
-        {"$set": {
-            "status": "cancelled",
-            "cancelled_at": datetime.utcnow().isoformat(),
-            "cancelled_by": "customer"
-        }}
+        {"$set": update_data}
     )
 
     return {
