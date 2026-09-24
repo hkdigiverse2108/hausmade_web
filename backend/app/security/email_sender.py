@@ -3,7 +3,26 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import asyncio
 from datetime import datetime, timedelta
+from email.utils import formataddr
 from app.config.settings import SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM, FRONTEND_URL, ENV
+
+def _get_sender_address():
+    sender_email = SMTP_FROM or SMTP_USER or "info@hausmade.in"
+    if "<" in sender_email and ">" in sender_email:
+        display_name = sender_email.split("<")[0].strip()
+        addr = sender_email.split("<")[1].replace(">", "").strip()
+        return formataddr((display_name, addr)), addr
+    return formataddr(("Hausmade", sender_email)), sender_email
+
+def _get_smtp_connection():
+    port = int(SMTP_PORT) if SMTP_PORT else 587
+    if port == 465:
+        server = smtplib.SMTP_SSL(SMTP_HOST, port, timeout=20)
+    else:
+        server = smtplib.SMTP(SMTP_HOST, port, timeout=20)
+        server.starttls()
+    server.login(SMTP_USER, SMTP_PASSWORD)
+    return server
 
 def _send_email_sync(email_to: str, otp: str):
     if not SMTP_USER or not SMTP_PASSWORD:
@@ -11,8 +30,9 @@ def _send_email_sync(email_to: str, otp: str):
         return False
         
     try:
+        from_header, raw_sender = _get_sender_address()
         msg = MIMEMultipart()
-        msg['From'] = SMTP_FROM or SMTP_USER
+        msg['From'] = from_header
         msg['To'] = email_to
         msg['Subject'] = f"{otp} is your Hausmade™ verification code"
         
@@ -142,10 +162,8 @@ def _send_email_sync(email_to: str, otp: str):
         """
         msg.attach(MIMEText(body, 'html'))
         
-        server = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
-        server.starttls()
-        server.login(SMTP_USER, SMTP_PASSWORD)
-        server.sendmail(msg['From'], email_to, msg.as_string())
+        server = _get_smtp_connection()
+        server.sendmail(raw_sender, email_to, msg.as_string())
         server.quit()
         print(f"[EMAIL SENDER] Email successfully sent to {email_to}")
         return True
@@ -227,8 +245,9 @@ def _send_order_email_sync(order_dict: dict):
 
         tracking_url = f"{base_url}/?id={order_id}#track"
 
+        from_header, raw_sender = _get_sender_address()
         msg = MIMEMultipart()
-        msg['From'] = SMTP_FROM or SMTP_USER
+        msg['From'] = from_header
         msg['To'] = email_to
         msg['Subject'] = f"Order Confirmed! Your Hausmade™ Order #{order_id}"
 
@@ -376,10 +395,8 @@ def _send_order_email_sync(order_dict: dict):
         """
         msg.attach(MIMEText(body, 'html'))
 
-        server = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
-        server.starttls()
-        server.login(SMTP_USER, SMTP_PASSWORD)
-        server.sendmail(msg['From'], email_to, msg.as_string())
+        server = _get_smtp_connection()
+        server.sendmail(raw_sender, email_to, msg.as_string())
         server.quit()
         print(f"[EMAIL SENDER] Order confirmation email sent successfully to {email_to}")
         return True

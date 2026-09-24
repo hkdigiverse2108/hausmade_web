@@ -71,8 +71,9 @@ async def place_order(order_data: OrderCreate, current_user_email: Optional[str]
     await orders_collection.insert_one(order_dict)
     order_dict["_id"] = str(order_dict["_id"])
 
-    # Trigger order confirmation email
-    asyncio.create_task(send_order_confirmation_email(order_dict))
+    # Trigger order confirmation email if order is confirmed (e.g. COD / offline)
+    if order_dict.get("status") == "confirmed":
+        asyncio.create_task(send_order_confirmation_email(order_dict))
 
     return order_dict
 
