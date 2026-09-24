@@ -1,48 +1,55 @@
 <!doctype html>
 <html lang="en" class="scroll-smooth">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Hausmade — Handcrafted Organic Soap</title>
-    <meta name="description" content="Small-batch handmade soap made with 100% natural organic ingredients, wild lavender, cold-pressed olive oil, and raw honey." />
-    <meta name="google-site-verification" content="ctt0yjWQKJ8dbZG037WUDpKitz3s6HzpP7uiPVwdhHk" />
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-1XWHVHX1JK"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
 
-      gtag('config', 'G-1XWHVHX1JK');
-    </script>
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hausmade — Handcrafted Organic Soap</title>
+  <meta name="description"
+    content="Small-batch handmade soap made with 100% natural organic ingredients, wild lavender, cold-pressed olive oil, and raw honey." />
+  <meta name="google-site-verification" content="ctt0yjWQKJ8dbZG037WUDpKitz3s6HzpP7uiPVwdhHk" />
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Inter:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet">
 
-    <!-- Meta Pixel Code -->
-    <script>
-      !function(f,b,e,v,n,t,s)
-      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-      n.queue=[];t=b.createElement(e);t.async=!0;
-      t.src=v;s=b.getElementsByTagName(e)[0];
-      s.parentNode.insertBefore(t,s)}(window, document,'script',
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-1XWHVHX1JK"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+
+    gtag('config', 'G-1XWHVHX1JK');
+  </script>
+
+  <!-- Meta Pixel Code -->
+  <script>
+    !function (f, b, e, v, n, t, s) {
+      if (f.fbq) return; n = f.fbq = function () {
+        n.callMethod ?
+          n.callMethod.apply(n, arguments) : n.queue.push(arguments)
+      };
+      if (!f._fbq) f._fbq = n; n.push = n; n.loaded = !0; n.version = '2.0';
+      n.queue = []; t = b.createElement(e); t.async = !0;
+      t.src = v; s = b.getElementsByTagName(e)[0];
+      s.parentNode.insertBefore(t, s)
+    }(window, document, 'script',
       'https://connect.facebook.net/en_US/fbevents.js');
-      fbq('init', '1126184246516800');
-      fbq('track', 'PageView');
-    </script>
-    <!-- End Meta Pixel Code -->
-  </head>
-  <body class="bg-[#F5F1E8] text-[#3A2E26] font-sans antialiased selection:bg-[#7A8B6F] selection:text-white">
-    <noscript><img height="1" width="1" style="display:none"
-      src="https://www.facebook.com/tr?id=1126184246516800&amp;ev=PageView&amp;noscript=1"
-    /></noscript>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
-</html>
+    fbq('init', '1126184246516800');
+    fbq('track', 'PageView');
+  </script>
+  <!-- End Meta Pixel Code -->
+</head>
 
+<body class="bg-[#F5F1E8] text-[#3A2E26] font-sans antialiased selection:bg-[#7A8B6F] selection:text-white">
+  <noscript><img height="1" width="1" style="display:none"
+      src="https://www.facebook.com/tr?id=1126184246516800&amp;ev=PageView&amp;noscript=1" /></noscript>
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+
+</html>
