@@ -72,9 +72,20 @@ def check_mongodb_connection(uri):
     if not uri:
         raise ValueError("MongoDB URI is not configured.")
     import pymongo
-    client = pymongo.MongoClient(uri, serverSelectionTimeoutMS=3000, connectTimeoutMS=3000)
-    client.admin.command('ping')
-    client.close()
+    import time
+    last_err = None
+    for attempt in range(1, 4):
+        try:
+            timeout_ms = 5000 * attempt
+            client = pymongo.MongoClient(uri, serverSelectionTimeoutMS=timeout_ms, connectTimeoutMS=timeout_ms)
+            client.admin.command('ping')
+            client.close()
+            return
+        except Exception as e:
+            last_err = e
+            time.sleep(0.5)
+    if last_err:
+        raise last_err
 
 async def migrate_json_to_mongodb():
     collections_to_migrate = ["users", "orders", "otps", "products", "coupons", "settings", "reviews", "subscriptions", "targets"]

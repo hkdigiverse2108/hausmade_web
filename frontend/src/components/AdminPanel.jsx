@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   TrendingUp, 
   ShoppingBag, 
@@ -928,6 +928,29 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     pincode: ''
   });
   const [orderSourceFilter, setOrderSourceFilter] = useState('all');
+  const [selectedShipmentStatuses, setSelectedShipmentStatuses] = useState([]);
+  const [isShipmentStatusDropdownOpen, setIsShipmentStatusDropdownOpen] = useState(false);
+  const [shipmentStatusSearch, setShipmentStatusSearch] = useState('');
+  const shipmentStatusDropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (shipmentStatusDropdownRef.current && !shipmentStatusDropdownRef.current.contains(event.target)) {
+        setIsShipmentStatusDropdownOpen(false);
+      }
+    };
+
+    if (isShipmentStatusDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [isShipmentStatusDropdownOpen]);
+
   const [statsFilter, setStatsFilter] = useState('all');
 
   const handleOpenOfflineSaleModal = () => {
@@ -1183,23 +1206,66 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     fetchAdminData(true);
   };
 
-  // Filter orders based on search and source
+  const SHIPMENT_STATUS_OPTIONS = [
+    'Ready To Ship',
+    'Ready for pickup',
+    'In-Transit',
+    'Out for delivery',
+    'Delivered',
+    'Cancelled'
+  ];
+
+  const getShipmentStatus = (order) => {
+    if (order.status === 'cancelled' || order.fulfillment?.status?.toLowerCase() === 'cancelled') {
+      return 'Cancelled';
+    }
+    if (order.status === 'delivered' || order.fulfillment?.status?.toLowerCase() === 'delivered') {
+      return 'Delivered';
+    }
+    if (!order.fulfillment || !order.fulfillment.awb) {
+      return 'Ready To Ship';
+    }
+    const rawStatus = (order.fulfillment.status || '').toLowerCase();
+    if (rawStatus.includes('out for delivery')) {
+      return 'Out for delivery';
+    }
+    if (rawStatus.includes('transit') || rawStatus.includes('dispatched')) {
+      return 'In-Transit';
+    }
+    if (rawStatus.includes('manifest') || rawStatus.includes('pickup') || rawStatus.includes('ready')) {
+      return 'Ready for pickup';
+    }
+    return order.fulfillment.status || 'Ready for pickup';
+  };
+
+  // Filter orders based on search, source, and shipment status
   const filteredOrders = orders.filter(order => {
     const isCancelled = order.status === 'cancelled' || order.fulfillment?.status?.toLowerCase() === 'cancelled';
     const matchesSource = 
       orderSourceFilter === 'all' || 
       (orderSourceFilter === 'online' && !order.isOffline) ||
-      (orderSourceFilter === 'offline' && order.isOffline) ||
-      (orderSourceFilter === 'cancelled' && isCancelled);
+      (orderSourceFilter === 'offline' && order.isOffline);
       
     if (!matchesSource) return false;
 
-    const searchLower = orderSearch.toLowerCase();
-    const orderIdMatch = order.orderId?.toLowerCase().includes(searchLower);
-    const nameMatch = order.shippingAddress?.fullName?.toLowerCase().includes(searchLower);
-    const emailMatch = order.shippingAddress?.email?.toLowerCase().includes(searchLower);
-    const phoneMatch = order.shippingAddress?.phone?.includes(searchLower);
-    return orderIdMatch || nameMatch || emailMatch || phoneMatch;
+    // Filter by selected shipment statuses
+    if (selectedShipmentStatuses.length > 0) {
+      const orderShipmentStatus = getShipmentStatus(order);
+      if (!selectedShipmentStatuses.includes(orderShipmentStatus)) {
+        return false;
+      }
+    }
+
+    const searchTrimmed = orderSearch.trim().toLowerCase();
+    if (!searchTrimmed) return true;
+
+    const orderIdMatch = (order.orderId || '').toLowerCase().includes(searchTrimmed);
+    const nameMatch = (order.shippingAddress?.fullName || '').toLowerCase().includes(searchTrimmed);
+    const emailMatch = (order.shippingAddress?.email || '').toLowerCase().includes(searchTrimmed);
+    const phoneMatch = (order.shippingAddress?.phone || '').toLowerCase().includes(searchTrimmed);
+    const itemMatch = (order.cartItems || []).some(item => (item.title || '').toLowerCase().includes(searchTrimmed));
+    const awbMatch = (order.fulfillment?.awb || '').toLowerCase().includes(searchTrimmed);
+    return orderIdMatch || nameMatch || emailMatch || phoneMatch || itemMatch || awbMatch;
   });
 
   // Filter customers based on search
@@ -2603,8 +2669,9 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                     </div>
                     {/* Source Filters and Search Bar */}
                     <div className="flex items-center gap-3 w-full sm:w-auto flex-wrap">
+                      {/* Source Filters */}
                       <div className="flex bg-[#3A2E26]/5 p-1 rounded-xl border border-[#3A2E26]/10">
-                        {['all', 'online', 'offline', 'cancelled'].map((source) => (
+                        {['all', 'online', 'offline'].map((source) => (
                           <button
                             key={source}
                             onClick={() => setOrderSourceFilter(source)}
@@ -2618,6 +2685,97 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                           </button>
                         ))}
                       </div>
+
+                      {/* Shipment Status Filter Dropdown */}
+                      <div className="relative" ref={shipmentStatusDropdownRef}>
+                        <button
+                          type="button"
+                          onClick={() => setIsShipmentStatusDropdownOpen(!isShipmentStatusDropdownOpen)}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                            selectedShipmentStatuses.length > 0
+                              ? 'bg-[#3A2E26] text-white border-[#3A2E26] shadow-sm'
+                              : 'bg-white text-[#3A2E26]/80 border-[#3A2E26]/15 hover:border-[#3A2E26]/40'
+                          }`}
+                        >
+                          <span>
+                            Shipment Status {selectedShipmentStatuses.length > 0 ? `(${selectedShipmentStatuses.length})` : ''}
+                          </span>
+                          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isShipmentStatusDropdownOpen ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        {isShipmentStatusDropdownOpen && (
+                          <>
+                            <div 
+                              className="fixed inset-0 z-40" 
+                              onClick={() => setIsShipmentStatusDropdownOpen(false)} 
+                            />
+                            <div className="absolute left-0 sm:right-0 sm:left-auto mt-2 w-72 bg-white rounded-2xl shadow-xl border border-gray-200 z-50 p-4 flex flex-col gap-3 font-sans animate-in fade-in zoom-in-95 duration-150">
+                              {/* Search Box */}
+                              <div className="relative">
+                                <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                                <input
+                                  type="text"
+                                  placeholder="Search Shipment Status"
+                                  value={shipmentStatusSearch}
+                                  onChange={(e) => setShipmentStatusSearch(e.target.value)}
+                                  className="w-full pl-8 pr-3 py-1.5 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-[#3A2E26] transition-all"
+                                />
+                              </div>
+
+                              {/* Checkbox Options List */}
+                              <div className="max-h-52 overflow-y-auto flex flex-col gap-1 pr-1">
+                                {SHIPMENT_STATUS_OPTIONS
+                                  .filter(st => st.toLowerCase().includes(shipmentStatusSearch.toLowerCase()))
+                                  .map(st => {
+                                    const isChecked = selectedShipmentStatuses.includes(st);
+                                    return (
+                                      <label
+                                        key={st}
+                                        className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-gray-50 cursor-pointer text-xs font-medium text-gray-700 transition-colors"
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={isChecked}
+                                          onChange={() => {
+                                            if (isChecked) {
+                                              setSelectedShipmentStatuses(prev => prev.filter(s => s !== st));
+                                            } else {
+                                              setSelectedShipmentStatuses(prev => [...prev, st]);
+                                            }
+                                          }}
+                                          className="w-4 h-4 rounded border-gray-300 text-[#3A2E26] focus:ring-[#3A2E26]"
+                                        />
+                                        <span>{st}</span>
+                                      </label>
+                                    );
+                                  })}
+                              </div>
+
+                              {/* Footer with Done button */}
+                              <div className="flex items-center justify-between pt-2 border-t border-gray-100 mt-1">
+                                {selectedShipmentStatuses.length > 0 ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedShipmentStatuses([])}
+                                    className="text-[11px] font-bold text-gray-500 hover:text-gray-800 transition-colors cursor-pointer"
+                                  >
+                                    Clear filter
+                                  </button>
+                                ) : <div />}
+
+                                <button
+                                  type="button"
+                                  onClick={() => setIsShipmentStatusDropdownOpen(false)}
+                                  className="px-5 py-2 bg-[#1E232A] hover:bg-[#111418] text-white text-xs font-bold rounded-xl transition-all shadow-md cursor-pointer ml-auto"
+                                >
+                                  Done
+                                </button>
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+
                       <div className="relative w-full sm:w-64">
                         <Search className="w-4 h-4 text-[#3A2E26]/40 absolute left-3.5 top-1/2 -translate-y-1/2" />
                         <input 
@@ -2746,7 +2904,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                         </span>
                                       </div>
                                       <div className="text-[10px] font-bold text-[#3A2E26]/60">
-                                        Status: <span className="text-[#3A2E26] font-semibold">{order.fulfillment.status}</span>
+                                        Status: <span className="text-[#3A2E26] font-semibold">{order.fulfillment.status || getShipmentStatus(order)}</span>
                                       </div>
                                       <div className="flex gap-2 justify-end mt-1 flex-wrap items-center">
                                         {!order.fulfillment.pickup_scheduled && (
