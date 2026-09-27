@@ -9,7 +9,7 @@ const getApiUrl = () => {
   }
   
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    return `${window.location.protocol}//${window.location.hostname}:8010`;
+    return `${window.location.protocol}//${window.location.hostname}:8005`;
   }
   
   return window.location.origin;

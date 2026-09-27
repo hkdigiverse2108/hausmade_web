@@ -119,6 +119,9 @@ async def log_offline_order(order_data: OfflineSaleCreate, admin: dict = Depends
         except Exception:
             pass
             
+    pm_raw = str(order_data.paymentMethod or "Cash").strip()
+    is_cod_sale = pm_raw.lower() in ["cash", "cod", "cash on delivery", "cash_on_delivery"]
+
     order_doc = {
         "orderId": order_id,
         "shippingAddress": shipping_address,
@@ -127,13 +130,13 @@ async def log_offline_order(order_data: OfflineSaleCreate, admin: dict = Depends
         "discountAmount": 0.0,
         "shippingFee": 0.0,
         "grandTotal": order_data.totalPrice,
-        "paymentMethod": order_data.paymentMethod,
+        "paymentMethod": pm_raw,
         "created_at": dt_now,
         "user_email": order_data.customerEmail or "",
         "isOffline": True,
         "notes": order_data.notes or "",
         "status": "confirmed",
-        "payment_status": "COD" if str(order_data.paymentMethod).lower() == "cash" else "PAID"
+        "payment_status": "COD" if is_cod_sale else "PAID"
     }
     
     await orders_collection.insert_one(order_doc)
@@ -621,7 +624,7 @@ async def check_delhivery_serviceability(order_id: str, admin: dict = Depends(ge
                 "provider": "Delhivery (Error Fallback)"
             }
 
-async def process_delhivery_shipment_booking(order_or_id, weight=500, length=15, width=15, height=10):
+async def process_delhivery_shipment_booking(order_or_id, weight=500, length=15, width=15, height=10, payment_mode=None, cod_amount=None):
     import json
     if isinstance(order_or_id, str):
         order = await orders_collection.find_one({"orderId": order_or_id})
@@ -660,8 +663,21 @@ async def process_delhivery_shipment_booking(order_or_id, weight=500, length=15,
 
     waybill = real_awb or f"DELHIVERY{str(uuid.uuid4().int)[:10]}"
 
-    pmode = "COD" if order.get("paymentMethod") in ["cod", "COD"] else "Prepaid"
-    cod_amt = float(order.get("grandTotal", 0.0)) if pmode == "COD" else 0.0
+    # Determine payment mode (COD vs Prepaid)
+    if payment_mode:
+        pmode = "COD" if str(payment_mode).strip().upper() in ["COD", "CASH"] else "Prepaid"
+    else:
+        pm = str(order.get("paymentMethod") or "").strip().lower()
+        pstatus = str(order.get("payment_status") or "").strip().upper()
+        if pm in ["cod", "cash", "cash on delivery", "cash_on_delivery", "offline"] or pstatus == "COD":
+            pmode = "COD"
+        else:
+            pmode = "Prepaid"
+
+    if cod_amount is not None:
+        cod_amt = float(cod_amount) if pmode == "COD" else 0.0
+    else:
+        cod_amt = float(order.get("grandTotal", 0.0)) if pmode == "COD" else 0.0
     
     warehouse_name = config.get("warehouse_name") or "Yogi Arcade"
 
@@ -766,6 +782,8 @@ async def process_delhivery_shipment_booking(order_or_id, weight=500, length=15,
     fulfillment = {
         "awb": waybill,
         "provider": "Delhivery Express",
+        "payment_mode": pmode,
+        "cod_amount": cod_amt,
         "weight": weight,
         "dimensions": f"{length}x{width}x{height} cm",
         "shipped_at": datetime.utcnow().isoformat(),
@@ -795,6 +813,8 @@ async def create_delhivery_shipment(order_id: str, payload: dict, admin: dict = 
     length = payload.get("length", 15)
     width = payload.get("width", 15)
     height = payload.get("height", 10)
+    payment_mode = payload.get("payment_mode")
+    cod_amount = payload.get("cod_amount")
     
     order = await orders_collection.find_one({"orderId": order_id})
     if not order:
@@ -802,7 +822,10 @@ async def create_delhivery_shipment(order_id: str, payload: dict, admin: dict = 
         if not order:
             raise HTTPException(status_code=404, detail="Order not found")
     try:
-        fulfillment = await process_delhivery_shipment_booking(order, weight=weight, length=length, width=width, height=height)
+        fulfillment = await process_delhivery_shipment_booking(
+            order, weight=weight, length=length, width=width, height=height,
+            payment_mode=payment_mode, cod_amount=cod_amount
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     
@@ -1521,8 +1544,16 @@ async def generate_delhivery_shipping_label(awb: str):
     pincode = str(shipping.get("pincode") or "395010")
     phone = shipping.get("phone") or "N/A"
     
-    pmode = str(order.get("paymentMethod", "")).upper() if order else "PREPAID"
-    is_cod = pmode in ["COD", "CASH ON DELIVERY"]
+    fulfillment = order.get("fulfillment", {}) if order else {}
+    f_pmode = str(fulfillment.get("payment_mode", "")).strip().upper() if fulfillment else ""
+    if f_pmode in ["COD", "PREPAID"]:
+        is_cod = f_pmode == "COD"
+    else:
+        pm = str(order.get("paymentMethod", "")).strip().lower() if order else ""
+        pstatus = str(order.get("payment_status", "")).strip().upper() if order else ""
+        is_cod = pm in ["cod", "cash", "cash on delivery", "cash_on_delivery", "offline"] or pstatus == "COD"
+    
+    pmode = "COD" if is_cod else "PREPAID"
     try:
         grand_total = float(order.get("grandTotal", 0.0) or 0.0) if order else 0.0
     except (ValueError, TypeError):

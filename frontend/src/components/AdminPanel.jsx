@@ -440,6 +440,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   }, [settingsSubTab]);
 
   const [selectedOrderForShipping, setSelectedOrderForShipping] = useState(null);
+  const [shippingPaymentMode, setShippingPaymentMode] = useState('COD');
   const [shippingWeight, setShippingWeight] = useState(75); // grams
   const [shippingLength, setShippingLength] = useState(15); // cm
   const [shippingWidth, setShippingWidth] = useState(15); // cm
@@ -1443,7 +1444,8 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
         weight: shippingWeight,
         length: shippingLength,
         width: shippingWidth,
-        height: shippingHeight
+        height: shippingHeight,
+        payment_mode: shippingPaymentMode
       }, token);
       if (data.status === 'success') {
         showNotification('Consignment successfully booked with Delhivery! AWB: ' + (data.fulfillment?.awb || 'N/A'), 'success');
@@ -2952,6 +2954,8 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                     <div className="flex items-center justify-end gap-2">
                                       <button
                                         onClick={() => {
+                                          const isCod = ['cash', 'cod', 'cash on delivery'].includes(String(order.paymentMethod || '').trim().toLowerCase()) || order.payment_status === 'COD';
+                                          setShippingPaymentMode(isCod ? 'COD' : 'Prepaid');
                                           setSelectedOrderForShipping(order);
                                           setServiceabilityResult(null);
                                         }}
@@ -8282,8 +8286,8 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                     onChange={(e) => setOfflineSaleForm({ ...offlineSaleForm, paymentMethod: e.target.value })}
                     className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans appearance-none"
                   >
-                    <option value="Cash">Cash</option>
-                    <option value="UPI">UPI / QR Code</option>
+                    <option value="Cash">Cash (Cash on Delivery / COD)</option>
+                    <option value="UPI">UPI / QR Code (Prepaid)</option>
                   </select>
                 </div>
                 <div>
@@ -8392,6 +8396,47 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
               <div>Phone: <span className="font-semibold text-gray-700">{selectedOrderForShipping.shippingAddress?.phone}</span></div>
               <div>Address: <span className="text-gray-600">{selectedOrderForShipping.shippingAddress?.address}, {selectedOrderForShipping.shippingAddress?.city} - {selectedOrderForShipping.shippingAddress?.pincode} ({selectedOrderForShipping.shippingAddress?.state})</span></div>
               <div>Order Total: <span className="font-bold text-[#7A8B6F]">{formatCurrency(selectedOrderForShipping.grandTotal)}</span> ({selectedOrderForShipping.paymentMethod?.toUpperCase()})</div>
+              
+              <div className="pt-2 border-t border-[#E6D5C3]/40 mt-2">
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-[#8C7A5B] mb-1.5">Shipping Payment Mode</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShippingPaymentMode('COD')}
+                    className={`px-3 py-2 rounded-xl text-xs font-bold transition-all border flex items-center justify-center gap-1.5 cursor-pointer ${
+                      shippingPaymentMode === 'COD'
+                        ? 'bg-[#7A8B6F] text-white border-[#7A8B6F] shadow-xs'
+                        : 'bg-white text-[#3A2E26] border-[#E6D5C3]/60 hover:bg-[#FDFBF7]'
+                    }`}
+                  >
+                    <span className={`w-2 h-2 rounded-full ${shippingPaymentMode === 'COD' ? 'bg-white' : 'bg-gray-300'}`}></span>
+                    Cash on Delivery (COD)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShippingPaymentMode('Prepaid')}
+                    className={`px-3 py-2 rounded-xl text-xs font-bold transition-all border flex items-center justify-center gap-1.5 cursor-pointer ${
+                      shippingPaymentMode === 'Prepaid'
+                        ? 'bg-[#7A8B6F] text-white border-[#7A8B6F] shadow-xs'
+                        : 'bg-white text-[#3A2E26] border-[#E6D5C3]/60 hover:bg-[#FDFBF7]'
+                    }`}
+                  >
+                    <span className={`w-2 h-2 rounded-full ${shippingPaymentMode === 'Prepaid' ? 'bg-white' : 'bg-gray-300'}`}></span>
+                    Prepaid
+                  </button>
+                </div>
+                <div className="mt-2 text-[11px]">
+                  {shippingPaymentMode === 'COD' ? (
+                    <div className="text-amber-800 bg-amber-50 border border-amber-200/80 rounded-lg p-2 font-medium">
+                      Delhivery will collect <strong>{formatCurrency(selectedOrderForShipping.grandTotal)}</strong> cash from customer upon delivery.
+                    </div>
+                  ) : (
+                    <div className="text-gray-600 bg-gray-50 border border-gray-200 rounded-lg p-2">
+                      Prepaid shipment. Delhivery will collect <strong>₹0</strong> upon delivery.
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
             <div className="space-y-4">
