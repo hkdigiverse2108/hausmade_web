@@ -913,6 +913,11 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       }
     }
   }, [isReviewModalOpen, reviewForm, editingReview]);
+  const getLocalDateTimeString = (d = new Date()) => {
+    const pad = (num) => String(num).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
   const [offlineSaleForm, setOfflineSaleForm] = useState({
     customerName: '',
     customerPhone: '',
@@ -921,7 +926,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     quantity: 1,
     totalPrice: 0,
     paymentMethod: 'Cash',
-    created_at: new Date().toISOString().split('T')[0],
+    created_at: getLocalDateTimeString(),
     notes: '',
     address: '',
     city: '',
@@ -967,7 +972,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       quantity: 1,
       totalPrice: firstPrice,
       paymentMethod: 'Cash',
-      created_at: new Date().toISOString().split('T')[0],
+      created_at: getLocalDateTimeString(),
       notes: '',
       address: '',
       city: '',
@@ -1013,7 +1018,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
         quantity: parseInt(offlineSaleForm.quantity) || 1,
         totalPrice: parseFloat(offlineSaleForm.totalPrice) || 0,
         paymentMethod: offlineSaleForm.paymentMethod,
-        created_at: offlineSaleForm.created_at ? new Date(offlineSaleForm.created_at).toISOString() : null,
+        created_at: offlineSaleForm.created_at ? new Date(offlineSaleForm.created_at).toISOString() : new Date().toISOString(),
         notes: offlineSaleForm.notes || null,
         address: offlineSaleForm.address || null,
         city: offlineSaleForm.city || null,
@@ -8291,9 +8296,9 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">Sale Date (Optional)</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">Sale Date & Time</label>
                   <input
-                    type="date"
+                    type="datetime-local"
                     value={offlineSaleForm.created_at}
                     onChange={(e) => setOfflineSaleForm({ ...offlineSaleForm, created_at: e.target.value })}
                     className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"

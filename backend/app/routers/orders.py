@@ -1,5 +1,5 @@
 from typing import Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import uuid
 import httpx
 import hmac
@@ -115,7 +115,11 @@ async def log_offline_order(order_data: OfflineSaleCreate, admin: dict = Depends
     dt_now = datetime.utcnow()
     if order_data.created_at:
         try:
-            dt_now = datetime.fromisoformat(order_data.created_at.replace("Z", "+00:00"))
+            parsed_dt = datetime.fromisoformat(order_data.created_at.replace("Z", "+00:00"))
+            if parsed_dt.tzinfo is not None:
+                dt_now = parsed_dt.astimezone(timezone.utc).replace(tzinfo=None)
+            else:
+                dt_now = parsed_dt
         except Exception:
             pass
             
