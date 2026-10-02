@@ -939,14 +939,26 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   const [shipmentStatusSearch, setShipmentStatusSearch] = useState('');
   const shipmentStatusDropdownRef = useRef(null);
 
+  // Date Filter States
+  const [orderDateRange, setOrderDateRange] = useState({ startDate: null, endDate: null });
+  const [selectedOrderDates, setSelectedOrderDates] = useState([]);
+  const [dateFilterMode, setDateFilterMode] = useState('range'); // 'range' | 'multi'
+  const [isDateDropdownOpen, setIsDateDropdownOpen] = useState(false);
+  const [calendarViewDate, setCalendarViewDate] = useState(new Date());
+  const [hoveredDate, setHoveredDate] = useState(null);
+  const dateDropdownRef = useRef(null);
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (shipmentStatusDropdownRef.current && !shipmentStatusDropdownRef.current.contains(event.target)) {
         setIsShipmentStatusDropdownOpen(false);
       }
+      if (dateDropdownRef.current && !dateDropdownRef.current.contains(event.target)) {
+        setIsDateDropdownOpen(false);
+      }
     };
 
-    if (isShipmentStatusDropdownOpen) {
+    if (isShipmentStatusDropdownOpen || isDateDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside);
       document.addEventListener('touchstart', handleClickOutside);
     }
@@ -955,7 +967,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('touchstart', handleClickOutside);
     };
-  }, [isShipmentStatusDropdownOpen]);
+  }, [isShipmentStatusDropdownOpen, isDateDropdownOpen]);
 
   const [statsFilter, setStatsFilter] = useState('all');
 
@@ -1244,7 +1256,123 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     return order.fulfillment.status || 'Ready for pickup';
   };
 
-  // Filter orders based on search, source, and shipment status
+  // Helper function to extract YYYY-MM-DD from any date value
+  const getYYYYMMDD = (dVal) => {
+    if (!dVal) return '';
+    const d = new Date(dVal);
+    if (isNaN(d.getTime())) {
+      return String(dVal).split('T')[0].split(' ')[0];
+    }
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  // Helper function to format date as DD/MM/YYYY
+  const formatDateDDMMYYYY = (dateStr) => {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return dateStr;
+  };
+
+  // Helper to generate calendar days matrix
+  const getCalendarDays = (year, month) => {
+    const days = [];
+    const firstDayOfMonth = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+    for (let i = firstDayOfMonth - 1; i >= 0; i--) {
+      const prevDay = daysInPrevMonth - i;
+      const prevDate = new Date(year, month - 1, prevDay);
+      days.push({
+        dateStr: getYYYYMMDD(prevDate),
+        dayNum: prevDay,
+        isCurrentMonth: false,
+        dateObj: prevDate
+      });
+    }
+
+    for (let i = 1; i <= daysInMonth; i++) {
+      const currDate = new Date(year, month, i);
+      days.push({
+        dateStr: getYYYYMMDD(currDate),
+        dayNum: i,
+        isCurrentMonth: true,
+        dateObj: currDate
+      });
+    }
+
+    const remaining = (7 - (days.length % 7)) % 7;
+    for (let i = 1; i <= remaining; i++) {
+      const nextDate = new Date(year, month + 1, i);
+      days.push({
+        dateStr: getYYYYMMDD(nextDate),
+        dayNum: i,
+        isCurrentMonth: false,
+        dateObj: nextDate
+      });
+    }
+
+    return days;
+  };
+
+  const applyPreset = (presetKey) => {
+    const today = new Date();
+    const todayStr = getYYYYMMDD(today);
+    
+    if (presetKey === 'today') {
+      setOrderDateRange({ startDate: todayStr, endDate: todayStr });
+      setSelectedOrderDates([todayStr]);
+    } else if (presetKey === 'yesterday') {
+      const yest = new Date();
+      yest.setDate(today.getDate() - 1);
+      const yestStr = getYYYYMMDD(yest);
+      setOrderDateRange({ startDate: yestStr, endDate: yestStr });
+      setSelectedOrderDates([yestStr]);
+    } else if (presetKey === '7days') {
+      const start = new Date();
+      start.setDate(today.getDate() - 6);
+      setOrderDateRange({ startDate: getYYYYMMDD(start), endDate: todayStr });
+    } else if (presetKey === '30days') {
+      const start = new Date();
+      start.setDate(today.getDate() - 29);
+      setOrderDateRange({ startDate: getYYYYMMDD(start), endDate: todayStr });
+    } else if (presetKey === 'thisMonth') {
+      const start = new Date(today.getFullYear(), today.getMonth(), 1);
+      setOrderDateRange({ startDate: getYYYYMMDD(start), endDate: todayStr });
+    }
+  };
+
+  let dateFilterLabel = 'Date Filter';
+  let isDateFilterActive = false;
+
+  if (dateFilterMode === 'range') {
+    if (orderDateRange.startDate && orderDateRange.endDate) {
+      dateFilterLabel = `${formatDateDDMMYYYY(orderDateRange.startDate)} - ${formatDateDDMMYYYY(orderDateRange.endDate)}`;
+      isDateFilterActive = true;
+    } else if (orderDateRange.startDate) {
+      dateFilterLabel = `From ${formatDateDDMMYYYY(orderDateRange.startDate)}`;
+      isDateFilterActive = true;
+    } else if (orderDateRange.endDate) {
+      dateFilterLabel = `Until ${formatDateDDMMYYYY(orderDateRange.endDate)}`;
+      isDateFilterActive = true;
+    }
+  } else if (dateFilterMode === 'multi') {
+    if (selectedOrderDates.length === 1) {
+      dateFilterLabel = formatDateDDMMYYYY(selectedOrderDates[0]);
+      isDateFilterActive = true;
+    } else if (selectedOrderDates.length > 1) {
+      dateFilterLabel = `${selectedOrderDates.length} Dates Selected`;
+      isDateFilterActive = true;
+    }
+  }
+
+  // Filter orders based on search, source, shipment status, and date
   const filteredOrders = orders.filter(order => {
     const isCancelled = order.status === 'cancelled' || order.fulfillment?.status?.toLowerCase() === 'cancelled';
     const matchesSource = 
@@ -1258,6 +1386,24 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     if (selectedShipmentStatuses.length > 0) {
       const orderShipmentStatus = getShipmentStatus(order);
       if (!selectedShipmentStatuses.includes(orderShipmentStatus)) {
+        return false;
+      }
+    }
+
+    // Filter by Date (Range or Multi-Select)
+    if (dateFilterMode === 'range' && (orderDateRange.startDate || orderDateRange.endDate)) {
+      if (!order.created_at) return false;
+      const orderDateStr = getYYYYMMDD(order.created_at);
+      if (orderDateRange.startDate && orderDateStr < orderDateRange.startDate) {
+        return false;
+      }
+      if (orderDateRange.endDate && orderDateStr > orderDateRange.endDate) {
+        return false;
+      }
+    } else if (dateFilterMode === 'multi' && selectedOrderDates.length > 0) {
+      if (!order.created_at) return false;
+      const orderDateStr = getYYYYMMDD(order.created_at);
+      if (!selectedOrderDates.includes(orderDateStr)) {
         return false;
       }
     }
@@ -2668,16 +2814,16 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
               {/* Tab 2: Orders */}
               {activeTab === 'orders' && (
                 <div className="flex flex-col gap-6">
-                  {/* Title & Filter Bar */}
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[#3A2E26]/10 pb-4">
-                    <div>
+                  {/* Title & Filter Bar (Single Line Layout on Desktop) */}
+                  <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 border-b border-[#3A2E26]/10 pb-4">
+                    <div className="shrink-0">
                       <h2 className="text-xl font-bold tracking-tight uppercase text-[#3A2E26] font-sans">Order Management</h2>
                       <p className="text-xs text-[#3A2E26]/60">Track customer purchases and verify fulfillment details</p>
                     </div>
-                    {/* Source Filters and Search Bar */}
-                    <div className="flex items-center gap-3 w-full sm:w-auto flex-wrap">
+                    {/* Source Filters, Shipment Status, Date Filter, Search Bar, Log Offline Sale */}
+                    <div className="flex items-center gap-2.5 w-full xl:w-auto flex-wrap sm:flex-nowrap">
                       {/* Source Filters */}
-                      <div className="flex bg-[#3A2E26]/5 p-1 rounded-xl border border-[#3A2E26]/10">
+                      <div className="flex bg-[#3A2E26]/5 p-1 rounded-xl border border-[#3A2E26]/10 shrink-0">
                         {['all', 'online', 'offline'].map((source) => (
                           <button
                             key={source}
@@ -2694,7 +2840,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                       </div>
 
                       {/* Shipment Status Filter Dropdown */}
-                      <div className="relative" ref={shipmentStatusDropdownRef}>
+                      <div className="relative shrink-0" ref={shipmentStatusDropdownRef}>
                         <button
                           type="button"
                           onClick={() => setIsShipmentStatusDropdownOpen(!isShipmentStatusDropdownOpen)}
@@ -2783,19 +2929,203 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                         )}
                       </div>
 
-                      <div className="relative w-full sm:w-64">
+                      {/* Date Filter Dropdown (Theme Color Matched #7A8B6F) */}
+                      <div className="relative shrink-0" ref={dateDropdownRef}>
+                        <button
+                          type="button"
+                          onClick={() => setIsDateDropdownOpen(!isDateDropdownOpen)}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                            isDateFilterActive
+                              ? 'bg-[#7A8B6F]/10 text-[#7A8B6F] border-[#7A8B6F]/40 shadow-sm'
+                              : 'bg-white text-[#3A2E26]/80 border-[#3A2E26]/15 hover:border-[#3A2E26]/40'
+                          }`}
+                        >
+                          <Calendar className={`w-4 h-4 ${isDateFilterActive ? 'text-[#7A8B6F]' : 'text-[#7A8B6F]'}`} />
+                          <span className="font-semibold text-[#7A8B6F]">
+                            {dateFilterLabel}
+                          </span>
+                          {isDateFilterActive && (
+                            <span
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOrderDateRange({ startDate: null, endDate: null });
+                                setSelectedOrderDates([]);
+                              }}
+                              className="p-0.5 hover:bg-gray-200 rounded-full transition-colors ml-0.5"
+                              title="Clear date filter"
+                            >
+                              <X className="w-3.5 h-3.5 text-gray-500 hover:text-gray-800" />
+                            </span>
+                          )}
+                          <ChevronDown className={`w-3.5 h-3.5 text-gray-500 transition-transform ${isDateDropdownOpen ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        {isDateDropdownOpen && (
+                          <>
+                            <div 
+                              className="fixed inset-0 z-40" 
+                              onClick={() => setIsDateDropdownOpen(false)} 
+                            />
+                            <div className="absolute left-0 sm:right-0 sm:left-auto mt-2 w-80 bg-white rounded-3xl shadow-2xl border border-gray-100 z-50 p-4 flex flex-col gap-3 font-sans animate-in fade-in zoom-in-95 duration-150">
+                              
+                              {/* Selected Summary Badge */}
+                              <div className="text-[11px] text-[#3A2E26] font-medium text-center bg-[#7A8B6F]/5 py-2 px-3 rounded-xl border border-[#7A8B6F]/15">
+                                {orderDateRange.startDate && orderDateRange.endDate ? (
+                                  <span className="text-[#7A8B6F] font-bold">
+                                    {formatDateDDMMYYYY(orderDateRange.startDate)} &rarr; {formatDateDDMMYYYY(orderDateRange.endDate)}
+                                  </span>
+                                ) : orderDateRange.startDate ? (
+                                  <span>Select End Date (Start: <strong className="text-[#7A8B6F]">{formatDateDDMMYYYY(orderDateRange.startDate)}</strong>)</span>
+                                ) : (
+                                  <span>Select Start Date & End Date</span>
+                                )}
+                                 </div>
+
+                              {/* Month Navigation Header */}
+                              <div className="flex items-center justify-between px-1 pt-1">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const d = new Date(calendarViewDate);
+                                    d.setMonth(d.getMonth() - 1);
+                                    setCalendarViewDate(d);
+                                  }}
+                                  className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-600 cursor-pointer transition-colors"
+                                >
+                                  &lt;
+                                </button>
+                                <div className="font-bold text-sm text-[#3A2E26]">
+                                  {calendarViewDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const d = new Date(calendarViewDate);
+                                    d.setMonth(d.getMonth() + 1);
+                                    setCalendarViewDate(d);
+                                  }}
+                                  className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-600 cursor-pointer transition-colors"
+                                >
+                                  &gt;
+                                </button>
+                              </div>
+
+                              {/* Calendar Grid */}
+                              <div>
+                                {/* Weekday Labels */}
+                                <div className="grid grid-cols-7 text-center mb-1">
+                                  {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
+                                    <span key={day} className="text-[11px] font-semibold text-gray-400 py-1">
+                                      {day}
+                                    </span>
+                                  ))}
+                                </div>
+
+                                {/* Calendar Days */}
+                                <div className="grid grid-cols-7 gap-y-1 text-center">
+                                  {getCalendarDays(calendarViewDate.getFullYear(), calendarViewDate.getMonth()).map((cell, idx) => {
+                                    const { dateStr, dayNum, isCurrentMonth } = cell;
+
+                                    let isStart = false;
+                                    let isEnd = false;
+                                    let isInRange = false;
+
+                                    const start = orderDateRange.startDate;
+                                    const end = orderDateRange.endDate;
+
+                                    isStart = dateStr === start;
+                                    isEnd = dateStr === end;
+
+                                    if (start && end) {
+                                      isInRange = dateStr >= start && dateStr <= end;
+                                    } else if (start && hoveredDate) {
+                                      const min = start < hoveredDate ? start : hoveredDate;
+                                      const max = start < hoveredDate ? hoveredDate : start;
+                                      isInRange = dateStr >= min && dateStr <= max;
+                                    }
+
+                                    const isBetween = isInRange && !isStart && !isEnd;
+
+                                    return (
+                                      <button
+                                        key={idx}
+                                        type="button"
+                                        onMouseEnter={() => setHoveredDate(dateStr)}
+                                        onMouseLeave={() => setHoveredDate(null)}
+                                        onClick={() => {
+                                          if (!orderDateRange.startDate || (orderDateRange.startDate && orderDateRange.endDate)) {
+                                            setOrderDateRange({ startDate: dateStr, endDate: null });
+                                          } else {
+                                            if (dateStr < orderDateRange.startDate) {
+                                              setOrderDateRange({ startDate: dateStr, endDate: null });
+                                            } else {
+                                              setOrderDateRange({ ...orderDateRange, endDate: dateStr });
+                                            }
+                                          }
+                                        }}
+                                        className={`relative h-8 flex items-center justify-center text-xs font-semibold cursor-pointer transition-all ${
+                                          !isCurrentMonth ? 'text-gray-300' : 'text-[#3A2E26]'
+                                        } ${
+                                          isStart && isEnd
+                                            ? 'bg-[#7A8B6F] text-white rounded-xl font-bold shadow-sm z-10'
+                                            : isStart
+                                            ? 'bg-[#7A8B6F] text-white rounded-l-xl font-bold shadow-sm z-10'
+                                            : isEnd
+                                            ? 'bg-[#7A8B6F] text-white rounded-r-xl font-bold shadow-sm z-10'
+                                            : isBetween
+                                            ? 'bg-[#7A8B6F]/15 text-[#3A2E26] font-bold'
+                                            : 'hover:bg-gray-100 rounded-xl'
+                                        }`}
+                                      >
+                                        {dayNum}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+
+                              {/* Footer Actions */}
+                              <div className="flex items-center justify-between pt-2 border-t border-gray-100 mt-1">
+                                {isDateFilterActive ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOrderDateRange({ startDate: null, endDate: null });
+                                      setSelectedOrderDates([]);
+                                    }}
+                                    className="text-[11px] font-bold text-gray-500 hover:text-gray-800 transition-colors cursor-pointer"
+                                  >
+                                    Clear filter
+                                  </button>
+                                ) : <div />}
+
+                                <button
+                                  type="button"
+                                  onClick={() => setIsDateDropdownOpen(false)}
+                                  className="px-5 py-2 bg-[#3A2E26] hover:bg-[#251D18] text-white text-xs font-bold rounded-xl transition-all shadow-md cursor-pointer ml-auto"
+                                >
+                                  Done
+                                </button>
+                              </div>
+
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+                      <div className="relative w-full sm:w-44 xl:w-48 shrink-0">
                         <Search className="w-4 h-4 text-[#3A2E26]/40 absolute left-3.5 top-1/2 -translate-y-1/2" />
                         <input 
                           type="text"
                           placeholder="Search ID, name or email..."
                           value={orderSearch}
                           onChange={(e) => setOrderSearch(e.target.value)}
-                          className="w-full pl-10 pr-4 py-2 bg-white border border-[#3A2E26]/10 rounded-2xl text-xs focus:outline-none focus:border-[#3A2E26] transition-all font-medium"
+                          className="w-full pl-10 pr-3 py-2 bg-white border border-[#3A2E26]/10 rounded-2xl text-xs focus:outline-none focus:border-[#3A2E26] transition-all font-medium"
                         />
                       </div>
                       <button
                         onClick={handleOpenOfflineSaleModal}
-                        className="flex items-center gap-1.5 px-4 py-2 bg-[#7A8B6F] hover:bg-[#68785c] text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-200 shadow-sm cursor-pointer shrink-0"
+                        className="flex items-center gap-1.5 px-3.5 py-2 bg-[#7A8B6F] hover:bg-[#68785c] text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-200 shadow-sm cursor-pointer shrink-0"
                       >
                         <Plus className="w-4 h-4" />
                         <span>Log Offline Sale</span>
