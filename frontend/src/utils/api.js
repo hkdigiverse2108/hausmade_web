@@ -828,6 +828,20 @@ export async function scheduleDelhiveryPickup(orderId, token) {
   return response.json();
 }
 
+export async function syncDelhiveryStatus(token) {
+  const response = await fetch(`${API_URL}/api/admin/orders/delhivery/sync-status`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || 'Failed to sync status');
+  }
+  return response.json();
+}
+
 export async function cancelDelhiveryShipment(orderId, token) {
   const response = await fetch(`${API_URL}/api/admin/orders/${encodeURIComponent(orderId)}/delhivery/cancel`, {
     method: 'POST',

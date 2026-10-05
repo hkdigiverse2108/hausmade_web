@@ -1086,50 +1086,59 @@ async def fetch_delhivery_label(awb: str, admin: dict = Depends(get_admin_user))
                 raise e
             raise HTTPException(status_code=500, detail=str(e))
 
-async def sync_delhivery_orders_live_status():
+async def sync_delhivery_orders_live_status(limit: int = 200):
+    updated_count = 0
     try:
         config = await get_delhivery_config_internal()
         if not config or not config.get("active") or not config.get("api_token"):
-            return
+            return 0
         token = config["api_token"]
-        mode = config.get("mode", "test")
-        base_url = "https://staging-express.delhivery.com" if mode == "test" else "https://track.delhivery.com"
         
         active_orders = await orders_collection.find({
             "fulfillment.awb": {"$exists": True, "$ne": None},
             "fulfillment.status": {"$nin": ["Delivered", "Cancelled", "RTO Delivered"]}
-        }).to_list(length=30)
+        }).to_list(length=limit)
         
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=10.0) as client:
             for order in active_orders:
                 awb = order.get("fulfillment", {}).get("awb")
                 if not awb or awb.startswith("DELHIVERY"):
                     continue
-                url = f"{base_url}/api/v1/packages/json/?waybill={awb}"
-                headers = {"Authorization": f"Token {token}"}
+                url = f"https://track.delhivery.com/api/v2/packages/json/?token={token}&waybill={awb}"
                 try:
-                    resp = await client.get(url, headers=headers, timeout=5.0)
+                    resp = await client.get(url)
                     if resp.status_code == 200:
                         data = resp.json()
                         shipment_list = data.get("ShipmentData", [])
                         if shipment_list and isinstance(shipment_list, list):
                             st = shipment_list[0].get("Shipment", {}).get("Status", {})
                             status_name = st.get("Status")
-                            if status_name and status_name != order.get("fulfillment", {}).get("status"):
+                            if status_name:
                                 clean_status_name = status_name.lower()
                                 update_fields = {"fulfillment.status": status_name}
-                                if any(st_term in clean_status_name for st_term in ["shipped", "manifested", "dispatched", "in transit", "out for delivery"]):
+                                if any(term in clean_status_name for term in ["pickup scheduled", "pickup_scheduled", "pickup requested", "pickup created", "ready for pickup"]):
+                                    update_fields["fulfillment.pickup_scheduled"] = True
+                                if any(st_term in clean_status_name for st_term in ["shipped", "dispatched", "in transit", "out for delivery", "in-transit"]):
                                     update_fields["status"] = "shipped"
+                                    update_fields["fulfillment.pickup_scheduled"] = True
                                 elif "delivered" in clean_status_name:
                                     update_fields["status"] = "delivered"
+                                    update_fields["fulfillment.pickup_scheduled"] = True
                                 await orders_collection.update_one(
                                     {"_id": order["_id"]},
                                     {"$set": update_fields}
                                 )
-                except Exception:
-                    pass
+                                updated_count += 1
+                except Exception as ex:
+                    print(f"Error syncing AWB {awb}: {ex}")
     except Exception as e:
         print(f"Live status sync error: {e}")
+    return updated_count
+
+@router.post("/api/admin/orders/delhivery/sync-status")
+async def admin_sync_delhivery_status(admin: dict = Depends(get_admin_user)):
+    count = await sync_delhivery_orders_live_status(limit=200)
+    return {"status": "success", "message": "Successfully synced status from Delhivery", "updated_count": count}
 
 @router.get("/api/orders/track/{tracking_id}")
 async def track_order_shipment(tracking_id: str):

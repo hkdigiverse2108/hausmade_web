@@ -72,6 +72,7 @@ import {
   checkDelhiveryServiceability,
   bookDelhiveryShipment,
   scheduleDelhiveryPickup,
+  syncDelhiveryStatus,
   cancelDelhiveryShipment,
   deleteAdminOrder,
   adminLogOfflineSale,
@@ -1225,10 +1226,10 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   };
 
   const SHIPMENT_STATUS_OPTIONS = [
-    'Ready To Ship',
+    'Unfulfilled',
+    'Ready to ship',
     'Ready for pickup',
-    'In-Transit',
-    'Out for delivery',
+    'In transit',
     'Delivered',
     'Cancelled'
   ];
@@ -1241,19 +1242,22 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       return 'Delivered';
     }
     if (!order.fulfillment || !order.fulfillment.awb) {
-      return 'Ready To Ship';
+      return 'Unfulfilled';
     }
     const rawStatus = (order.fulfillment.status || '').toLowerCase();
-    if (rawStatus.includes('out for delivery')) {
-      return 'Out for delivery';
+    if (rawStatus.includes('delivered')) {
+      return 'Delivered';
     }
-    if (rawStatus.includes('transit') || rawStatus.includes('dispatched')) {
-      return 'In-Transit';
+    if (rawStatus.includes('rto') || rawStatus.includes('return')) {
+      return 'In transit';
     }
-    if (rawStatus.includes('manifest') || rawStatus.includes('pickup') || rawStatus.includes('ready')) {
+    if (rawStatus.includes('out for delivery') || rawStatus.includes('transit') || rawStatus.includes('dispatched') || rawStatus.includes('shipped') || rawStatus.includes('in-transit')) {
+      return 'In transit';
+    }
+    if (order.fulfillment.pickup_scheduled || rawStatus.includes('pickup') || rawStatus.includes('scheduled')) {
       return 'Ready for pickup';
     }
-    return order.fulfillment.status || 'Ready for pickup';
+    return 'Ready to ship';
   };
 
   // Helper function to extract YYYY-MM-DD from any date value
@@ -1618,12 +1622,42 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       const data = await scheduleDelhiveryPickup(orderId, token);
       if (data.status === 'success') {
         showNotification('Pickup scheduled successfully with Delhivery!', 'success');
+        setOrders(prev => prev.map(o => {
+          if (o.orderId === orderId || o._id === orderId) {
+            return {
+              ...o,
+              fulfillment: {
+                ...(o.fulfillment || {}),
+                pickup_scheduled: true,
+                status: 'Pickup Scheduled'
+              }
+            };
+          }
+          return o;
+        }));
         fetchAdminData(true);
       } else {
         showNotification(data.detail || 'Failed to schedule pickup', 'error');
       }
     } catch (err) {
       showNotification(err.message || 'Failed to schedule pickup', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSyncDelhiveryStatus = async () => {
+    setSaving(true);
+    try {
+      const data = await syncDelhiveryStatus(token);
+      if (data.status === 'success') {
+        showNotification(data.message || 'Synced Delhivery status successfully!', 'success');
+        fetchAdminData(true);
+      } else {
+        showNotification(data.detail || 'Failed to sync status', 'error');
+      }
+    } catch (err) {
+      showNotification(err.message || 'Failed to sync status', 'error');
     } finally {
       setSaving(false);
     }
@@ -2087,15 +2121,27 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
 
   const getFilteredStats = () => {
     const filteredOrdersList = orders.filter(order => {
-      if (statsFilter === 'online') return !order.isOffline;
-      if (statsFilter === 'offline') return !!order.isOffline;
+      if (statsFilter === 'online' && order.isOffline) return false;
+      if (statsFilter === 'offline' && !order.isOffline) return false;
+
+      // Filter by Date (Range or Multi-Select)
+      if (dateFilterMode === 'range' && (orderDateRange.startDate || orderDateRange.endDate)) {
+        if (!order.created_at) return false;
+        const orderDateStr = getYYYYMMDD(order.created_at);
+        if (orderDateRange.startDate && orderDateStr < orderDateRange.startDate) return false;
+        if (orderDateRange.endDate && orderDateStr > orderDateRange.endDate) return false;
+      } else if (dateFilterMode === 'multi' && selectedOrderDates.length > 0) {
+        if (!order.created_at) return false;
+        const orderDateStr = getYYYYMMDD(order.created_at);
+        if (!selectedOrderDates.includes(orderDateStr)) return false;
+      }
       return true;
     });
 
     const total_revenue = filteredOrdersList.reduce((sum, o) => sum + (parseFloat(o.grandTotal) || 0), 0);
     const order_count = filteredOrdersList.length;
     const uniqueCustomers = new Set(filteredOrdersList.map(o => o.shippingAddress?.phone || o.shippingAddress?.email));
-    const customer_count = statsFilter === 'all' ? stats.customer_count : uniqueCustomers.size;
+    const customer_count = (statsFilter === 'all' && !isDateFilterActive) ? stats.customer_count : uniqueCustomers.size;
     const average_order_value = order_count > 0 ? total_revenue / order_count : 0;
 
     return {
@@ -2480,6 +2526,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                     </div>
                     {/* Log Offline Sale button and Filter Toggles */}
                     <div className="flex items-center gap-3 w-full sm:w-auto flex-wrap">
+                      {/* Source Filters */}
                       <div className="flex bg-[#3A2E26]/5 p-1 rounded-xl border border-[#3A2E26]/10">
                         {['all', 'online', 'offline'].map((source) => (
                           <button
@@ -2495,6 +2542,209 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                           </button>
                         ))}
                       </div>
+
+                      {/* Date Filter Dropdown */}
+                      <div className="relative shrink-0" ref={dateDropdownRef}>
+                        <button
+                          type="button"
+                          onClick={() => setIsDateDropdownOpen(!isDateDropdownOpen)}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                            isDateFilterActive
+                              ? 'bg-[#7A8B6F]/10 text-[#7A8B6F] border-[#7A8B6F]/40 shadow-sm'
+                              : 'bg-white text-[#3A2E26]/80 border-[#3A2E26]/15 hover:border-[#3A2E26]/40'
+                          }`}
+                        >
+                          <Calendar className={`w-4 h-4 ${isDateFilterActive ? 'text-[#7A8B6F]' : 'text-[#7A8B6F]'}`} />
+                          <span className="font-semibold text-[#7A8B6F]">
+                            {dateFilterLabel}
+                          </span>
+                          {isDateFilterActive && (
+                            <span
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOrderDateRange({ startDate: null, endDate: null });
+                                setSelectedOrderDates([]);
+                              }}
+                              className="p-0.5 hover:bg-gray-200 rounded-full transition-colors ml-0.5"
+                              title="Clear date filter"
+                            >
+                              <X className="w-3.5 h-3.5 text-gray-500 hover:text-gray-800" />
+                            </span>
+                          )}
+                          <ChevronDown className={`w-3.5 h-3.5 text-gray-500 transition-transform ${isDateDropdownOpen ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        {isDateDropdownOpen && (
+                          <>
+                            <div 
+                              className="fixed inset-0 z-40" 
+                              onClick={() => setIsDateDropdownOpen(false)} 
+                            />
+                            <div className="absolute left-0 sm:right-0 sm:left-auto mt-2 w-80 bg-white rounded-3xl shadow-2xl border border-gray-100 z-50 p-4 flex flex-col gap-3 font-sans animate-in fade-in zoom-in-95 duration-150">
+                              
+                              {/* Quick Presets */}
+                              <div className="flex flex-wrap gap-1.5 pb-2 border-b border-gray-100">
+                                {[
+                                  { label: 'Today', key: 'today' },
+                                  { label: 'Yesterday', key: 'yesterday' },
+                                  { label: '7 Days', key: '7days' },
+                                  { label: '30 Days', key: '30days' },
+                                  { label: 'This Month', key: 'thisMonth' }
+                                ].map((preset) => (
+                                  <button
+                                    key={preset.key}
+                                    type="button"
+                                    onClick={() => applyPreset(preset.key)}
+                                    className="px-2.5 py-1 bg-gray-100 hover:bg-[#7A8B6F] hover:text-white text-[11px] font-bold rounded-lg text-gray-700 transition-colors cursor-pointer"
+                                  >
+                                    {preset.label}
+                                  </button>
+                                ))}
+                              </div>
+
+                              {/* Selected Summary Badge */}
+                              <div className="text-[11px] text-[#3A2E26] font-medium text-center bg-[#7A8B6F]/5 py-2 px-3 rounded-xl border border-[#7A8B6F]/15">
+                                {orderDateRange.startDate && orderDateRange.endDate ? (
+                                  <span className="text-[#7A8B6F] font-bold">
+                                    {formatDateDDMMYYYY(orderDateRange.startDate)} &rarr; {formatDateDDMMYYYY(orderDateRange.endDate)}
+                                  </span>
+                                ) : orderDateRange.startDate ? (
+                                  <span>Select End Date (Start: <strong className="text-[#7A8B6F]">{formatDateDDMMYYYY(orderDateRange.startDate)}</strong>)</span>
+                                ) : (
+                                  <span>Select Start Date & End Date</span>
+                                )}
+                              </div>
+
+                              {/* Month Navigation Header */}
+                              <div className="flex items-center justify-between px-1 pt-1">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const d = new Date(calendarViewDate);
+                                    d.setMonth(d.getMonth() - 1);
+                                    setCalendarViewDate(d);
+                                  }}
+                                  className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-600 cursor-pointer transition-colors"
+                                >
+                                  &lt;
+                                </button>
+                                <div className="font-bold text-sm text-[#3A2E26]">
+                                  {calendarViewDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const d = new Date(calendarViewDate);
+                                    d.setMonth(d.getMonth() + 1);
+                                    setCalendarViewDate(d);
+                                  }}
+                                  className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-600 cursor-pointer transition-colors"
+                                >
+                                  &gt;
+                                </button>
+                              </div>
+
+                              {/* Calendar Grid */}
+                              <div>
+                                <div className="grid grid-cols-7 text-center mb-1">
+                                  {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
+                                    <span key={day} className="text-[11px] font-semibold text-gray-400 py-1">
+                                      {day}
+                                    </span>
+                                  ))}
+                                </div>
+
+                                <div className="grid grid-cols-7 gap-y-1 text-center">
+                                  {getCalendarDays(calendarViewDate.getFullYear(), calendarViewDate.getMonth()).map((cell, idx) => {
+                                    const { dateStr, dayNum, isCurrentMonth } = cell;
+
+                                    let isStart = false;
+                                    let isEnd = false;
+                                    let isInRange = false;
+
+                                    const start = orderDateRange.startDate;
+                                    const end = orderDateRange.endDate;
+
+                                    isStart = dateStr === start;
+                                    isEnd = dateStr === end;
+
+                                    if (start && end) {
+                                      isInRange = dateStr >= start && dateStr <= end;
+                                    } else if (start && hoveredDate) {
+                                      const min = start < hoveredDate ? start : hoveredDate;
+                                      const max = start < hoveredDate ? hoveredDate : start;
+                                      isInRange = dateStr >= min && dateStr <= max;
+                                    }
+
+                                    const isBetween = isInRange && !isStart && !isEnd;
+
+                                    return (
+                                      <button
+                                        key={idx}
+                                        type="button"
+                                        onMouseEnter={() => setHoveredDate(dateStr)}
+                                        onMouseLeave={() => setHoveredDate(null)}
+                                        onClick={() => {
+                                          if (!orderDateRange.startDate || (orderDateRange.startDate && orderDateRange.endDate)) {
+                                            setOrderDateRange({ startDate: dateStr, endDate: null });
+                                          } else {
+                                            if (dateStr < orderDateRange.startDate) {
+                                              setOrderDateRange({ startDate: dateStr, endDate: null });
+                                            } else {
+                                              setOrderDateRange({ ...orderDateRange, endDate: dateStr });
+                                            }
+                                          }
+                                        }}
+                                        className={`relative h-8 flex items-center justify-center text-xs font-semibold cursor-pointer transition-all ${
+                                          !isCurrentMonth ? 'text-gray-300' : 'text-[#3A2E26]'
+                                        } ${
+                                          isStart && isEnd
+                                            ? 'bg-[#7A8B6F] text-white rounded-xl font-bold shadow-sm z-10'
+                                            : isStart
+                                            ? 'bg-[#7A8B6F] text-white rounded-l-xl font-bold shadow-sm z-10'
+                                            : isEnd
+                                            ? 'bg-[#7A8B6F] text-white rounded-r-xl font-bold shadow-sm z-10'
+                                            : isBetween
+                                            ? 'bg-[#7A8B6F]/15 text-[#3A2E26] font-bold'
+                                            : 'hover:bg-gray-100 rounded-xl'
+                                        }`}
+                                      >
+                                        {dayNum}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+
+                              {/* Footer Actions */}
+                              <div className="flex items-center justify-between pt-2 border-t border-gray-100 mt-1">
+                                {isDateFilterActive ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOrderDateRange({ startDate: null, endDate: null });
+                                      setSelectedOrderDates([]);
+                                    }}
+                                    className="text-[11px] font-bold text-gray-500 hover:text-gray-800 transition-colors cursor-pointer"
+                                  >
+                                    Clear filter
+                                  </button>
+                                ) : <div />}
+
+                                <button
+                                  type="button"
+                                  onClick={() => setIsDateDropdownOpen(false)}
+                                  className="px-5 py-2 bg-[#3A2E26] hover:bg-[#251D18] text-white text-xs font-bold rounded-xl transition-all shadow-md cursor-pointer ml-auto"
+                                >
+                                  Done
+                                </button>
+                              </div>
+
+                            </div>
+                          </>
+                        )}
+                      </div>
+
                       <button
                         onClick={handleOpenOfflineSaleModal}
                         className="flex items-center gap-1.5 px-4 py-2 bg-[#7A8B6F] hover:bg-[#68785c] text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-200 shadow-sm cursor-pointer"
@@ -2816,9 +3066,13 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                 <div className="flex flex-col gap-6">
                   {/* Title & Filter Bar (Single Line Layout on Desktop) */}
                   <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 border-b border-[#3A2E26]/10 pb-4">
-                    <div className="shrink-0">
-                      <h2 className="text-xl font-bold tracking-tight uppercase text-[#3A2E26] font-sans">Order Management</h2>
-                      <p className="text-xs text-[#3A2E26]/60">Track customer purchases and verify fulfillment details</p>
+                    <div className="shrink-0 flex items-center gap-3">
+                      <div>
+                        <div className="flex items-center gap-2.5">
+                          <h2 className="text-xl font-bold tracking-tight uppercase text-[#3A2E26] font-sans">Order Management</h2>
+                        </div>
+                        <p className="text-xs text-[#3A2E26]/60 mt-0.5">Track customer purchases and verify fulfillment details</p>
+                      </div>
                     </div>
                     {/* Source Filters, Shipment Status, Date Filter, Search Bar, Log Offline Sale */}
                     <div className="flex items-center gap-2.5 w-full xl:w-auto flex-wrap sm:flex-nowrap">
@@ -2884,21 +3138,23 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                     return (
                                       <label
                                         key={st}
-                                        className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-gray-50 cursor-pointer text-xs font-medium text-gray-700 transition-colors"
+                                        className="flex items-center justify-between p-2 rounded-xl hover:bg-gray-50 cursor-pointer text-xs font-medium text-gray-700 transition-colors"
                                       >
-                                        <input
-                                          type="checkbox"
-                                          checked={isChecked}
-                                          onChange={() => {
-                                            if (isChecked) {
-                                              setSelectedShipmentStatuses(prev => prev.filter(s => s !== st));
-                                            } else {
-                                              setSelectedShipmentStatuses(prev => [...prev, st]);
-                                            }
-                                          }}
-                                          className="w-4 h-4 rounded border-gray-300 text-[#3A2E26] focus:ring-[#3A2E26]"
-                                        />
-                                        <span>{st}</span>
+                                        <div className="flex items-center gap-2.5">
+                                          <input
+                                            type="checkbox"
+                                            checked={isChecked}
+                                            onChange={() => {
+                                              if (isChecked) {
+                                                setSelectedShipmentStatuses(prev => prev.filter(s => s !== st));
+                                              } else {
+                                                setSelectedShipmentStatuses(prev => [...prev, st]);
+                                              }
+                                            }}
+                                            className="w-4 h-4 rounded border-gray-300 text-[#3A2E26] focus:ring-[#3A2E26]"
+                                          />
+                                          <span>{st}</span>
+                                        </div>
                                       </label>
                                     );
                                   })}
@@ -3123,6 +3379,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                           className="w-full pl-10 pr-3 py-2 bg-white border border-[#3A2E26]/10 rounded-2xl text-xs focus:outline-none focus:border-[#3A2E26] transition-all font-medium"
                         />
                       </div>
+
                       <button
                         onClick={handleOpenOfflineSaleModal}
                         className="flex items-center gap-1.5 px-3.5 py-2 bg-[#7A8B6F] hover:bg-[#68785c] text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-200 shadow-sm cursor-pointer shrink-0"
@@ -3132,6 +3389,8 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                       </button>
                     </div>
                   </div>
+
+
 
                   {/* Orders Data Table */}
                   <div className="bg-white rounded-3xl border border-[#3A2E26]/10 shadow-sm overflow-hidden">
@@ -3244,14 +3503,28 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                         Status: <span className="text-[#3A2E26] font-semibold">{order.fulfillment.status || getShipmentStatus(order)}</span>
                                       </div>
                                       <div className="flex gap-2 justify-end mt-1 flex-wrap items-center">
-                                        {!order.fulfillment.pickup_scheduled && (
-                                          <button
-                                            onClick={() => handleSchedulePickup(order.orderId)}
-                                            className="px-2 py-1 bg-[#7A8B6F] hover:bg-[#68785c] text-white text-[9px] font-bold rounded-lg uppercase tracking-wider transition-colors cursor-pointer border-none"
-                                          >
-                                            Pickup
-                                          </button>
-                                        )}
+                                        {(() => {
+                                          const shipSt = getShipmentStatus(order);
+                                          const isDelivered = order.status === 'delivered' || order.fulfillment?.status?.toLowerCase() === 'delivered' || shipSt === 'Delivered';
+                                          const isScheduled = order.fulfillment?.pickup_scheduled || ['Ready for pickup', 'In transit', 'RTO - In transit', 'Out for delivery', 'In-Transit'].includes(shipSt);
+                                          
+                                          if (isDelivered) return null;
+                                          if (isScheduled) {
+                                            return (
+                                              <span className="px-3 py-1 bg-[#A4B59B] text-white text-[9px] font-bold rounded-full uppercase tracking-wider inline-flex items-center justify-center shadow-sm select-none pointer-events-none cursor-default">
+                                                SCHEDULED
+                                              </span>
+                                            );
+                                          }
+                                          return (
+                                            <button
+                                              onClick={() => handleSchedulePickup(order.orderId)}
+                                              className="px-2 py-1 bg-[#7A8B6F] hover:bg-[#68785c] text-white text-[9px] font-bold rounded-lg uppercase tracking-wider transition-colors cursor-pointer border-none"
+                                            >
+                                              Pickup
+                                            </button>
+                                          );
+                                        })()}
                                         {(order.fulfillment.label_url || order.fulfillment.awb) && (
                                            <button
                                               onClick={() => {
