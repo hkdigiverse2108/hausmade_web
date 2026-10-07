@@ -9,7 +9,7 @@ const getApiUrl = () => {
   }
   
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    return `${window.location.protocol}//${window.location.hostname}:8005`;
+    return `${window.location.protocol}//${window.location.hostname}:8010`;
   }
   
   return window.location.origin;
@@ -931,6 +931,66 @@ export async function cancelGuestOrder(orderId, emailOrPhone) {
   }
   return response.json();
 }
+
+export async function adminGetManualOrders(token) {
+  const response = await fetch(`${API_URL}/api/admin/manual-orders`, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Failed to fetch manual orders');
+  }
+  return response.json();
+}
+
+export async function adminCreateManualOrder(payload, token) {
+  const response = await fetch(`${API_URL}/api/admin/manual-orders`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(payload)
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Failed to create manual order');
+  }
+  return response.json();
+}
+
+export async function adminUpdateManualOrderStatus(orderId, status, token) {
+  const response = await fetch(`${API_URL}/api/admin/manual-orders/${encodeURIComponent(orderId)}/status`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ status })
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Failed to update manual order status');
+  }
+  return response.json();
+}
+
+export async function adminDeleteManualOrder(orderId, token) {
+  const response = await fetch(`${API_URL}/api/admin/manual-orders/${encodeURIComponent(orderId)}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Failed to delete manual order');
+  }
+  return response.json();
+}
+
 
 
 

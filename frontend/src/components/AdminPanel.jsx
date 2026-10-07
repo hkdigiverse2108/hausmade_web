@@ -19,6 +19,7 @@ import {
   RefreshCw,
   Clock,
   ShieldCheck,
+  Check,
   CheckCircle,
   Truck,
   Plus,
@@ -76,6 +77,10 @@ import {
   cancelDelhiveryShipment,
   deleteAdminOrder,
   adminLogOfflineSale,
+  adminGetManualOrders,
+  adminCreateManualOrder,
+  adminUpdateManualOrderStatus,
+  adminDeleteManualOrder,
   API_URL
 } from '../utils/api';
 import ConfirmModal from './ConfirmModal';
@@ -260,6 +265,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   const [activeTab, setActiveTab] = useState(() => {
     return localStorage.getItem('hausmade_admin_active_tab') || 'overview';
   });
+  const [revenueChartTimeframe, setRevenueChartTimeframe] = useState('7days');
   const [showApiToken, setShowApiToken] = useState(false);
   const [confirmConfig, setConfirmConfig] = useState(null);
   const [stats, setStats] = useState({ total_revenue: 0, order_count: 0, customer_count: 0, average_order_value: 0 });
@@ -453,6 +459,30 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [customDuration, setCustomDuration] = useState('');
   const [customFreq, setCustomFreq] = useState('');
+
+  // Manual Orders state
+  const [manualOrders, setManualOrders] = useState([]);
+  const [isManualOrderModalOpen, setIsManualOrderModalOpen] = useState(false);
+  const [viewingManualOrder, setViewingManualOrder] = useState(null);
+  const [manualOrderFilter, setManualOrderFilter] = useState('all');
+  const [manualOrderSearch, setManualOrderSearch] = useState('');
+  const [openStatusMenuId, setOpenStatusMenuId] = useState(null);
+  const [manualOrderForm, setManualOrderForm] = useState({
+    customerName: '',
+    customerPhone: '',
+    customerEmail: '',
+    numberOfSoaps: 1,
+    pricePerSoap: 299,
+    totalPrice: 299,
+    paymentMethod: 'Cash (Cash on Delivery / COD)',
+    saleDateTime: new Date().toISOString().slice(0, 16),
+    address: '',
+    city: '',
+    state: '',
+    pincode: '',
+    notes: '',
+    status: 'Pending'
+  });
   const [previewFullscreen, setPreviewFullscreen] = useState(false);
 
   useEffect(() => {
@@ -1049,12 +1079,118 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     }
   };
 
+  const handleSaveManualOrder = async (e) => {
+    e.preventDefault();
+    if (!manualOrderForm.customerName || !manualOrderForm.customerPhone) {
+      showNotification('Please fill in customer name and phone number.', 'error');
+      return;
+    }
+    setSaving(true);
+    try {
+      const payload = {
+        customerName: manualOrderForm.customerName,
+        customerPhone: manualOrderForm.customerPhone,
+        customerEmail: manualOrderForm.customerEmail || null,
+        numberOfSoaps: parseInt(manualOrderForm.numberOfSoaps) || 1,
+        pricePerSoap: parseFloat(manualOrderForm.pricePerSoap) || 0,
+        totalPrice: parseFloat(manualOrderForm.totalPrice) || 0,
+        paymentMethod: manualOrderForm.paymentMethod || 'Cash (Cash on Delivery / COD)',
+        saleDateTime: manualOrderForm.saleDateTime ? new Date(manualOrderForm.saleDateTime).toISOString() : new Date().toISOString(),
+        address: manualOrderForm.address || null,
+        city: manualOrderForm.city || null,
+        state: manualOrderForm.state || null,
+        pincode: manualOrderForm.pincode || null,
+        notes: manualOrderForm.notes || null,
+        status: manualOrderForm.status || 'Pending'
+      };
+      await adminCreateManualOrder(payload, token);
+      showNotification('Manual order added successfully!', 'success');
+      setIsManualOrderModalOpen(false);
+      setManualOrderForm({
+        customerName: '',
+        customerPhone: '',
+        customerEmail: '',
+        numberOfSoaps: 1,
+        pricePerSoap: 299,
+        totalPrice: 299,
+        paymentMethod: 'Cash (Cash on Delivery / COD)',
+        saleDateTime: new Date().toISOString().slice(0, 16),
+        address: '',
+        city: '',
+        state: '',
+        pincode: '',
+        notes: '',
+        status: 'Pending'
+      });
+      fetchAdminData(true);
+    } catch (err) {
+      showNotification(err.message || 'Failed to create manual order', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUpdateManualOrderStatus = async (orderId, newStatus) => {
+    let previousStatus = null;
+    const matchId = (o) => o && (o.orderId === orderId || o._id === orderId || String(o.orderId) === String(orderId) || String(o._id) === String(orderId));
+
+    // Instant optimistic UI update
+    setManualOrders(prev => prev.map(o => {
+      if (matchId(o)) {
+        previousStatus = o.status || 'Pending';
+        return { ...o, status: newStatus };
+      }
+      return o;
+    }));
+
+    if (viewingManualOrder && matchId(viewingManualOrder)) {
+      setViewingManualOrder(prev => prev ? { ...prev, status: newStatus } : null);
+    }
+
+    try {
+      await adminUpdateManualOrderStatus(orderId, newStatus, token);
+      showNotification(`Order status updated to ${newStatus}`, 'success');
+    } catch (err) {
+      // Revert optimistic state update on failure
+      if (previousStatus) {
+        setManualOrders(prev => prev.map(o => {
+          if (matchId(o)) {
+            return { ...o, status: previousStatus };
+          }
+          return o;
+        }));
+        if (viewingManualOrder && matchId(viewingManualOrder)) {
+          setViewingManualOrder(prev => prev ? { ...prev, status: previousStatus } : null);
+        }
+      }
+      showNotification(err.message || 'Failed to update order status', 'error');
+    }
+  };
+
+  const handleDeleteManualOrder = async (orderId) => {
+    setConfirmConfig({
+      title: 'Delete Manual Order',
+      message: 'Are you sure you want to permanently delete this manual order record?',
+      type: 'danger',
+      onConfirm: async () => {
+        setConfirmConfig(null);
+        try {
+          await adminDeleteManualOrder(orderId, token);
+          showNotification('Manual order record deleted.', 'success');
+          setManualOrders(prev => prev.filter(o => o.orderId !== orderId && o._id !== orderId));
+        } catch (err) {
+          showNotification(err.message || 'Failed to delete manual order', 'error');
+        }
+      }
+    });
+  };
+
   const fetchAdminData = async (silent = false) => {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     
     try {
-      const [statsData, ordersData, usersData, productsData, couponsData, reviewsData, recentUsersData, subscriptionsData, targetsDataRes, activeCartsData] = await Promise.all([
+      const [statsData, ordersData, usersData, productsData, couponsData, reviewsData, recentUsersData, subscriptionsData, targetsDataRes, activeCartsData, manualOrdersData] = await Promise.all([
         getAdminStats(token),
         getAdminOrders(token),
         getAdminUsers(token),
@@ -1064,7 +1200,8 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
         getAdminRecentUsers(token),
         getAdminSubscriptions(token),
         adminGetTargets(token),
-        adminGetActiveCarts(token)
+        adminGetActiveCarts(token),
+        adminGetManualOrders(token).catch(() => [])
       ]);
       
       setStats(statsData);
@@ -1077,6 +1214,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       setSubscriptions(subscriptionsData);
       setTargetsData(targetsDataRes);
       setActiveCarts(activeCartsData || []);
+      setManualOrders(manualOrdersData || []);
 
       // Trigger a reload of the live storefront preview iframe so it pulls the latest database changes
       const iframe = document.getElementById('preview-storefront-frame');
@@ -2036,6 +2174,46 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     }
   };
 
+  const formatManualOrderId = (idStr) => {
+    if (!idStr) return 'OFF-000000';
+    const str = String(idStr).trim();
+    if (str.startsWith('OFF-')) {
+      const suffix = str.replace('OFF-', '');
+      if (/^\d{6}$/.test(suffix)) return str;
+      const digits = suffix.replace(/\D/g, '');
+      if (digits.length >= 6) return `OFF-${digits.slice(0, 6)}`;
+      return `OFF-${digits.padEnd(6, '0')}`;
+    }
+    const cleaned = str.replace(/^MANUAL-?/i, '');
+    const digitsOnly = cleaned.replace(/\D/g, '');
+    if (digitsOnly.length >= 6) {
+      return `OFF-${digitsOnly.slice(0, 6)}`;
+    }
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = (hash * 31 + str.charCodeAt(i)) % 1000000;
+    }
+    return `OFF-${String(hash).padStart(6, '0')}`;
+  };
+
+  const getLocalDatetimeString = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
+  const formatPaymentMethodShort = (methodStr) => {
+    if (!methodStr) return 'COD';
+    const str = String(methodStr).toLowerCase();
+    if (str.includes('cod') || str.includes('cash')) return 'COD';
+    if (str.includes('upi') || str.includes('qr')) return 'UPI';
+    return String(methodStr).toUpperCase();
+  };
+
   const renderStorefrontPreview = (sectionHash, isSettings = false) => {
     if (previewFullscreen) return null;
     return (
@@ -2123,6 +2301,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     const filteredOrdersList = orders.filter(order => {
       if (statsFilter === 'online' && order.isOffline) return false;
       if (statsFilter === 'offline' && !order.isOffline) return false;
+      if (statsFilter === 'manual') return false;
 
       // Filter by Date (Range or Multi-Select)
       if (dateFilterMode === 'range' && (orderDateRange.startDate || orderDateRange.endDate)) {
@@ -2138,10 +2317,35 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       return true;
     });
 
-    const total_revenue = filteredOrdersList.reduce((sum, o) => sum + (parseFloat(o.grandTotal) || 0), 0);
-    const order_count = filteredOrdersList.length;
-    const uniqueCustomers = new Set(filteredOrdersList.map(o => o.shippingAddress?.phone || o.shippingAddress?.email));
-    const customer_count = (statsFilter === 'all' && !isDateFilterActive) ? stats.customer_count : uniqueCustomers.size;
+    // Filter Delivered Manual Orders (strictly status === 'Delivered' and matching source filter)
+    const filteredDeliveredManualOrders = manualOrders.filter(mo => {
+      if (mo.status !== 'Delivered') return false;
+      if (statsFilter === 'online' || statsFilter === 'offline') return false;
+
+      const moDateRaw = mo.saleDateTime || mo.created_at;
+      if (dateFilterMode === 'range' && (orderDateRange.startDate || orderDateRange.endDate)) {
+        if (!moDateRaw) return false;
+        const moDateStr = getYYYYMMDD(moDateRaw);
+        if (orderDateRange.startDate && moDateStr < orderDateRange.startDate) return false;
+        if (orderDateRange.endDate && moDateStr > orderDateRange.endDate) return false;
+      } else if (dateFilterMode === 'multi' && selectedOrderDates.length > 0) {
+        if (!moDateRaw) return false;
+        const moDateStr = getYYYYMMDD(moDateRaw);
+        if (!selectedOrderDates.includes(moDateStr)) return false;
+      }
+      return true;
+    });
+
+    const main_revenue = filteredOrdersList.reduce((sum, o) => sum + (parseFloat(o.grandTotal) || 0), 0);
+    const manual_revenue = filteredDeliveredManualOrders.reduce((sum, mo) => sum + (parseFloat(mo.totalPrice) || 0), 0);
+    const total_revenue = main_revenue + manual_revenue;
+
+    const order_count = filteredOrdersList.length + filteredDeliveredManualOrders.length;
+    const uniqueCustomers = new Set([
+      ...filteredOrdersList.map(o => o.shippingAddress?.phone || o.shippingAddress?.email).filter(Boolean),
+      ...filteredDeliveredManualOrders.map(mo => mo.customerPhone || mo.customerEmail).filter(Boolean)
+    ]);
+    const customer_count = uniqueCustomers.size || order_count;
     const average_order_value = order_count > 0 ? total_revenue / order_count : 0;
 
     return {
@@ -2152,16 +2356,35 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     };
   };
 
-  const getRevenueChartData = () => {
+  const getRevenueChartData = (tf = revenueChartTimeframe) => {
     const data = [];
     const now = new Date();
-    for (let i = 6; i >= 0; i--) {
+    let daysCount = 7;
+
+    if (tf === '14days') daysCount = 14;
+    else if (tf === '30days') daysCount = 30;
+    else if (tf === 'thisMonth') daysCount = Math.max(now.getDate(), 1);
+    else if (tf === 'filter' && orderDateRange.startDate && orderDateRange.endDate) {
+      const start = new Date(orderDateRange.startDate);
+      const end = new Date(orderDateRange.endDate);
+      const diffTime = Math.abs(end - start);
+      daysCount = Math.min(Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1, 60);
+    }
+
+    for (let i = daysCount - 1; i >= 0; i--) {
       const d = new Date();
-      d.setDate(now.getDate() - i);
+      if (tf === 'filter' && orderDateRange.endDate) {
+        const endDate = new Date(orderDateRange.endDate);
+        d.setDate(endDate.getDate() - i);
+      } else {
+        d.setDate(now.getDate() - i);
+      }
+
       const dateStr = d.toISOString().split('T')[0];
       const label = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', timeZone: 'Asia/Kolkata' });
-      
-      const dayTotal = orders.reduce((sum, order) => {
+
+      let dayOrderCount = 0;
+      let dayTotal = orders.reduce((sum, order) => {
         if (!order.created_at) return sum;
         const orderDate = order.created_at.split(' ')[0].split('T')[0];
         
@@ -2171,11 +2394,27 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
           (statsFilter === 'offline' && order.isOffline);
 
         if (orderDate === dateStr && matchesFilter) {
+          dayOrderCount++;
           return sum + (parseFloat(order.grandTotal) || 0);
         }
         return sum;
       }, 0);
-      data.push({ label, value: dayTotal });
+
+      // Add Delivered Manual Orders for this date if statsFilter is 'all' or 'offline'
+      if (statsFilter === 'all' || statsFilter === 'offline') {
+        manualOrders.forEach(mo => {
+          if (mo.status !== 'Delivered') return;
+          const moDateRaw = mo.saleDateTime || mo.created_at;
+          if (!moDateRaw) return;
+          const moDate = moDateRaw.split(' ')[0].split('T')[0];
+          if (moDate === dateStr) {
+            dayOrderCount++;
+            dayTotal += (parseFloat(mo.totalPrice) || 0);
+          }
+        });
+      }
+
+      data.push({ dateStr, label, value: dayTotal, orderCount: dayOrderCount });
     }
     return data;
   };
@@ -2194,6 +2433,15 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
         counts[title] = (counts[title] || 0) + (parseInt(item.quantity) || 0);
       });
     });
+
+    if (statsFilter === 'all' || statsFilter === 'offline') {
+      manualOrders.forEach(mo => {
+        if (mo.status !== 'Delivered') return;
+        const qty = parseInt(mo.numberOfSoaps) || 1;
+        counts['Manual Soap Orders'] = (counts['Manual Soap Orders'] || 0) + qty;
+      });
+    }
+
     return Object.entries(counts).map(([label, value]) => ({ label, value }));
   };
 
@@ -2305,6 +2553,21 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
           >
             <ShoppingBag className="w-4 h-4" />
             {!sidebarCollapsed && <span>Orders</span>}
+          </button>
+
+          <button
+            onClick={() => setActiveTab('manual_orders')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+              sidebarCollapsed ? 'justify-center px-0' : ''
+            } ${
+              activeTab === 'manual_orders' 
+                ? 'bg-[#3A2E26] text-white shadow-lg shadow-[#3A2E26]/10 translate-x-1' 
+                : 'hover:bg-[#3A2E26]/5 text-[#3A2E26]/75 hover:text-[#3A2E26]'
+            }`}
+            title="Manual Orders"
+          >
+            <FileText className="w-4 h-4 text-[#C97C5D]" />
+            {!sidebarCollapsed && <span>Manual Orders</span>}
           </button>
 
           <button
@@ -2528,17 +2791,17 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                     <div className="flex items-center gap-3 w-full sm:w-auto flex-wrap">
                       {/* Source Filters */}
                       <div className="flex bg-[#3A2E26]/5 p-1 rounded-xl border border-[#3A2E26]/10">
-                        {['all', 'online', 'offline'].map((source) => (
+                        {['all', 'online', 'offline', 'manual'].map((source) => (
                           <button
                             key={source}
                             onClick={() => setStatsFilter(source)}
-                            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                            className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
                               statsFilter === source
-                                ? 'bg-[#3A2E26] text-white shadow-sm'
+                                ? 'bg-[#3A2E26] text-white shadow-xs'
                                 : 'text-[#3A2E26]/60 hover:text-[#3A2E26]'
                             }`}
                           >
-                            {source}
+                            {source === 'manual' ? 'manual order' : source}
                           </button>
                         ))}
                       </div>
@@ -2582,25 +2845,6 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                             />
                             <div className="absolute left-0 sm:right-0 sm:left-auto mt-2 w-80 bg-white rounded-3xl shadow-2xl border border-gray-100 z-50 p-4 flex flex-col gap-3 font-sans animate-in fade-in zoom-in-95 duration-150">
                               
-                              {/* Quick Presets */}
-                              <div className="flex flex-wrap gap-1.5 pb-2 border-b border-gray-100">
-                                {[
-                                  { label: 'Today', key: 'today' },
-                                  { label: 'Yesterday', key: 'yesterday' },
-                                  { label: '7 Days', key: '7days' },
-                                  { label: '30 Days', key: '30days' },
-                                  { label: 'This Month', key: 'thisMonth' }
-                                ].map((preset) => (
-                                  <button
-                                    key={preset.key}
-                                    type="button"
-                                    onClick={() => applyPreset(preset.key)}
-                                    className="px-2.5 py-1 bg-gray-100 hover:bg-[#7A8B6F] hover:text-white text-[11px] font-bold rounded-lg text-gray-700 transition-colors cursor-pointer"
-                                  >
-                                    {preset.label}
-                                  </button>
-                                ))}
-                              </div>
 
                               {/* Selected Summary Badge */}
                               <div className="text-[11px] text-[#3A2E26] font-medium text-center bg-[#7A8B6F]/5 py-2 px-3 rounded-xl border border-[#7A8B6F]/15">
@@ -2807,188 +3051,392 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
 
                   {/* SVG Charts Section */}
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Revenue Growth Line Chart */}
-                    <div className="bg-white p-6 rounded-3xl border border-[#3A2E26]/10 shadow-sm">
-                      <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70 border-b border-[#3A2E26]/10 pb-3 mb-4">
-                        7-Day Revenue Trend
-                      </h3>
-                      <div className="flex justify-center items-center py-4 bg-[#FDFBF7] rounded-2xl border border-[#3A2E26]/5">
+                    {/* Revenue Growth Line Chart - Enhanced 2 Columns Layout */}
+                    <div className="lg:col-span-2 bg-white p-6 sm:p-7 rounded-3xl border border-[#3A2E26]/10 shadow-sm flex flex-col justify-between">
+                      <div>
+                        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#3A2E26]/10 pb-4 mb-5">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-xl bg-[#7A8B6F]/10 text-[#7A8B6F] flex items-center justify-center">
+                              <TrendingUp className="w-4.5 h-4.5" />
+                            </div>
+                            <div>
+                              <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]">
+                                {revenueChartTimeframe === '7days' ? '7-Day Revenue Trend' :
+                                 revenueChartTimeframe === '14days' ? '14-Day Revenue Trend' :
+                                 revenueChartTimeframe === '30days' ? '30-Day Revenue Trend' :
+                                 "This Month's Revenue Trend"}
+                              </h3>
+                              <p className="text-[10px] text-[#3A2E26]/50 font-medium">Daily income distribution for selected period</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="hidden sm:inline-block px-2.5 py-1 bg-[#7A8B6F]/10 text-[#7A8B6F] rounded-xl text-[10px] font-bold uppercase tracking-wider border border-[#7A8B6F]/20">
+                              {statsFilter === 'all' ? 'All Channels' : statsFilter === 'online' ? 'Online Only' : statsFilter === 'offline' ? 'Offline Only' : 'Manual Orders'}
+                            </span>
+                          </div>
+                        </div>
+
                         {(() => {
-                          const revData = getRevenueChartData();
-                          const maxVal = Math.max(...revData.map(d => d.value), 500);
-                          const width = 480;
-                          const height = 180;
-                          const padding = 30;
+                          const revData = getRevenueChartData(revenueChartTimeframe);
+                          const totalRevenue = revData.reduce((sum, d) => sum + d.value, 0);
+                          const avgRevenue = totalRevenue / (revData.length || 1);
+                          const peakData = revData.reduce((max, d) => (d.value > max.value ? d : max), revData[0] || { label: '', value: 0 });
+
+                          const rawMax = Math.max(...revData.map(d => d.value), 100);
+                          let niceMax = 500;
+                          if (rawMax > 100000) niceMax = Math.ceil(rawMax / 40000) * 40000;
+                          else if (rawMax > 20000) niceMax = Math.ceil(rawMax / 10000) * 10000;
+                          else if (rawMax > 5000) niceMax = Math.ceil(rawMax / 2000) * 2000;
+                          else if (rawMax > 1000) niceMax = Math.ceil(rawMax / 1000) * 1000;
+                          else niceMax = Math.max(Math.ceil(rawMax / 200) * 200, 200);
+
+                          const width = 680;
+                          const height = 250;
+                          const paddingLeft = 75;
+                          const paddingRight = 40;
+                          const paddingTop = 55;
+                          const paddingBottom = 45;
+
+                          const chartWidth = width - paddingLeft - paddingRight;
+                          const chartHeight = height - paddingTop - paddingBottom;
+
                           const points = revData.map((d, i) => {
-                            const x = padding + (i * (width - padding * 2) / 6);
-                            const y = height - padding - (d.value / maxVal) * (height - padding * 2);
-                            return `${x},${y}`;
-                          }).join(' ');
+                            const x = paddingLeft + (i * chartWidth / (revData.length - 1 || 1));
+                            const y = (height - paddingBottom) - (d.value / niceMax) * chartHeight;
+                            return { x, y, value: d.value, label: d.label, dateStr: d.dateStr, orderCount: d.orderCount };
+                          });
+
+                          // Monotone Cubic Spline (Fritsch-Carlson algorithm - zero overshoot dips)
+                          const getSmoothMonotonePath = (pts) => {
+                            if (!pts || pts.length === 0) return '';
+                            if (pts.length === 1) return `M ${pts[0].x},${pts[0].y}`;
+                            if (pts.length === 2) return `M ${pts[0].x},${pts[0].y} L ${pts[1].x},${pts[1].y}`;
+
+                            const n = pts.length;
+                            const slopes = new Array(n);
+
+                            for (let i = 0; i < n; i++) {
+                              if (i === 0) {
+                                slopes[0] = (pts[1].y - pts[0].y) / (pts[1].x - pts[0].x);
+                              } else if (i === n - 1) {
+                                slopes[n - 1] = (pts[n - 1].y - pts[n - 2].y) / (pts[n - 1].x - pts[n - 2].x);
+                              } else {
+                                const d1 = (pts[i].y - pts[i - 1].y) / (pts[i].x - pts[i - 1].x);
+                                const d2 = (pts[i + 1].y - pts[i].y) / (pts[i + 1].x - pts[i].x);
+                                if ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) {
+                                  slopes[i] = 0;
+                                } else {
+                                  slopes[i] = (d1 + d2) / 2;
+                                }
+                              }
+                            }
+
+                            let path = `M ${pts[0].x},${pts[0].y}`;
+                            for (let i = 0; i < n - 1; i++) {
+                              const dx = pts[i + 1].x - pts[i].x;
+                              const tension = 0.32;
+                              const cp1x = pts[i].x + dx * tension;
+                              const cp1y = pts[i].y + slopes[i] * (dx * tension);
+                              const cp2x = pts[i + 1].x - dx * tension;
+                              const cp2y = pts[i + 1].y - slopes[i + 1] * (dx * tension);
+                              path += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${pts[i + 1].x},${pts[i + 1].y}`;
+                            }
+                            return path;
+                          };
+
+                          const linePath = getSmoothMonotonePath(points);
+                          const areaPath = points.length > 0 
+                            ? `${linePath} L ${points[points.length - 1].x},${height - paddingBottom} L ${points[0].x},${height - paddingBottom} Z`
+                            : '';
+
+                          const yTicks = [
+                            { val: niceMax, y: paddingTop },
+                            { val: niceMax * 0.75, y: paddingTop + chartHeight * 0.25 },
+                            { val: niceMax * 0.50, y: paddingTop + chartHeight * 0.50 },
+                            { val: niceMax * 0.25, y: paddingTop + chartHeight * 0.75 },
+                            { val: 0, y: height - paddingBottom }
+                          ];
+
+                          const formatYLabel = (val) => {
+                            if (val === 0) return '₹0';
+                            if (val >= 100000) return `₹${(val / 1000).toFixed(0)}k`;
+                            if (val >= 1000) return `₹${(val / 1000).toFixed(val % 1000 === 0 ? 0 : 1)}k`;
+                            return `₹${Math.round(val)}`;
+                          };
+
+                          // Determine X-axis label skip step for large date ranges
+                          const labelStep = points.length > 20 ? 4 : points.length > 10 ? 2 : 1;
 
                           return (
-                            <svg className="w-full max-w-[480px]" viewBox={`0 0 ${width} ${height}`}>
-                              <defs>
-                                <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="0%" stopColor="#7A8B6F" stopOpacity="0.4" />
-                                  <stop offset="100%" stopColor="#7A8B6F" stopOpacity="0.0" />
-                                </linearGradient>
-                              </defs>
-                              {/* Grid lines */}
-                              <line x1={padding} y1={padding} x2={width - padding} y2={padding} stroke="#3A2E26" strokeOpacity="0.05" strokeDasharray="3,3" />
-                              <line x1={padding} y1={height / 2} x2={width - padding} y2={height / 2} stroke="#3A2E26" strokeOpacity="0.05" strokeDasharray="3,3" />
-                              <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="#3A2E26" strokeOpacity="0.1" />
+                            <div className="flex flex-col gap-5">
+                              {/* 3 Metric Pills */}
+                              <div className="grid grid-cols-3 gap-3 p-3.5 bg-[#FDFBF7] rounded-2xl border border-[#3A2E26]/5">
+                                <div className="border-r border-[#3A2E26]/10 pr-2">
+                                  <span className="text-[9px] font-bold text-[#3A2E26]/50 uppercase tracking-widest block">Period Total</span>
+                                  <span className="text-sm sm:text-base font-extrabold text-[#3A2E26] mt-0.5 block">{formatCurrency(totalRevenue)}</span>
+                                </div>
+                                <div className="border-r border-[#3A2E26]/10 pr-2 px-1">
+                                  <span className="text-[9px] font-bold text-[#3A2E26]/50 uppercase tracking-widest block">Daily Avg</span>
+                                  <span className="text-sm sm:text-base font-extrabold text-[#7A8B6F] mt-0.5 block">{formatCurrency(avgRevenue)}</span>
+                                </div>
+                                <div className="pl-1">
+                                  <span className="text-[9px] font-bold text-[#3A2E26]/50 uppercase tracking-widest block">Peak Day ({peakData.label})</span>
+                                  <span className="text-sm sm:text-base font-extrabold text-[#C97C5D] mt-0.5 block">{formatCurrency(peakData.value)}</span>
+                                </div>
+                              </div>
 
-                              {/* Fill area */}
-                              {points && (
-                                <polygon
-                                  points={`${padding},${height - padding} ${points} ${width - padding},${height - padding}`}
-                                  fill="url(#chartGrad)"
-                                />
-                              )}
-                              {/* Spline path line */}
-                              {points && (
-                                <polyline
-                                  fill="none"
-                                  stroke="#7A8B6F"
-                                  strokeWidth="3.5"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  points={points}
-                                />
-                              )}
-                              {/* Data Nodes */}
-                              {revData.map((d, i) => {
-                                const x = padding + (i * (width - padding * 2) / 6);
-                                const y = height - padding - (d.value / maxVal) * (height - padding * 2);
-                                return (
-                                  <g key={i} className="group/node">
-                                    <circle
-                                      cx={x}
-                                      cy={y}
-                                      r="4.5"
-                                      fill="#FDFBF7"
-                                      stroke="#7A8B6F"
-                                      strokeWidth="2.5"
+                              {/* SVG Chart Wrapper */}
+                              <div className="relative p-3 bg-[#FDFBF7] rounded-2xl border border-[#3A2E26]/5">
+                                <svg className="w-full h-auto min-h-[210px]" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet">
+                                  <defs>
+                                    <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                                      <stop offset="0%" stopColor="#7A8B6F" stopOpacity="0.4" />
+                                      <stop offset="70%" stopColor="#7A8B6F" stopOpacity="0.08" />
+                                      <stop offset="100%" stopColor="#7A8B6F" stopOpacity="0.0" />
+                                    </linearGradient>
+                                  </defs>
+
+                                  {/* Background Vertical Hybrid Columns */}
+                                  {points.map((pt, i) => {
+                                    const colW = Math.min(chartWidth / (points.length * 1.6), 34);
+                                    return (
+                                      <rect
+                                        key={`bar-${i}`}
+                                        x={pt.x - colW / 2}
+                                        y={pt.y}
+                                        width={colW}
+                                        height={height - paddingBottom - pt.y}
+                                        rx="6"
+                                        fill="#7A8B6F"
+                                        fillOpacity="0.06"
+                                        className="transition-all duration-200 hover:fill-opacity-20"
+                                      />
+                                    );
+                                  })}
+
+                                  {/* Grid Lines & Y-Axis Scale */}
+                                  {yTicks.map((tick, i) => (
+                                    <g key={i}>
+                                      <line
+                                        x1={paddingLeft}
+                                        y1={tick.y}
+                                        x2={width - paddingRight}
+                                        y2={tick.y}
+                                        stroke="#3A2E26"
+                                        strokeOpacity={i === yTicks.length - 1 ? "0.12" : "0.06"}
+                                        strokeDasharray={i === yTicks.length - 1 ? "none" : "4,4"}
+                                      />
+                                      <text
+                                        x={paddingLeft - 12}
+                                        y={tick.y + 4}
+                                        textAnchor="end"
+                                        className="text-[10px] font-bold fill-[#3A2E26]/50 font-sans select-none"
+                                      >
+                                        {formatYLabel(tick.val)}
+                                      </text>
+                                    </g>
+                                  ))}
+
+                                  {/* Shaded Area under spline */}
+                                  {areaPath && (
+                                    <path
+                                      d={areaPath}
+                                      fill="url(#revenueGradient)"
                                     />
-                                    {/* Tooltip on Hover */}
-                                    <text
-                                      x={x}
-                                      y={y - 10}
-                                      textAnchor="middle"
-                                      className="text-[9px] font-bold fill-[#3A2E26] opacity-0 group-hover/node:opacity-100 transition-opacity bg-white"
-                                    >
-                                      ₹{Math.round(d.value)}
-                                    </text>
-                                    {/* Axis Labels */}
-                                    <text
-                                      x={x}
-                                      y={height - 10}
-                                      textAnchor="middle"
-                                      className="text-[8px] font-bold fill-[#3A2E26]/50 uppercase tracking-wider"
-                                    >
-                                      {d.label}
-                                    </text>
-                                  </g>
-                                );
-                              })}
-                            </svg>
+                                  )}
+
+                                  {/* Spline Path */}
+                                  {linePath && (
+                                    <path
+                                      d={linePath}
+                                      fill="none"
+                                      stroke="#7A8B6F"
+                                      strokeWidth="3.5"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                    />
+                                  )}
+
+                                  {/* Points, Labels & Values */}
+                                  {points.map((pt, i) => {
+                                    const showXLabel = i % labelStep === 0 || i === points.length - 1;
+
+                                    return (
+                                      <g key={i} className="group/node">
+                                        {/* Full height column invisible hover hitbox for easy mouse interaction */}
+                                        <rect
+                                          x={pt.x - (chartWidth / (points.length * 2))}
+                                          y={paddingTop - 10}
+                                          width={chartWidth / points.length}
+                                          height={chartHeight + 20}
+                                          fill="transparent"
+                                          className="cursor-pointer"
+                                        />
+
+                                        {/* Vertical guideline on hover */}
+                                        <line
+                                          x1={pt.x}
+                                          y1={paddingTop}
+                                          x2={pt.x}
+                                          y2={height - paddingBottom}
+                                          stroke="#7A8B6F"
+                                          strokeWidth="1.5"
+                                          strokeDasharray="3,3"
+                                          className="opacity-0 group-hover/node:opacity-60 transition-opacity pointer-events-none"
+                                        />
+
+                                        {/* Simple Clean Node Dot */}
+                                        <circle
+                                          cx={pt.x}
+                                          cy={pt.y}
+                                          r="4.5"
+                                          fill="#7A8B6F"
+                                          stroke="#ffffff"
+                                          strokeWidth="2"
+                                          className="transition-all duration-200 group-hover/node:r-6.5 group-hover/node:fill-[#3A2E26] pointer-events-none"
+                                        />
+
+                                        {/* X-Axis Date Label */}
+                                        {showXLabel && (
+                                          <text
+                                            x={pt.x}
+                                            y={height - 15}
+                                            textAnchor="middle"
+                                            className="text-[9.5px] font-bold fill-[#3A2E26]/60 uppercase tracking-wider font-sans group-hover/node:fill-[#3A2E26] group-hover/node:font-extrabold transition-colors select-none"
+                                          >
+                                            {pt.label}
+                                          </text>
+                                        )}
+
+                                        {/* Value Badge - ONLY SHOWN ON HOVER */}
+                                        <g 
+                                          transform={`translate(${pt.x}, ${Math.max(pt.y - 18, paddingTop - 12)})`} 
+                                          className="opacity-0 group-hover/node:opacity-100 transition-all duration-200 pointer-events-none"
+                                        >
+                                          <rect
+                                            x="-34"
+                                            y="-14"
+                                            width="68"
+                                            height="20"
+                                            rx="10"
+                                            className="fill-[#3A2E26] stroke-[#3A2E26] shadow-md"
+                                          />
+                                          <text
+                                            x="0"
+                                            y="0"
+                                            textAnchor="middle"
+                                            className="text-[10px] font-extrabold font-sans fill-white select-none"
+                                          >
+                                            {formatCurrency(pt.value)}
+                                          </text>
+                                        </g>
+                                      </g>
+                                    );
+                                  })}
+                                </svg>
+                              </div>
+                            </div>
                           );
                         })()}
                       </div>
                     </div>
 
-                    {/* Sales Channels Analysis (Online vs Offline) */}
-                    <div className="bg-white p-6 rounded-3xl border border-[#3A2E26]/10 shadow-sm flex flex-col justify-between">
-                      <div>
-                        <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70 border-b border-[#3A2E26]/10 pb-3 mb-4">
-                          Sales Channels (Online vs Offline)
-                        </h3>
-                        <div className="flex flex-col gap-4 py-2">
-                          {(() => {
-                            const onlineOrders = orders.filter(o => !o.isOffline);
-                            const offlineOrders = orders.filter(o => !!o.isOffline);
+                    {/* Right Column: Channels & Distribution Stacked */}
+                    <div className="lg:col-span-1 flex flex-col gap-6">
+                      {/* Sales Channels Analysis (Online vs Offline) */}
+                      <div className="bg-white p-6 rounded-3xl border border-[#3A2E26]/10 shadow-sm flex flex-col justify-between">
+                        <div>
+                          <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70 border-b border-[#3A2E26]/10 pb-3 mb-4">
+                            Sales Channels (Online vs Offline)
+                          </h3>
+                          <div className="flex flex-col gap-4 py-2">
+                            {(() => {
+                              const onlineOrders = orders.filter(o => !o.isOffline);
+                              const offlineOrders = orders.filter(o => !!o.isOffline);
 
-                            const onlineRev = onlineOrders.reduce((sum, o) => sum + (parseFloat(o.grandTotal) || 0), 0);
-                            const offlineRev = offlineOrders.reduce((sum, o) => sum + (parseFloat(o.grandTotal) || 0), 0);
-                            const totalRev = onlineRev + offlineRev || 1;
+                              const onlineRev = onlineOrders.reduce((sum, o) => sum + (parseFloat(o.grandTotal) || 0), 0);
+                              const offlineRev = offlineOrders.reduce((sum, o) => sum + (parseFloat(o.grandTotal) || 0), 0);
+                              const totalRev = onlineRev + offlineRev || 1;
 
-                            const onlinePct = Math.round((onlineRev / totalRev) * 100);
-                            const offlinePct = Math.round((offlineRev / totalRev) * 100);
+                              const onlinePct = Math.round((onlineRev / totalRev) * 100);
+                              const offlinePct = Math.round((offlineRev / totalRev) * 100);
 
-                            return (
-                              <>
-                                <div className="space-y-1 px-1">
-                                  <div className="flex justify-between items-center text-xs font-bold">
-                                    <span className="text-[#3A2E26]/80 flex items-center gap-1.5">
-                                      <span className="w-2 h-2 rounded-full bg-[#7A8B6F] inline-block"></span>
-                                      Online Store
-                                    </span>
-                                    <span className="text-[#3A2E26]">{formatCurrency(onlineRev)} ({onlinePct}%)</span>
+                              return (
+                                <>
+                                  <div className="space-y-1 px-1">
+                                    <div className="flex justify-between items-center text-xs font-bold">
+                                      <span className="text-[#3A2E26]/80 flex items-center gap-1.5">
+                                        <span className="w-2 h-2 rounded-full bg-[#7A8B6F] inline-block"></span>
+                                        Online Store
+                                      </span>
+                                      <span className="text-[#3A2E26]">{formatCurrency(onlineRev)} ({onlinePct}%)</span>
+                                    </div>
+                                    <div className="w-full bg-[#3A2E26]/5 h-2 rounded-full overflow-hidden">
+                                      <div className="h-full bg-[#7A8B6F] rounded-full transition-all duration-500" style={{ width: `${onlinePct}%` }}></div>
+                                    </div>
                                   </div>
-                                  <div className="w-full bg-[#3A2E26]/5 h-2 rounded-full overflow-hidden">
-                                    <div className="h-full bg-[#7A8B6F] rounded-full transition-all duration-500" style={{ width: `${onlinePct}%` }}></div>
-                                  </div>
-                                </div>
 
-                                <div className="space-y-1 px-1">
-                                  <div className="flex justify-between items-center text-xs font-bold">
-                                    <span className="text-[#3A2E26]/80 flex items-center gap-1.5">
-                                      <span className="w-2 h-2 rounded-full bg-[#C97C5D] inline-block"></span>
-                                      Offline Orders
-                                    </span>
-                                    <span className="text-[#3A2E26]">{formatCurrency(offlineRev)} ({offlinePct}%)</span>
+                                  <div className="space-y-1 px-1">
+                                    <div className="flex justify-between items-center text-xs font-bold">
+                                      <span className="text-[#3A2E26]/80 flex items-center gap-1.5">
+                                        <span className="w-2 h-2 rounded-full bg-[#C97C5D] inline-block"></span>
+                                        Offline Orders
+                                      </span>
+                                      <span className="text-[#3A2E26]">{formatCurrency(offlineRev)} ({offlinePct}%)</span>
+                                    </div>
+                                    <div className="w-full bg-[#3A2E26]/5 h-2 rounded-full overflow-hidden">
+                                      <div className="h-full bg-[#C97C5D] rounded-full transition-all duration-500" style={{ width: `${offlinePct}%` }}></div>
+                                    </div>
                                   </div>
-                                  <div className="w-full bg-[#3A2E26]/5 h-2 rounded-full overflow-hidden">
-                                    <div className="h-full bg-[#C97C5D] rounded-full transition-all duration-500" style={{ width: `${offlinePct}%` }}></div>
-                                  </div>
-                                </div>
 
-                                <div className="pt-2 mt-2 border-t border-[#3A2E26]/10 flex justify-between items-center text-[9px] font-bold uppercase tracking-wider text-[#3A2E26]/50">
-                                  <div>
-                                    <span>Online: </span>
-                                    <span className="text-[#3A2E26]">{onlineOrders.length} orders</span>
+                                  <div className="pt-2 mt-2 border-t border-[#3A2E26]/10 flex justify-between items-center text-[9px] font-bold uppercase tracking-wider text-[#3A2E26]/50">
+                                    <div>
+                                      <span>Online: </span>
+                                      <span className="text-[#3A2E26]">{onlineOrders.length} orders</span>
+                                    </div>
+                                    <div>
+                                      <span>Offline: </span>
+                                      <span className="text-[#3A2E26]">{offlineOrders.length} orders</span>
+                                    </div>
                                   </div>
-                                  <div>
-                                    <span>Offline: </span>
-                                    <span className="text-[#3A2E26]">{offlineOrders.length} orders</span>
-                                  </div>
-                                </div>
-                              </>
-                            );
-                          })()}
+                                </>
+                              );
+                            })()}
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Product Distribution Chart */}
-                    <div className="bg-white p-6 rounded-3xl border border-[#3A2E26]/10 shadow-sm">
-                      <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70 border-b border-[#3A2E26]/10 pb-3 mb-4">
-                        Sales Distribution By Product Pack
-                      </h3>
-                      <div className="flex flex-col gap-4 py-3 justify-center h-full max-h-[180px] overflow-y-auto">
-                        {(() => {
-                          const distData = getProductDistributionData();
-                          const totalItems = distData.reduce((sum, d) => sum + d.value, 0) || 1;
-                          if (distData.length === 0) {
-                            return <p className="text-xs text-[#3A2E26]/50 italic text-center">No items ordered yet.</p>;
-                          }
-                          return distData.map((d, i) => {
-                            const pct = Math.round((d.value / totalItems) * 100);
-                            const barColors = ["bg-[#7A8B6F]", "bg-[#C97C5D]", "bg-amber-500", "bg-[#3A2E26]"];
-                            const color = barColors[i % barColors.length];
-                            return (
-                              <div key={i} className="space-y-1 px-1">
-                                <div className="flex justify-between items-center text-xs font-bold">
-                                  <span className="text-[#3A2E26]/80">{d.label}</span>
-                                  <span className="text-[#3A2E26]">{d.value} Qty ({pct}%)</span>
+                      {/* Product Distribution Chart */}
+                      <div className="bg-white p-6 rounded-3xl border border-[#3A2E26]/10 shadow-sm">
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70 border-b border-[#3A2E26]/10 pb-3 mb-4">
+                          Sales Distribution By Product Pack
+                        </h3>
+                        <div className="flex flex-col gap-4 py-3 justify-center h-full max-h-[180px] overflow-y-auto">
+                          {(() => {
+                            const distData = getProductDistributionData();
+                            const totalItems = distData.reduce((sum, d) => sum + d.value, 0) || 1;
+                            if (distData.length === 0) {
+                              return <p className="text-xs text-[#3A2E26]/50 italic text-center">No items ordered yet.</p>;
+                            }
+                            return distData.map((d, i) => {
+                              const pct = Math.round((d.value / totalItems) * 100);
+                              const barColors = ["bg-[#7A8B6F]", "bg-[#C97C5D]", "bg-amber-500", "bg-[#3A2E26]"];
+                              const color = barColors[i % barColors.length];
+                              return (
+                                <div key={i} className="space-y-1 px-1">
+                                  <div className="flex justify-between items-center text-xs font-bold">
+                                    <span className="text-[#3A2E26]/80">{d.label}</span>
+                                    <span className="text-[#3A2E26]">{d.value} Qty ({pct}%)</span>
+                                  </div>
+                                  <div className="w-full bg-[#3A2E26]/5 h-2.5 rounded-full overflow-hidden">
+                                    <div className={`h-full ${color} rounded-full transition-all duration-500`} style={{ width: `${pct}%` }}></div>
+                                  </div>
                                 </div>
-                                <div className="w-full bg-[#3A2E26]/5 h-2.5 rounded-full overflow-hidden">
-                                  <div className={`h-full ${color} rounded-full transition-all duration-500`} style={{ width: `${pct}%` }}></div>
-                                </div>
-                              </div>
-                            );
-                          });
-                        })()}
+                              );
+                            });
+                          })()}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -3001,31 +3449,60 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                         <h3 className="text-xs font-bold uppercase tracking-widest text-[#3A2E26]/70">Recent Orders</h3>
                         <button onClick={() => setActiveTab('orders')} className="text-[10px] font-bold uppercase text-[#7A8B6F] hover:underline">View All</button>
                       </div>
-                      {orders.length === 0 ? (
-                        <p className="text-xs text-[#3A2E26]/60">No transaction data logged yet.</p>
-                      ) : (
-                        <div className="divide-y divide-[#3A2E26]/10">
-                          {orders.slice(0, 5).map((order) => (
-                            <div key={order._id} className="py-3 flex justify-between items-center flex-wrap gap-2 text-xs">
-                              <div className="flex items-center gap-3">
-                                <div className="bg-[#3A2E26]/5 p-2 rounded-xl text-[#3A2E26]/80">
-                                  <Package className="w-4 h-4" />
+                      {(() => {
+                        const filteredReg = orders.filter(o => {
+                          if (statsFilter === 'online' && o.isOffline) return false;
+                          if (statsFilter === 'offline' && !o.isOffline) return false;
+                          if (statsFilter === 'manual') return false;
+                          return true;
+                        }).map(o => ({
+                          id: o._id,
+                          displayId: o.orderId,
+                          customerName: o.shippingAddress?.fullName || 'Customer',
+                          date: o.created_at,
+                          total: o.grandTotal,
+                          paymentMethod: o.paymentMethod || 'Online'
+                        }));
+
+                        const filteredMo = (statsFilter === 'all' || statsFilter === 'manual') ? manualOrders.filter(mo => mo.status === 'Delivered').map(mo => ({
+                          id: mo._id || mo.orderId,
+                          displayId: formatManualOrderId(mo.orderId || mo._id),
+                          customerName: mo.customerName,
+                          date: mo.saleDateTime || mo.created_at,
+                          total: mo.totalPrice,
+                          paymentMethod: formatPaymentMethodShort(mo.paymentMethod)
+                        })) : [];
+
+                        const combinedRecent = [...filteredReg, ...filteredMo].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)).slice(0, 5);
+
+                        if (combinedRecent.length === 0) {
+                          return <p className="text-xs text-[#3A2E26]/60">No transaction data logged yet.</p>;
+                        }
+
+                        return (
+                          <div className="divide-y divide-[#3A2E26]/10">
+                            {combinedRecent.map((order) => (
+                              <div key={order.id} className="py-3 flex justify-between items-center flex-wrap gap-2 text-xs">
+                                <div className="flex items-center gap-3">
+                                  <div className="bg-[#3A2E26]/5 p-2 rounded-xl text-[#3A2E26]/80">
+                                    <Package className="w-4 h-4" />
+                                  </div>
+                                  <div>
+                                    <p className="font-bold text-[#3A2E26]">{order.displayId}</p>
+                                    <p className="text-[10px] text-[#3A2E26]/60 font-semibold">{order.customerName} &bull; {formatDate(order.date)}</p>
+                                  </div>
                                 </div>
-                                <div>
-                                  <p className="font-bold text-[#3A2E26]">{order.orderId}</p>
-                                  <p className="text-[10px] text-[#3A2E26]/60 font-semibold">{order.shippingAddress?.fullName} &bull; {formatDate(order.created_at)}</p>
+                                <div className="text-right">
+                                  <p className="font-bold text-[#3A2E26]">{formatCurrency(order.total)}</p>
+                                  <p className="text-[9px] uppercase tracking-widest text-[#7A8B6F] font-bold bg-[#7A8B6F]/10 px-2 py-0.5 rounded-full inline-block mt-0.5">
+                                    {order.paymentMethod}
+                                  </p>
                                 </div>
                               </div>
-                              <div className="text-right">
-                                <p className="font-bold text-[#3A2E26]">{formatCurrency(order.grandTotal)}</p>
-                                <p className="text-[9px] uppercase tracking-widest text-[#7A8B6F] font-bold bg-[#7A8B6F]/10 px-2 py-0.5 rounded-full inline-block mt-0.5">
-                                  {order.paymentMethod}
-                                </p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     {/* Recent Users List */}
@@ -3082,9 +3559,9 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                           <button
                             key={source}
                             onClick={() => setOrderSourceFilter(source)}
-                            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                            className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
                               orderSourceFilter === source
-                                ? 'bg-[#3A2E26] text-white shadow-sm'
+                                ? 'bg-[#3A2E26] text-white shadow-xs'
                                 : 'text-[#3A2E26]/60 hover:text-[#3A2E26]'
                             }`}
                           >
@@ -3585,6 +4062,465 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                               </tr>
                             ))
                           )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Tab: Manual Orders */}
+              {activeTab === 'manual_orders' && (
+                <div className="flex flex-col gap-6">
+                  {/* Top Bar: Title & Add Button */}
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[#3A2E26]/10 pb-4">
+                    <div>
+                      <h2 className="text-xl font-bold tracking-tight uppercase text-[#3A2E26] font-sans flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-[#C97C5D]" />
+                        <span>Manual Orders</span>
+                      </h2>
+                      <p className="text-xs text-[#3A2E26]/60">Manage direct sales & manual orders (Independent section without Delhivery process)</p>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        setManualOrderForm({
+                          customerName: '',
+                          customerPhone: '',
+                          customerEmail: '',
+                          numberOfSoaps: 1,
+                          pricePerSoap: 299,
+                          totalPrice: 299,
+                          paymentMethod: 'COD',
+                          saleDateTime: getLocalDatetimeString(),
+                          address: '',
+                          city: '',
+                          state: '',
+                          pincode: '',
+                          notes: '',
+                          status: 'Pending'
+                        });
+                        setIsManualOrderModalOpen(true);
+                      }}
+                      className="px-5 py-2.5 bg-[#C97C5D] hover:bg-[#B36B4C] text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer uppercase tracking-wider border-none"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add Manual Order</span>
+                    </button>
+                  </div>
+
+                  {/* Summary / Stats Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-white p-5 rounded-2xl border border-[#3A2E26]/10 shadow-xs flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-[#3A2E26]/5 text-[#3A2E26] flex items-center justify-center shrink-0">
+                        <ShoppingBag className="w-6 h-6 text-[#C97C5D]" />
+                      </div>
+                      <div>
+                        <div className="text-2xl font-black text-[#3A2E26] font-sans">{manualOrders.length}</div>
+                        <div className="text-xs font-bold text-[#3A2E26]/60 uppercase tracking-wider">Total Manual Orders</div>
+                      </div>
+                    </div>
+
+                    <div className="bg-white p-5 rounded-2xl border border-[#3A2E26]/10 shadow-xs flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                        <DollarSign className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <div className="text-2xl font-black text-[#3A2E26] font-sans">
+                          {formatCurrency(manualOrders.reduce((acc, o) => acc + (parseFloat(o.totalPrice) || 0), 0))}
+                        </div>
+                        <div className="text-xs font-bold text-[#3A2E26]/60 uppercase tracking-wider">Total Revenue</div>
+                      </div>
+                    </div>
+
+                    <div className="bg-white p-5 rounded-2xl border border-[#3A2E26]/10 shadow-xs flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                        <Clock className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <div className="text-2xl font-black text-[#3A2E26] font-sans">
+                          {manualOrders.filter(o => o.status === 'Pending').length}
+                        </div>
+                        <div className="text-xs font-bold text-[#3A2E26]/60 uppercase tracking-wider">Pending Orders</div>
+                      </div>
+                    </div>
+
+                    <div className="bg-white p-5 rounded-2xl border border-[#3A2E26]/10 shadow-xs flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-green-50 text-green-600 flex items-center justify-center shrink-0">
+                        <CheckCircle className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <div className="text-2xl font-black text-[#3A2E26] font-sans">
+                          {manualOrders.filter(o => o.status === 'Delivered').length}
+                        </div>
+                        <div className="text-xs font-bold text-[#3A2E26]/60 uppercase tracking-wider">Delivered Orders</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Filter & Search Bar */}
+                  <div className="bg-white p-4 rounded-2xl border border-[#3A2E26]/10 shadow-xs flex flex-col md:flex-row justify-between items-center gap-4">
+                    {/* Status Tabs */}
+                    <div className="flex items-center gap-1 bg-[#FDFBF7] p-1 rounded-xl border border-[#3A2E26]/10 w-full md:w-auto">
+                      {['all', 'Pending', 'Delivered'].map((st) => (
+                        <button
+                          key={st}
+                          onClick={() => setManualOrderFilter(st)}
+                          className={`px-3 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all cursor-pointer border-none flex-1 md:flex-initial ${
+                            manualOrderFilter === st
+                              ? 'bg-[#3A2E26] text-white shadow-xs'
+                              : 'text-[#3A2E26]/60 hover:text-[#3A2E26] hover:bg-[#3A2E26]/5'
+                          }`}
+                        >
+                          {st === 'all' ? 'All Orders' : st}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Right Controls: Date Filter & Search */}
+                    <div className="flex items-center gap-3 w-full md:w-auto flex-col md:flex-row">
+                      {/* Date Filter Dropdown */}
+                      <div className="relative shrink-0 w-full md:w-auto" ref={dateDropdownRef}>
+                        <button
+                          type="button"
+                          onClick={() => setIsDateDropdownOpen(!isDateDropdownOpen)}
+                          className={`w-full md:w-auto flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                            isDateFilterActive
+                              ? 'bg-[#7A8B6F]/10 text-[#7A8B6F] border-[#7A8B6F]/40 shadow-sm'
+                              : 'bg-[#FDFBF7] text-[#3A2E26]/80 border-[#3A2E26]/10 hover:border-[#3A2E26]/40'
+                          }`}
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <Calendar className="w-4 h-4 text-[#7A8B6F]" />
+                            <span className="font-semibold text-[#7A8B6F]">
+                              {dateFilterLabel}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            {isDateFilterActive && (
+                              <span
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOrderDateRange({ startDate: null, endDate: null });
+                                  setSelectedOrderDates([]);
+                                }}
+                                className="p-0.5 hover:bg-gray-200 rounded-full transition-colors"
+                                title="Clear date filter"
+                              >
+                                <X className="w-3.5 h-3.5 text-gray-500 hover:text-gray-800" />
+                              </span>
+                            )}
+                            <ChevronDown className={`w-3.5 h-3.5 text-gray-500 transition-transform ${isDateDropdownOpen ? 'rotate-180' : ''}`} />
+                          </div>
+                        </button>
+
+                        {isDateDropdownOpen && (
+                          <>
+                            <div 
+                              className="fixed inset-0 z-40" 
+                              onClick={() => setIsDateDropdownOpen(false)} 
+                            />
+                            <div className="absolute right-0 mt-2 w-80 bg-white rounded-3xl shadow-2xl border border-gray-100 z-50 p-4 flex flex-col gap-3 font-sans animate-in fade-in zoom-in-95 duration-150">
+                              
+
+                              {/* Selected Summary Badge */}
+                              <div className="text-[11px] text-[#3A2E26] font-medium text-center bg-[#7A8B6F]/5 py-2 px-3 rounded-xl border border-[#7A8B6F]/15">
+                                {orderDateRange.startDate && orderDateRange.endDate ? (
+                                  <span className="text-[#7A8B6F] font-bold">
+                                    {formatDateDDMMYYYY(orderDateRange.startDate)} &rarr; {formatDateDDMMYYYY(orderDateRange.endDate)}
+                                  </span>
+                                ) : orderDateRange.startDate ? (
+                                  <span>Select End Date (Start: <strong className="text-[#7A8B6F]">{formatDateDDMMYYYY(orderDateRange.startDate)}</strong>)</span>
+                                ) : (
+                                  <span>Select Start Date & End Date</span>
+                                )}
+                              </div>
+
+                              {/* Month Navigation Header */}
+                              <div className="flex items-center justify-between px-1 pt-1">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const d = new Date(calendarViewDate);
+                                    d.setMonth(d.getMonth() - 1);
+                                    setCalendarViewDate(d);
+                                  }}
+                                  className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-600 cursor-pointer transition-colors"
+                                >
+                                  &lt;
+                                </button>
+                                <div className="font-bold text-sm text-[#3A2E26]">
+                                  {calendarViewDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const d = new Date(calendarViewDate);
+                                    d.setMonth(d.getMonth() + 1);
+                                    setCalendarViewDate(d);
+                                  }}
+                                  className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-600 cursor-pointer transition-colors"
+                                >
+                                  &gt;
+                                </button>
+                              </div>
+
+                              {/* Calendar Grid */}
+                              <div>
+                                <div className="grid grid-cols-7 text-center mb-1">
+                                  {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
+                                    <span key={day} className="text-[11px] font-semibold text-gray-400 py-1">
+                                      {day}
+                                    </span>
+                                  ))}
+                                </div>
+
+                                <div className="grid grid-cols-7 gap-y-1 text-center">
+                                  {getCalendarDays(calendarViewDate.getFullYear(), calendarViewDate.getMonth()).map((cell, idx) => {
+                                    const { dateStr, dayNum, isCurrentMonth } = cell;
+
+                                    let isStart = false;
+                                    let isEnd = false;
+                                    let isInRange = false;
+
+                                    const start = orderDateRange.startDate;
+                                    const end = orderDateRange.endDate;
+
+                                    isStart = dateStr === start;
+                                    isEnd = dateStr === end;
+
+                                    if (start && end) {
+                                      isInRange = dateStr >= start && dateStr <= end;
+                                    } else if (start && hoveredDate) {
+                                      const min = start < hoveredDate ? start : hoveredDate;
+                                      const max = start < hoveredDate ? hoveredDate : start;
+                                      isInRange = dateStr >= min && dateStr <= max;
+                                    }
+
+                                    const isBetween = isInRange && !isStart && !isEnd;
+
+                                    return (
+                                      <button
+                                        key={idx}
+                                        type="button"
+                                        onMouseEnter={() => setHoveredDate(dateStr)}
+                                        onMouseLeave={() => setHoveredDate(null)}
+                                        onClick={() => {
+                                          if (!orderDateRange.startDate || (orderDateRange.startDate && orderDateRange.endDate)) {
+                                            setOrderDateRange({ startDate: dateStr, endDate: null });
+                                          } else {
+                                            if (dateStr < orderDateRange.startDate) {
+                                              setOrderDateRange({ startDate: dateStr, endDate: null });
+                                            } else {
+                                              setOrderDateRange({ ...orderDateRange, endDate: dateStr });
+                                            }
+                                          }
+                                        }}
+                                        className={`relative h-8 flex items-center justify-center text-xs font-semibold cursor-pointer transition-all ${
+                                          !isCurrentMonth ? 'text-gray-300' : 'text-[#3A2E26]'
+                                        } ${
+                                          isStart && isEnd
+                                            ? 'bg-[#7A8B6F] text-white rounded-xl font-bold shadow-sm z-10'
+                                            : isStart
+                                            ? 'bg-[#7A8B6F] text-white rounded-l-xl font-bold shadow-sm z-10'
+                                            : isEnd
+                                            ? 'bg-[#7A8B6F] text-white rounded-r-xl font-bold shadow-sm z-10'
+                                            : isBetween
+                                            ? 'bg-[#7A8B6F]/15 text-[#3A2E26] font-bold'
+                                            : 'hover:bg-gray-100 rounded-xl'
+                                        }`}
+                                      >
+                                        {dayNum}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+
+                              {/* Footer Actions */}
+                              <div className="flex items-center justify-between pt-2 border-t border-gray-100 mt-1">
+                                {isDateFilterActive ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOrderDateRange({ startDate: null, endDate: null });
+                                      setSelectedOrderDates([]);
+                                    }}
+                                    className="text-[11px] font-bold text-gray-500 hover:text-gray-800 transition-colors cursor-pointer"
+                                  >
+                                    Clear filter
+                                  </button>
+                                ) : <div />}
+
+                                <button
+                                  type="button"
+                                  onClick={() => setIsDateDropdownOpen(false)}
+                                  className="px-5 py-2 bg-[#3A2E26] hover:bg-[#251D18] text-white text-xs font-bold rounded-xl transition-all shadow-md cursor-pointer ml-auto"
+                                >
+                                  Done
+                                </button>
+                              </div>
+
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Search */}
+                      <div className="relative w-full md:w-72">
+                        <Search className="w-4 h-4 text-[#3A2E26]/40 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          placeholder="Search name, phone, or order ID..."
+                          value={manualOrderSearch}
+                          onChange={(e) => setManualOrderSearch(e.target.value)}
+                          className="w-full pl-10 pr-4 py-2 bg-[#FDFBF7] border border-[#3A2E26]/10 rounded-xl text-xs font-sans focus:outline-none focus:border-[#3A2E26]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Orders Table */}
+                  <div className="bg-white rounded-2xl border border-[#3A2E26]/10 shadow-xs overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-[#FDFBF7] border-b border-[#3A2E26]/10 text-[11px] font-bold uppercase tracking-wider text-[#3A2E26]/60">
+                            <th className="p-4 pl-6">ORDER ID</th>
+                            <th className="p-4">CUSTOMER INFO</th>
+                            <th className="p-4">ITEMS / QTY</th>
+                            <th className="p-4">PAYMENT METHOD</th>
+                            <th className="p-4">DATE & TIME</th>
+                            <th className="p-4 text-center">STATUS</th>
+                            <th className="p-4 text-right">TOTAL PRICE</th>
+                            <th className="p-4 pr-6 text-right">ACTIONS</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#3A2E26]/5 text-xs font-sans">
+                          {(() => {
+                            const filtered = manualOrders.filter(o => {
+                              const matchesFilter = manualOrderFilter === 'all' || o.status === manualOrderFilter;
+                              const query = manualOrderSearch.toLowerCase();
+                              const formattedId = formatManualOrderId(o.orderId || o._id);
+                              const matchesSearch = !query ||
+                                formattedId.toLowerCase().includes(query) ||
+                                (o.orderId && o.orderId.toLowerCase().includes(query)) ||
+                                (o.customerName && o.customerName.toLowerCase().includes(query)) ||
+                                (o.customerPhone && o.customerPhone.toLowerCase().includes(query)) ||
+                                (o.customerEmail && o.customerEmail.toLowerCase().includes(query));
+
+                              let matchesDate = true;
+                              const moDateRaw = o.saleDateTime || o.created_at;
+                              if (dateFilterMode === 'range' && (orderDateRange.startDate || orderDateRange.endDate)) {
+                                if (!moDateRaw) matchesDate = false;
+                                else {
+                                  const moDateStr = getYYYYMMDD(moDateRaw);
+                                  if (orderDateRange.startDate && moDateStr < orderDateRange.startDate) matchesDate = false;
+                                  if (orderDateRange.endDate && moDateStr > orderDateRange.endDate) matchesDate = false;
+                                }
+                              } else if (dateFilterMode === 'multi' && selectedOrderDates.length > 0) {
+                                if (!moDateRaw) matchesDate = false;
+                                else {
+                                  const moDateStr = getYYYYMMDD(moDateRaw);
+                                  if (!selectedOrderDates.includes(moDateStr)) matchesDate = false;
+                                }
+                              }
+
+                              return matchesFilter && matchesSearch && matchesDate;
+                            });
+
+                            if (filtered.length === 0) {
+                              return (
+                                <tr>
+                                  <td colSpan={8} className="p-12 text-center text-[#3A2E26]/50 font-sans">
+                                    <FileText className="w-10 h-10 mx-auto mb-2 text-[#3A2E26]/20" />
+                                    No manual orders found matching your criteria.
+                                  </td>
+                                </tr>
+                              );
+                            }
+
+                            return filtered.map((order) => {
+                              const formattedId = formatManualOrderId(order.orderId || order._id);
+                              const statusVal = order.status || 'Pending';
+                              return (
+                                <tr key={order.orderId || order._id} className="hover:bg-[#FDFBF7]/60 transition-colors">
+                                  <td className="p-4 pl-6 font-mono font-bold text-[#3A2E26] whitespace-nowrap">
+                                    {formattedId}
+                                  </td>
+                                  <td className="p-4">
+                                    <div className="font-bold text-[#3A2E26]">{order.customerName}</div>
+                                    <div className="text-[11px] text-[#3A2E26]/60 flex items-center gap-1 mt-0.5">
+                                      <Phone className="w-3 h-3 text-[#C97C5D]" />
+                                      <span>{order.customerPhone}</span>
+                                    </div>
+                                    {order.customerEmail && (
+                                      <div className="text-[10px] text-[#3A2E26]/40">{order.customerEmail}</div>
+                                    )}
+                                  </td>
+                                  <td className="p-4">
+                                    <div className="font-bold text-[#3A2E26]">{order.numberOfSoaps || 1} Bar(s)</div>
+                                    <div className="text-[11px] text-[#3A2E26]/60">₹{order.pricePerSoap || 299} per soap</div>
+                                  </td>
+                                  <td className="p-4">
+                                    <span className="inline-block px-3 py-1 bg-[#3A2E26]/5 text-[#3A2E26]/90 rounded-full text-[10px] font-black uppercase tracking-wider border border-[#3A2E26]/10 font-sans">
+                                      {formatPaymentMethodShort(order.paymentMethod)}
+                                    </span>
+                                  </td>
+                                  <td className="p-4 text-[11px] text-[#3A2E26]/75 whitespace-nowrap">
+                                    {formatDate(order.saleDateTime || order.created_at)}
+                                  </td>
+                                  <td className="p-4 text-center">
+                                    <div className="inline-flex items-center bg-[#FDFBF7] p-1 rounded-full border border-[#3A2E26]/15 shadow-2xs font-sans">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleUpdateManualOrderStatus(order.orderId || order._id, 'Pending')}
+                                        className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer border-none font-sans ${
+                                          statusVal === 'Pending'
+                                            ? 'bg-amber-100/90 text-amber-900 border border-amber-400 shadow-2xs'
+                                            : 'text-[#3A2E26]/50 hover:text-[#3A2E26]'
+                                        }`}
+                                      >
+                                        Pending
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleUpdateManualOrderStatus(order.orderId || order._id, 'Delivered')}
+                                        className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer border-none font-sans ${
+                                          statusVal === 'Delivered'
+                                            ? 'bg-emerald-100/90 text-emerald-900 border border-emerald-400 shadow-2xs'
+                                            : 'text-[#3A2E26]/50 hover:text-[#3A2E26]'
+                                        }`}
+                                      >
+                                        Delivered
+                                      </button>
+                                    </div>
+                                  </td>
+                                  <td className="p-4 text-right font-bold text-sm text-[#3A2E26] whitespace-nowrap">
+                                    {formatCurrency(order.totalPrice)}
+                                  </td>
+                                  <td className="p-4 pr-6 text-right">
+                                    <div className="flex items-center justify-end gap-2">
+                                      <button
+                                        onClick={() => setViewingManualOrder(order)}
+                                        title="View Details"
+                                        className="p-2 bg-[#3A2E26]/5 hover:bg-[#3A2E26]/10 text-[#3A2E26] rounded-xl transition-colors cursor-pointer border-none"
+                                      >
+                                        <Eye className="w-4 h-4" />
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteManualOrder(order.orderId || order._id)}
+                                        title="Delete Order"
+                                        className="p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl transition-colors cursor-pointer border-none"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            });
+                          })()}
                         </tbody>
                       </table>
                     </div>
@@ -9332,8 +10268,440 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
         </div>
       )}
 
-    </div>
-  );
-}
+      {/* Add Manual Order Modal */}
+      {isManualOrderModalOpen && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-[#3A2E26]/60 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-[#FDFBF7] w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl shadow-2xl relative border border-[#3A2E26]/10 animate-slideUp p-6 sm:p-8 font-sans">
+            {/* Header */}
+            <div className="flex justify-between items-center border-b border-[#3A2E26]/10 pb-4 mb-6">
+              <div>
+                <h3 className="text-xl font-bold text-[#3A2E26] uppercase tracking-tight flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-[#C97C5D]" />
+                  <span>Add Manual Order</span>
+                </h3>
+                <p className="text-xs text-[#3A2E26]/60 mt-0.5">Add an independent manual order record (No Delhivery integration)</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsManualOrderModalOpen(false)}
+                className="text-[#3A2E26]/50 hover:text-[#3A2E26] p-1.5 rounded-xl hover:bg-[#3A2E26]/5 transition-colors cursor-pointer border-none"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSaveManualOrder} className="space-y-5">
+              {/* Customer Name & Phone */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">
+                    Customer Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Customer Name"
+                    value={manualOrderForm.customerName}
+                    onChange={(e) => setManualOrderForm({ ...manualOrderForm, customerName: e.target.value })}
+                    className="w-full px-4 py-3 bg-[#FDFBF7] border border-[#E6D5C3] rounded-xl text-xs font-semibold text-[#3A2E26] focus:outline-none focus:border-[#3A2E26] shadow-2xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">
+                    Customer Phone *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Phone number"
+                    value={manualOrderForm.customerPhone}
+                    onChange={(e) => setManualOrderForm({ ...manualOrderForm, customerPhone: e.target.value })}
+                    className="w-full px-4 py-3 bg-[#FDFBF7] border border-[#E6D5C3] rounded-xl text-xs font-semibold text-[#3A2E26] focus:outline-none focus:border-[#3A2E26] shadow-2xs"
+                  />
+                </div>
+              </div>
+
+              {/* Customer Email */}
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">
+                  Customer Email (Optional)
+                </label>
+                <input
+                  type="email"
+                  placeholder="email@example.com"
+                  value={manualOrderForm.customerEmail}
+                  onChange={(e) => setManualOrderForm({ ...manualOrderForm, customerEmail: e.target.value })}
+                  className="w-full px-4 py-3 bg-[#FDFBF7] border border-[#E6D5C3] rounded-xl text-xs font-semibold text-[#3A2E26] focus:outline-none focus:border-[#3A2E26] shadow-2xs"
+                />
+              </div>
+
+              {/* Number of Soaps, Price Per Soap, Total Price */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">
+                    Number of Soaps *
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={manualOrderForm.numberOfSoaps}
+                    onChange={(e) => {
+                      const qty = parseInt(e.target.value) || 1;
+                      const pps = parseFloat(manualOrderForm.pricePerSoap) || 0;
+                      setManualOrderForm({
+                        ...manualOrderForm,
+                        numberOfSoaps: qty,
+                        totalPrice: qty * pps
+                      });
+                    }}
+                    className="w-full px-4 py-3 bg-[#FDFBF7] border border-[#E6D5C3] rounded-xl text-xs font-semibold text-[#3A2E26] focus:outline-none focus:border-[#3A2E26] shadow-2xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">
+                    Price Per Soap (₹) *
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    required
+                    value={manualOrderForm.pricePerSoap}
+                    onChange={(e) => {
+                      const pps = parseFloat(e.target.value) || 0;
+                      const qty = parseInt(manualOrderForm.numberOfSoaps) || 1;
+                      setManualOrderForm({
+                        ...manualOrderForm,
+                        pricePerSoap: pps,
+                        totalPrice: qty * pps
+                      });
+                    }}
+                    className="w-full px-4 py-3 bg-[#FDFBF7] border border-[#E6D5C3] rounded-xl text-xs font-semibold text-[#3A2E26] focus:outline-none focus:border-[#3A2E26] shadow-2xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">
+                    Total Price (₹) *
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    required
+                    value={manualOrderForm.totalPrice}
+                    onChange={(e) => setManualOrderForm({ ...manualOrderForm, totalPrice: parseFloat(e.target.value) || 0 })}
+                    className="w-full px-4 py-3 bg-[#FDFBF7] border border-[#E6D5C3] rounded-xl text-xs font-bold text-[#3A2E26] focus:outline-none focus:border-[#3A2E26] shadow-2xs"
+                  />
+                </div>
+              </div>
+
+              {/* Payment Method & Sale Date */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">
+                    Payment Method
+                  </label>
+                  <select
+                    value={manualOrderForm.paymentMethod}
+                    onChange={(e) => setManualOrderForm({ ...manualOrderForm, paymentMethod: e.target.value })}
+                    className="w-full px-4 py-3 bg-[#FDFBF7] border border-[#E6D5C3] rounded-xl text-xs font-semibold text-[#3A2E26] focus:outline-none focus:border-[#3A2E26] shadow-2xs cursor-pointer"
+                  >
+                    <option value="COD">COD</option>
+                    <option value="UPI">UPI</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">
+                    Sale Date & Time
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={manualOrderForm.saleDateTime}
+                    onChange={(e) => setManualOrderForm({ ...manualOrderForm, saleDateTime: e.target.value })}
+                    className="w-full px-4 py-3 bg-[#FDFBF7] border border-[#E6D5C3] rounded-xl text-xs font-semibold text-[#3A2E26] focus:outline-none focus:border-[#3A2E26] shadow-2xs"
+                  />
+                </div>
+              </div>
+
+              {/* Status Selection (Pending vs Delivered ONLY) */}
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">
+                  Order Status *
+                </label>
+                <div className="flex items-center gap-4">
+                  <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer font-bold text-xs transition-all ${
+                    manualOrderForm.status === 'Pending'
+                      ? 'bg-amber-50 border-amber-400 text-amber-800 shadow-xs'
+                      : 'bg-white border-[#E6D5C3] text-[#3A2E26]/70 hover:bg-[#FDFBF7]'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="manualOrderStatus"
+                      value="Pending"
+                      checked={manualOrderForm.status === 'Pending'}
+                      onChange={() => setManualOrderForm({ ...manualOrderForm, status: 'Pending' })}
+                      className="hidden"
+                    />
+                    <Clock className="w-4 h-4 text-amber-600" />
+                    <span>Pending</span>
+                  </label>
+
+                  <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer font-bold text-xs transition-all ${
+                    manualOrderForm.status === 'Delivered'
+                      ? 'bg-emerald-50 border-emerald-400 text-emerald-800 shadow-xs'
+                      : 'bg-white border-[#E6D5C3] text-[#3A2E26]/70 hover:bg-[#FDFBF7]'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="manualOrderStatus"
+                      value="Delivered"
+                      checked={manualOrderForm.status === 'Delivered'}
+                      onChange={() => setManualOrderForm({ ...manualOrderForm, status: 'Delivered' })}
+                      className="hidden"
+                    />
+                    <CheckCircle className="w-4 h-4 text-emerald-600" />
+                    <span>Delivered</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Shipping Details (Optional) Section */}
+              <div className="pt-2 border-t border-[#3A2E26]/10">
+                <h4 className="text-sm font-bold text-[#3A2E26] font-sans">Shipping Details (Optional)</h4>
+                <p className="text-[11px] text-[#3A2E26]/50 mb-3">Fill these out if you want to record delivery details for this manual order.</p>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">
+                      Address
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Street Address, Appt, etc."
+                      value={manualOrderForm.address}
+                      onChange={(e) => setManualOrderForm({ ...manualOrderForm, address: e.target.value })}
+                      className="w-full px-4 py-3 bg-[#FDFBF7] border border-[#E6D5C3] rounded-xl text-xs font-semibold text-[#3A2E26] focus:outline-none focus:border-[#3A2E26] shadow-2xs"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">
+                        City
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="City"
+                        value={manualOrderForm.city}
+                        onChange={(e) => setManualOrderForm({ ...manualOrderForm, city: e.target.value })}
+                        className="w-full px-4 py-3 bg-[#FDFBF7] border border-[#E6D5C3] rounded-xl text-xs font-semibold text-[#3A2E26] focus:outline-none focus:border-[#3A2E26] shadow-2xs"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">
+                        State
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="State"
+                        value={manualOrderForm.state}
+                        onChange={(e) => setManualOrderForm({ ...manualOrderForm, state: e.target.value })}
+                        className="w-full px-4 py-3 bg-[#FDFBF7] border border-[#E6D5C3] rounded-xl text-xs font-semibold text-[#3A2E26] focus:outline-none focus:border-[#3A2E26] shadow-2xs"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">
+                        Pincode
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="123456"
+                        value={manualOrderForm.pincode}
+                        onChange={(e) => setManualOrderForm({ ...manualOrderForm, pincode: e.target.value })}
+                        className="w-full px-4 py-3 bg-[#FDFBF7] border border-[#E6D5C3] rounded-xl text-xs font-semibold text-[#3A2E26] focus:outline-none focus:border-[#3A2E26] shadow-2xs"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Notes / Details */}
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">
+                  Notes / Details
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="E.g. Sold at local market event"
+                  value={manualOrderForm.notes}
+                  onChange={(e) => setManualOrderForm({ ...manualOrderForm, notes: e.target.value })}
+                  className="w-full px-4 py-3 bg-[#FDFBF7] border border-[#E6D5C3] rounded-xl text-xs font-semibold text-[#3A2E26] focus:outline-none focus:border-[#3A2E26] shadow-2xs resize-none"
+                />
+              </div>
+
+              {/* Modal Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#3A2E26]/10">
+                <button
+                  type="button"
+                  onClick={() => setIsManualOrderModalOpen(false)}
+                  className="px-6 py-2.5 bg-white hover:bg-gray-100 border border-[#3A2E26]/20 text-[#3A2E26] font-bold text-xs rounded-xl uppercase tracking-wider transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-6 py-2.5 bg-[#C97C5D] hover:bg-[#B36B4C] text-white font-bold text-xs rounded-xl shadow-md uppercase tracking-wider transition-all cursor-pointer border-none flex items-center gap-2"
+                >
+                  {saving ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <span>Add Manual Order</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* View Manual Order Details Modal */}
+      {viewingManualOrder && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-[#3A2E26]/60 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-[#FDFBF7] w-full max-w-lg rounded-3xl shadow-2xl relative border border-[#3A2E26]/10 animate-slideUp p-6 font-sans">
+            <div className="flex justify-between items-center border-b border-[#3A2E26]/10 pb-4 mb-4">
+              <div>
+                <h3 className="text-lg font-bold text-[#3A2E26] uppercase tracking-tight flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-[#C97C5D]" />
+                  <span>Manual Order Details</span>
+                </h3>
+                <p className="text-xs text-[#3A2E26]/60 font-mono mt-0.5">{formatManualOrderId(viewingManualOrder.orderId || viewingManualOrder._id)}</p>
+              </div>
+              <button
+                onClick={() => setViewingManualOrder(null)}
+                className="text-[#3A2E26]/50 hover:text-[#3A2E26] p-1.5 rounded-xl hover:bg-[#3A2E26]/5 transition-colors cursor-pointer border-none"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs text-[#3A2E26]">
+              {/* Customer Info */}
+              <div className="bg-white p-4 rounded-2xl border border-[#3A2E26]/10">
+                <div className="text-[10px] font-bold uppercase text-[#3A2E26]/50 mb-1">Customer Info</div>
+                <div className="font-bold text-sm text-[#3A2E26]">{viewingManualOrder.customerName}</div>
+                <div className="text-xs text-[#3A2E26]/70 mt-1 flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5 text-[#C97C5D]" />
+                  <span>{viewingManualOrder.customerPhone}</span>
+                </div>
+                {viewingManualOrder.customerEmail && (
+                  <div className="text-xs text-[#3A2E26]/60 mt-1">{viewingManualOrder.customerEmail}</div>
+                )}
+              </div>
+
+              {/* Order Breakdown */}
+              <div className="bg-white p-4 rounded-2xl border border-[#3A2E26]/10">
+                <div className="text-[10px] font-bold uppercase text-[#3A2E26]/50 mb-2">Order Items</div>
+                <div className="flex justify-between items-center py-1">
+                  <span>Quantity (Soaps)</span>
+                  <span className="font-bold">{viewingManualOrder.numberOfSoaps || 1} Bar(s)</span>
+                </div>
+                <div className="flex justify-between items-center py-1">
+                  <span>Price Per Soap</span>
+                  <span className="font-bold">₹{viewingManualOrder.pricePerSoap || 299}</span>
+                </div>
+                <div className="flex justify-between items-center py-1 border-t border-[#3A2E26]/10 mt-1 pt-2">
+                  <span className="font-bold text-sm">Total Price</span>
+                  <span className="font-bold text-base text-[#3A2E26]">₹{viewingManualOrder.totalPrice}</span>
+                </div>
+              </div>
+
+              {/* Payment & Status */}
+              <div className="bg-white p-4 rounded-2xl border border-[#3A2E26]/10 grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-[10px] font-bold uppercase text-[#3A2E26]/50 mb-1">Payment Method</div>
+                  <div className="font-extrabold text-xs text-[#3A2E26]">{formatPaymentMethodShort(viewingManualOrder.paymentMethod)}</div>
+                </div>
+
+                <div>
+                  <div className="text-[10px] font-bold uppercase text-[#3A2E26]/50 mb-1 font-sans">Status</div>
+                  <div className="flex items-center gap-1.5 font-sans">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleUpdateManualOrderStatus(viewingManualOrder.orderId || viewingManualOrder._id, 'Pending');
+                        setViewingManualOrder(prev => ({ ...prev, status: 'Pending' }));
+                      }}
+                      className={`flex-1 py-1.5 px-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border transition-all cursor-pointer ${
+                        (viewingManualOrder.status || 'Pending') === 'Pending'
+                          ? 'bg-amber-100/90 text-amber-900 border-amber-400 font-black shadow-2xs'
+                          : 'bg-white text-[#3A2E26]/60 border-[#3A2E26]/15 hover:bg-[#FDFBF7]'
+                      }`}
+                    >
+                      Pending
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleUpdateManualOrderStatus(viewingManualOrder.orderId || viewingManualOrder._id, 'Delivered');
+                        setViewingManualOrder(prev => ({ ...prev, status: 'Delivered' }));
+                      }}
+                      className={`flex-1 py-1.5 px-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border transition-all cursor-pointer ${
+                        viewingManualOrder.status === 'Delivered'
+                          ? 'bg-emerald-100/90 text-emerald-900 border-emerald-400 font-black shadow-2xs'
+                          : 'bg-white text-[#3A2E26]/60 border-[#3A2E26]/15 hover:bg-[#FDFBF7]'
+                      }`}
+                    >
+                      Delivered
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Shipping details if available */}
+              {(viewingManualOrder.address || viewingManualOrder.city || viewingManualOrder.pincode) && (
+                <div className="bg-white p-4 rounded-2xl border border-[#3A2E26]/10">
+                  <div className="text-[10px] font-bold uppercase text-[#3A2E26]/50 mb-1">Shipping Address</div>
+                  <div className="font-semibold text-xs text-[#3A2E26]">{viewingManualOrder.address}</div>
+                  <div className="text-xs text-[#3A2E26]/70">
+                    {[viewingManualOrder.city, viewingManualOrder.state, viewingManualOrder.pincode].filter(Boolean).join(', ')}
+                  </div>
+                </div>
+              )}
+
+              {/* Notes */}
+              {viewingManualOrder.notes && (
+                <div className="bg-white p-4 rounded-2xl border border-[#3A2E26]/10">
+                  <div className="text-[10px] font-bold uppercase text-[#3A2E26]/50 mb-1">Notes / Details</div>
+                  <div className="text-xs italic text-[#3A2E26]/80">{viewingManualOrder.notes}</div>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setViewingManualOrder(null)}
+                className="px-6 py-2 bg-[#3A2E26] text-white font-bold text-xs rounded-xl uppercase tracking-wider hover:bg-[#2A201A] transition-colors border-none cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      </div>
+    );
+  }
 
 export default React.memo(AdminPanel);

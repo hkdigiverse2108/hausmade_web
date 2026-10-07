@@ -93,6 +93,26 @@ class OfflineSaleCreate(BaseModel):
     state: Optional[str] = None
     pincode: Optional[str] = None
 
+class ManualOrderCreate(BaseModel):
+    customerName: str
+    customerPhone: str
+    customerEmail: Optional[str] = None
+    numberOfSoaps: int = 1
+    pricePerSoap: float = 299.0
+    totalPrice: float
+    paymentMethod: Optional[str] = "Cash (Cash on Delivery / COD)"
+    saleDateTime: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    pincode: Optional[str] = None
+    notes: Optional[str] = None
+    status: Optional[str] = "Pending"
+
+class ManualOrderStatusUpdate(BaseModel):
+    status: str
+
+
 
 class AnnouncementSettings(BaseModel):
     text: str = ""

@@ -67,6 +67,7 @@ settings_collection = AsyncCollectionProxy("settings")
 reviews_collection = AsyncCollectionProxy("reviews")
 subscriptions_collection = AsyncCollectionProxy("subscriptions")
 targets_collection = AsyncCollectionProxy("targets")
+manual_orders_collection = AsyncCollectionProxy("manual_orders")
 
 def check_mongodb_connection(uri):
     if not uri:
@@ -88,7 +89,7 @@ def check_mongodb_connection(uri):
         raise last_err
 
 async def migrate_json_to_mongodb():
-    collections_to_migrate = ["users", "orders", "otps", "products", "coupons", "settings", "reviews", "subscriptions", "targets"]
+    collections_to_migrate = ["users", "orders", "otps", "products", "coupons", "settings", "reviews", "subscriptions", "targets", "manual_orders"]
     for coll_name in collections_to_migrate:
         try:
             coll = motor_db[coll_name]
