@@ -152,6 +152,30 @@ const createHausmadeLogoDataUrl = () => {
   }
 };
 
+const getOrderCategory = (order) => {
+  const isOffline = !!order.isOffline;
+  const totalQty = getTotalQty(order);
+  const itemsStr = getItemsSummaryStr(order).toLowerCase();
+  
+  // Check if it's a Combo order (Pack of 2/3/5, Combo, multiple items, or numberOfSoaps > 1)
+  const isCombo = 
+    order.isCombo || 
+    totalQty > 1 || 
+    (order.numberOfSoaps && order.numberOfSoaps > 1) ||
+    itemsStr.includes('combo') || 
+    itemsStr.includes('pack of') || 
+    itemsStr.includes('pack-') || 
+    itemsStr.includes('pack 2') || 
+    itemsStr.includes('pack 3') || 
+    itemsStr.includes('pack 5') ||
+    (order.cartItems && order.cartItems.length > 1);
+
+  if (isCombo) {
+    return isOffline ? 'Offline Combo' : 'Combo';
+  }
+  return isOffline ? 'Offline' : 'Online';
+};
+
 export const exportOrdersToPDF = async (orders, filterSummary = {}) => {
   if (!orders || orders.length === 0) {
     alert('No orders available to export.');
@@ -201,10 +225,10 @@ export const exportOrdersToPDF = async (orders, filterSummary = {}) => {
   doc.setFontSize(8.5);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 100, 100);
-  doc.text(`Generated on: ${todayStr}`, 280, 12, { align: 'right' });
+  doc.text(`Generated on: ${todayStr}`, 280, 11, { align: 'right' });
 
   const totalRevenue = orders.reduce((sum, o) => sum + getTotalAmount(o), 0);
-  doc.text(`Total Orders: ${orders.length}  |  Total Revenue: Rs. ${totalRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 280, 17.5, { align: 'right' });
+  doc.text(`Total Orders: ${orders.length}  |  Total Revenue: Rs. ${totalRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 280, 16, { align: 'right' });
 
   // Prepare table data
   const tableHead = [['#', 'Order ID', 'Date', 'Source', 'Customer', 'Phone', 'Items', 'Payment', 'Shipment', 'Total (INR)']];
@@ -216,7 +240,7 @@ export const exportOrdersToPDF = async (orders, filterSummary = {}) => {
       idx + 1,
       order.orderId || order._id || 'N/A',
       formatDateStr(order.created_at || order.saleDateTime).split(' ')[0],
-      order.isOffline ? 'Offline' : 'Online',
+      getOrderCategory(order),
       getCustomerName(order),
       getCustomerPhone(order),
       getItemsSummaryStr(order),
@@ -249,15 +273,40 @@ export const exportOrdersToPDF = async (orders, filterSummary = {}) => {
     },
     columnStyles: {
       0: { cellWidth: 7, halign: 'center' },  // #
-      1: { cellWidth: 26, fontStyle: 'bold' }, // Order ID
-      2: { cellWidth: 20 },                   // Date
-      3: { cellWidth: 15 },                   // Source
-      4: { cellWidth: 35, fontStyle: 'bold' }, // Customer
-      5: { cellWidth: 25 },                   // Phone
-      6: { cellWidth: 62 },                   // Items
-      7: { cellWidth: 25 },                   // Payment
-      8: { cellWidth: 24 },                   // Shipment
-      9: { cellWidth: 30, halign: 'right', fontStyle: 'bold' } // Total
+      1: { cellWidth: 25, fontStyle: 'bold' }, // Order ID
+      2: { cellWidth: 18 },                   // Date
+      3: { cellWidth: 22 },                   // Source (Category)
+      4: { cellWidth: 33, fontStyle: 'bold' }, // Customer
+      5: { cellWidth: 23 },                   // Phone
+      6: { cellWidth: 60 },                   // Items
+      7: { cellWidth: 23 },                   // Payment
+      8: { cellWidth: 22 },                   // Shipment
+      9: { cellWidth: 28, halign: 'right', fontStyle: 'bold' } // Total
+    },
+    didParseCell: (data) => {
+      // Color-code the Source column (Column index 3)
+      if (data.section === 'body' && data.column.index === 3) {
+        const val = String(data.cell.raw || '');
+        if (val.includes('Combo')) {
+          // Purple badge style for Combo orders
+          data.cell.styles.fillColor = [243, 229, 245]; // Soft Purple #F3E5F5
+          data.cell.styles.textColor = [106, 27, 154];  // Rich Purple #6A1B9A
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.halign = 'center';
+        } else if (val.includes('Offline')) {
+          // Amber/Orange badge style for Offline orders
+          data.cell.styles.fillColor = [255, 243, 224]; // Soft Amber #FFF3E0
+          data.cell.styles.textColor = [230, 81, 0];    // Deep Orange #E65100
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.halign = 'center';
+        } else {
+          // Green badge style for Online orders
+          data.cell.styles.fillColor = [232, 245, 233]; // Soft Green #E8F5E9
+          data.cell.styles.textColor = [27, 94, 32];    // Deep Green #1B5E20
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.halign = 'center';
+        }
+      }
     },
     didDrawPage: (data) => {
       // Footer page numbers
