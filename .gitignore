@@ -38,6 +38,8 @@ app/config/*.env
 *.json
 !package.json
 package-lock.json
+frontend/package-lock.json
+*/package-lock.json
 !tsconfig.json
 !.oxlintrc.json
 !*plugin.json
