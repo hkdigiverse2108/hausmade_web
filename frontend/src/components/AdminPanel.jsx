@@ -41,8 +41,10 @@ import {
   Target,
   ChevronDown,
   FileText,
+  FileSpreadsheet,
   RotateCcw,
-  X
+  X,
+  Download
 } from 'lucide-react';
 import { 
   getAdminStats, 
@@ -85,6 +87,7 @@ import {
 } from '../utils/api';
 import ConfirmModal from './ConfirmModal';
 import { defaultTerms, defaultPrivacy, defaultShipping, defaultRefund } from '../utils/policyDefaults';
+import { exportOrdersToExcel, exportOrdersToPDF } from '../utils/orderExport';
 
 const AutoResizeTextarea = ({ value, onChange, placeholder, className, rows = 3, ...props }) => {
   const textareaRef = React.useRef(null);
@@ -979,6 +982,12 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   const [hoveredDate, setHoveredDate] = useState(null);
   const dateDropdownRef = useRef(null);
 
+  // Export Dropdown States
+  const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
+  const exportDropdownRef = useRef(null);
+  const [isManualExportDropdownOpen, setIsManualExportDropdownOpen] = useState(false);
+  const manualExportDropdownRef = useRef(null);
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (shipmentStatusDropdownRef.current && !shipmentStatusDropdownRef.current.contains(event.target)) {
@@ -987,9 +996,15 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       if (dateDropdownRef.current && !dateDropdownRef.current.contains(event.target)) {
         setIsDateDropdownOpen(false);
       }
+      if (exportDropdownRef.current && !exportDropdownRef.current.contains(event.target)) {
+        setIsExportDropdownOpen(false);
+      }
+      if (manualExportDropdownRef.current && !manualExportDropdownRef.current.contains(event.target)) {
+        setIsManualExportDropdownOpen(false);
+      }
     };
 
-    if (isShipmentStatusDropdownOpen || isDateDropdownOpen) {
+    if (isShipmentStatusDropdownOpen || isDateDropdownOpen || isExportDropdownOpen || isManualExportDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside);
       document.addEventListener('touchstart', handleClickOutside);
     }
@@ -998,7 +1013,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('touchstart', handleClickOutside);
     };
-  }, [isShipmentStatusDropdownOpen, isDateDropdownOpen]);
+  }, [isShipmentStatusDropdownOpen, isDateDropdownOpen, isExportDropdownOpen, isManualExportDropdownOpen]);
 
   const [statsFilter, setStatsFilter] = useState('all');
 
@@ -3857,6 +3872,81 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                         />
                       </div>
 
+                      {/* Single Export Dropdown Button */}
+                      <div className="relative shrink-0" ref={exportDropdownRef}>
+                        <button
+                          type="button"
+                          onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                            isExportDropdownOpen
+                              ? 'bg-[#3A2E26] text-white border-[#3A2E26] shadow-sm'
+                              : 'bg-white text-[#3A2E26]/80 border-[#3A2E26]/15 hover:border-[#3A2E26]/40'
+                          }`}
+                        >
+                          <Download className="w-3.5 h-3.5 text-[#7A8B6F]" />
+                          <span>Export</span>
+                          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isExportDropdownOpen ? 'rotate-180' : 'text-gray-500'}`} />
+                        </button>
+
+                        {isExportDropdownOpen && (
+                          <>
+                            <div 
+                              className="fixed inset-0 z-40" 
+                              onClick={() => setIsExportDropdownOpen(false)} 
+                            />
+                            <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 p-2 flex flex-col gap-1 font-sans animate-in fade-in zoom-in-95 duration-150">
+                              {/* Option 1: PDF */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsExportDropdownOpen(false);
+                                  const filterSummary = {
+                                    source: orderSourceFilter,
+                                    statuses: selectedShipmentStatuses,
+                                    dateRange: orderDateRange.startDate && orderDateRange.endDate 
+                                      ? `${formatDateDDMMYYYY(orderDateRange.startDate)} - ${formatDateDDMMYYYY(orderDateRange.endDate)}` 
+                                      : (orderDateRange.startDate ? `From ${formatDateDDMMYYYY(orderDateRange.startDate)}` : ''),
+                                    search: orderSearch
+                                  };
+                                  exportOrdersToPDF(filteredOrders, filterSummary);
+                                  if (showNotification) {
+                                    showNotification(`Successfully exported ${filteredOrders.length} order(s) to PDF!`, 'success');
+                                  }
+                                }}
+                                className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-gray-50 text-[#3A2E26] font-bold text-xs transition-colors cursor-pointer text-left w-full"
+                              >
+                                <FileText className="w-4 h-4 text-rose-600 shrink-0" />
+                                <span>Export to PDF</span>
+                              </button>
+
+                              {/* Option 2: Excel */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsExportDropdownOpen(false);
+                                  const filterSummary = {
+                                    source: orderSourceFilter,
+                                    statuses: selectedShipmentStatuses,
+                                    dateRange: orderDateRange.startDate && orderDateRange.endDate 
+                                      ? `${formatDateDDMMYYYY(orderDateRange.startDate)} - ${formatDateDDMMYYYY(orderDateRange.endDate)}` 
+                                      : (orderDateRange.startDate ? `From ${formatDateDDMMYYYY(orderDateRange.startDate)}` : ''),
+                                    search: orderSearch
+                                  };
+                                  exportOrdersToExcel(filteredOrders, filterSummary);
+                                  if (showNotification) {
+                                    showNotification(`Successfully exported ${filteredOrders.length} order(s) to Excel!`, 'success');
+                                  }
+                                }}
+                                className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-gray-50 text-[#3A2E26] font-bold text-xs transition-colors cursor-pointer text-left w-full"
+                              >
+                                <FileSpreadsheet className="w-4 h-4 text-emerald-600 shrink-0" />
+                                <span>Export to Excel</span>
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+
                       <button
                         onClick={handleOpenOfflineSaleModal}
                         className="flex items-center gap-1.5 px-3.5 py-2 bg-[#7A8B6F] hover:bg-[#68785c] text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-200 shadow-sm cursor-pointer shrink-0"
@@ -4376,6 +4466,153 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                           onChange={(e) => setManualOrderSearch(e.target.value)}
                           className="w-full pl-10 pr-4 py-2 bg-[#FDFBF7] border border-[#3A2E26]/10 rounded-xl text-xs font-sans focus:outline-none focus:border-[#3A2E26]"
                         />
+                      </div>
+
+                      {/* Export Dropdown for Manual Orders */}
+                      <div className="relative shrink-0" ref={manualExportDropdownRef}>
+                        <button
+                          type="button"
+                          onClick={() => setIsManualExportDropdownOpen(!isManualExportDropdownOpen)}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                            isManualExportDropdownOpen
+                              ? 'bg-[#3A2E26] text-white border-[#3A2E26] shadow-sm'
+                              : 'bg-white text-[#3A2E26]/80 border-[#3A2E26]/15 hover:border-[#3A2E26]/40'
+                          }`}
+                        >
+                          <Download className="w-3.5 h-3.5 text-[#7A8B6F]" />
+                          <span>Export</span>
+                          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isManualExportDropdownOpen ? 'rotate-180' : 'text-gray-500'}`} />
+                        </button>
+
+                        {isManualExportDropdownOpen && (
+                          <>
+                            <div 
+                              className="fixed inset-0 z-40" 
+                              onClick={() => setIsManualExportDropdownOpen(false)} 
+                            />
+                            <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 p-2 flex flex-col gap-1 font-sans animate-in fade-in zoom-in-95 duration-150">
+                              {/* Option 1: PDF */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsManualExportDropdownOpen(false);
+                                  const filtered = manualOrders.filter(o => {
+                                    const matchesFilter = manualOrderFilter === 'all' || o.status === manualOrderFilter;
+                                    const query = manualOrderSearch.toLowerCase();
+                                    const formattedId = formatManualOrderId(o.orderId || o._id);
+                                    const matchesSearch = !query ||
+                                      formattedId.toLowerCase().includes(query) ||
+                                      (o.orderId && o.orderId.toLowerCase().includes(query)) ||
+                                      (o.customerName && o.customerName.toLowerCase().includes(query)) ||
+                                      (o.customerPhone && o.customerPhone.toLowerCase().includes(query)) ||
+                                      (o.customerEmail && o.customerEmail.toLowerCase().includes(query));
+
+                                    let matchesDate = true;
+                                    const moDateRaw = o.saleDateTime || o.created_at;
+                                    if (dateFilterMode === 'range' && (orderDateRange.startDate || orderDateRange.endDate)) {
+                                      if (!moDateRaw) matchesDate = false;
+                                      else {
+                                        const moDateStr = getYYYYMMDD(moDateRaw);
+                                        if (orderDateRange.startDate && moDateStr < orderDateRange.startDate) matchesDate = false;
+                                        if (orderDateRange.endDate && moDateStr > orderDateRange.endDate) matchesDate = false;
+                                      }
+                                    } else if (dateFilterMode === 'multi' && selectedOrderDates.length > 0) {
+                                      if (!moDateRaw) matchesDate = false;
+                                      else {
+                                        const moDateStr = getYYYYMMDD(moDateRaw);
+                                        if (!selectedOrderDates.includes(moDateStr)) matchesDate = false;
+                                      }
+                                    }
+
+                                    return matchesFilter && matchesSearch && matchesDate;
+                                  }).map(o => ({
+                                    ...o,
+                                    orderId: formatManualOrderId(o.orderId || o._id),
+                                    isOffline: true
+                                  }));
+
+                                  const filterSummary = {
+                                    source: 'Manual / Offline',
+                                    statuses: manualOrderFilter !== 'all' ? [manualOrderFilter] : [],
+                                    dateRange: orderDateRange.startDate && orderDateRange.endDate 
+                                      ? `${formatDateDDMMYYYY(orderDateRange.startDate)} - ${formatDateDDMMYYYY(orderDateRange.endDate)}` 
+                                      : (orderDateRange.startDate ? `From ${formatDateDDMMYYYY(orderDateRange.startDate)}` : ''),
+                                    search: manualOrderSearch
+                                  };
+
+                                  exportOrdersToPDF(filtered, filterSummary);
+                                  if (showNotification) {
+                                    showNotification(`Successfully exported ${filtered.length} manual order(s) to PDF!`, 'success');
+                                  }
+                                }}
+                                className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-gray-50 text-[#3A2E26] font-bold text-xs transition-colors cursor-pointer text-left w-full"
+                              >
+                                <FileText className="w-4 h-4 text-rose-600 shrink-0" />
+                                <span>Export to PDF</span>
+                              </button>
+
+                              {/* Option 2: Excel */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsManualExportDropdownOpen(false);
+                                  const filtered = manualOrders.filter(o => {
+                                    const matchesFilter = manualOrderFilter === 'all' || o.status === manualOrderFilter;
+                                    const query = manualOrderSearch.toLowerCase();
+                                    const formattedId = formatManualOrderId(o.orderId || o._id);
+                                    const matchesSearch = !query ||
+                                      formattedId.toLowerCase().includes(query) ||
+                                      (o.orderId && o.orderId.toLowerCase().includes(query)) ||
+                                      (o.customerName && o.customerName.toLowerCase().includes(query)) ||
+                                      (o.customerPhone && o.customerPhone.toLowerCase().includes(query)) ||
+                                      (o.customerEmail && o.customerEmail.toLowerCase().includes(query));
+
+                                    let matchesDate = true;
+                                    const moDateRaw = o.saleDateTime || o.created_at;
+                                    if (dateFilterMode === 'range' && (orderDateRange.startDate || orderDateRange.endDate)) {
+                                      if (!moDateRaw) matchesDate = false;
+                                      else {
+                                        const moDateStr = getYYYYMMDD(moDateRaw);
+                                        if (orderDateRange.startDate && moDateStr < orderDateRange.startDate) matchesDate = false;
+                                        if (orderDateRange.endDate && moDateStr > orderDateRange.endDate) matchesDate = false;
+                                      }
+                                    } else if (dateFilterMode === 'multi' && selectedOrderDates.length > 0) {
+                                      if (!moDateRaw) matchesDate = false;
+                                      else {
+                                        const moDateStr = getYYYYMMDD(moDateRaw);
+                                        if (!selectedOrderDates.includes(moDateStr)) matchesDate = false;
+                                      }
+                                    }
+
+                                    return matchesFilter && matchesSearch && matchesDate;
+                                  }).map(o => ({
+                                    ...o,
+                                    orderId: formatManualOrderId(o.orderId || o._id),
+                                    isOffline: true
+                                  }));
+
+                                  const filterSummary = {
+                                    source: 'Manual / Offline',
+                                    statuses: manualOrderFilter !== 'all' ? [manualOrderFilter] : [],
+                                    dateRange: orderDateRange.startDate && orderDateRange.endDate 
+                                      ? `${formatDateDDMMYYYY(orderDateRange.startDate)} - ${formatDateDDMMYYYY(orderDateRange.endDate)}` 
+                                      : (orderDateRange.startDate ? `From ${formatDateDDMMYYYY(orderDateRange.startDate)}` : ''),
+                                    search: manualOrderSearch
+                                  };
+
+                                  exportOrdersToExcel(filtered, filterSummary);
+                                  if (showNotification) {
+                                    showNotification(`Successfully exported ${filtered.length} manual order(s) to Excel!`, 'success');
+                                  }
+                                }}
+                                className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-gray-50 text-[#3A2E26] font-bold text-xs transition-colors cursor-pointer text-left w-full"
+                              >
+                                <FileSpreadsheet className="w-4 h-4 text-emerald-600 shrink-0" />
+                                <span>Export to Excel</span>
+                              </button>
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
