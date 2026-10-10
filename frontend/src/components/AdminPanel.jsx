@@ -1840,8 +1840,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
         height: bulkShippingHeight
       }, token);
       if (data.status === 'success') {
-        showNotification(data.detail || `Bulk shipment completed! Processed: ${data.processed_count}`, 'success');
-        setIsBulkShipModalOpen(false);
+        showNotification(data.detail || ("Bulk shipment completed! Processed: " + data.processed_count), 'success');
         setSelectedOrderIds([]);
         fetchAdminData(true);
       } else {
@@ -1863,8 +1862,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     try {
       const data = await bulkScheduleDelhiveryPickup(selectedOrderIds, token);
       if (data.status === 'success') {
-        showNotification(data.detail || `Bulk pickup scheduled! Processed: ${data.processed_count}`, 'success');
-        setIsBulkPickupModalOpen(false);
+        showNotification(data.detail || ("Bulk pickup scheduled! Processed: " + data.processed_count), 'success');
         setSelectedOrderIds([]);
         fetchAdminData(true);
       } else {
@@ -1877,6 +1875,39 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     }
   };
 
+  const handlePromptBulkShip = () => {
+    if (selectedOrderIds.length === 0) {
+      showNotification('Please select at least one order to ship', 'error');
+      return;
+    }
+    setConfirmConfig({
+      title: 'Bulk Ship Orders',
+      message: "Are you sure you want to book Delhivery shipment for " + selectedOrderIds.length + " selected order(s)?",
+      confirmText: 'Ship Orders',
+      type: 'primary',
+      onConfirm: async () => {
+        setConfirmConfig(null);
+        handleBulkShipment();
+      }
+    });
+  };
+
+  const handlePromptBulkPickup = () => {
+    if (selectedOrderIds.length === 0) {
+      showNotification('Please select at least one order for pickup', 'error');
+      return;
+    }
+    setConfirmConfig({
+      title: 'Bulk Schedule Pickup',
+      message: "Are you sure you want to schedule Delhivery pickup for " + selectedOrderIds.length + " selected order(s)?",
+      confirmText: 'Schedule Pickup',
+      type: 'primary',
+      onConfirm: async () => {
+        setConfirmConfig(null);
+        handleBulkPickup();
+      }
+    });
+  };
   const handleSyncDelhiveryStatus = async () => {
     setSaving(true);
     try {
@@ -2389,162 +2420,6 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       </div>
     );
   };
-
-  const getFilteredStats = () => {
-    const filteredOrdersList = orders.filter(order => {
-      if (statsFilter === 'online' && order.isOffline) return false;
-      if (statsFilter === 'offline' && !order.isOffline) return false;
-      if (statsFilter === 'manual') return false;
-
-      // Filter by Date (Range or Multi-Select)
-      if (dateFilterMode === 'range' && (orderDateRange.startDate || orderDateRange.endDate)) {
-        if (!order.created_at) return false;
-        const orderDateStr = getYYYYMMDD(order.created_at);
-        if (orderDateRange.startDate && orderDateStr < orderDateRange.startDate) return false;
-        if (orderDateRange.endDate && orderDateStr > orderDateRange.endDate) return false;
-      } else if (dateFilterMode === 'multi' && selectedOrderDates.length > 0) {
-        if (!order.created_at) return false;
-        const orderDateStr = getYYYYMMDD(order.created_at);
-        if (!selectedOrderDates.includes(orderDateStr)) return false;
-      }
-      return true;
-    });
-
-    // Filter Delivered Manual Orders (strictly status === 'Delivered' and matching source filter)
-    const filteredDeliveredManualOrders = manualOrders.filter(mo => {
-      if (mo.status !== 'Delivered') return false;
-      if (statsFilter === 'online' || statsFilter === 'offline') return false;
-
-      const moDateRaw = mo.saleDateTime || mo.created_at;
-      if (dateFilterMode === 'range' && (orderDateRange.startDate || orderDateRange.endDate)) {
-        if (!moDateRaw) return false;
-        const moDateStr = getYYYYMMDD(moDateRaw);
-        if (orderDateRange.startDate && moDateStr < orderDateRange.startDate) return false;
-        if (orderDateRange.endDate && moDateStr > orderDateRange.endDate) return false;
-      } else if (dateFilterMode === 'multi' && selectedOrderDates.length > 0) {
-        if (!moDateRaw) return false;
-        const moDateStr = getYYYYMMDD(moDateRaw);
-        if (!selectedOrderDates.includes(moDateStr)) return false;
-      }
-      return true;
-    });
-
-    const main_revenue = filteredOrdersList.reduce((sum, o) => sum + (parseFloat(o.grandTotal) || 0), 0);
-    const manual_revenue = filteredDeliveredManualOrders.reduce((sum, mo) => sum + (parseFloat(mo.totalPrice) || 0), 0);
-    const total_revenue = main_revenue + manual_revenue;
-
-    const order_count = filteredOrdersList.length + filteredDeliveredManualOrders.length;
-    const uniqueCustomers = new Set([
-      ...filteredOrdersList.map(o => o.shippingAddress?.phone || o.shippingAddress?.email).filter(Boolean),
-      ...filteredDeliveredManualOrders.map(mo => mo.customerPhone || mo.customerEmail).filter(Boolean)
-    ]);
-    const customer_count = uniqueCustomers.size || order_count;
-    const average_order_value = order_count > 0 ? total_revenue / order_count : 0;
-
-    return {
-      total_revenue,
-      order_count,
-      customer_count,
-      average_order_value
-    };
-  };
-
-  const getRevenueChartData = (tf = revenueChartTimeframe) => {
-    const data = [];
-    const now = new Date();
-    let daysCount = 7;
-
-    if (tf === '14days') daysCount = 14;
-    else if (tf === '30days') daysCount = 30;
-    else if (tf === 'thisMonth') daysCount = Math.max(now.getDate(), 1);
-    else if (tf === 'filter' && orderDateRange.startDate && orderDateRange.endDate) {
-      const start = new Date(orderDateRange.startDate);
-      const end = new Date(orderDateRange.endDate);
-      const diffTime = Math.abs(end - start);
-      daysCount = Math.min(Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1, 60);
-    }
-
-    for (let i = daysCount - 1; i >= 0; i--) {
-      const d = new Date();
-      if (tf === 'filter' && orderDateRange.endDate) {
-        const endDate = new Date(orderDateRange.endDate);
-        d.setDate(endDate.getDate() - i);
-      } else {
-        d.setDate(now.getDate() - i);
-      }
-
-      const dateStr = d.toISOString().split('T')[0];
-      const label = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', timeZone: 'Asia/Kolkata' });
-
-      let dayOrderCount = 0;
-      let dayTotal = orders.reduce((sum, order) => {
-        if (!order.created_at) return sum;
-        const orderDate = order.created_at.split(' ')[0].split('T')[0];
-        
-        const matchesFilter = 
-          statsFilter === 'all' || 
-          (statsFilter === 'online' && !order.isOffline) ||
-          (statsFilter === 'offline' && order.isOffline);
-
-        if (orderDate === dateStr && matchesFilter) {
-          dayOrderCount++;
-          return sum + (parseFloat(order.grandTotal) || 0);
-        }
-        return sum;
-      }, 0);
-
-      // Add Delivered Manual Orders for this date if statsFilter is 'all' or 'offline'
-      if (statsFilter === 'all' || statsFilter === 'offline') {
-        manualOrders.forEach(mo => {
-          if (mo.status !== 'Delivered') return;
-          const moDateRaw = mo.saleDateTime || mo.created_at;
-          if (!moDateRaw) return;
-          const moDate = moDateRaw.split(' ')[0].split('T')[0];
-          if (moDate === dateStr) {
-            dayOrderCount++;
-            dayTotal += (parseFloat(mo.totalPrice) || 0);
-          }
-        });
-      }
-
-      data.push({ dateStr, label, value: dayTotal, orderCount: dayOrderCount });
-    }
-    return data;
-  };
-
-  const getProductDistributionData = () => {
-    const counts = {};
-    orders.forEach(o => {
-      const matchesFilter = 
-        statsFilter === 'all' || 
-        (statsFilter === 'online' && !o.isOffline) ||
-        (statsFilter === 'offline' && o.isOffline);
-      if (!matchesFilter) return;
-
-      o.cartItems?.forEach(item => {
-        const title = item.title || 'Other';
-        counts[title] = (counts[title] || 0) + (parseInt(item.quantity) || 0);
-      });
-    });
-
-    if (statsFilter === 'all' || statsFilter === 'offline') {
-      manualOrders.forEach(mo => {
-        if (mo.status !== 'Delivered') return;
-        const qty = parseInt(mo.numberOfSoaps) || 1;
-        counts['Manual Soap Orders'] = (counts['Manual Soap Orders'] || 0) + qty;
-      });
-    }
-
-    return Object.entries(counts).map(([label, value]) => ({ label, value }));
-  };
-
-  const activePreviewHash = activeTab === 'settings' 
-    ? settingsSubTab 
-    : activeTab === 'products' 
-      ? 'products' 
-      : activeTab === 'coupons' 
-        ? 'identity' 
-        : 'reviews';
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] text-[#3A2E26] flex flex-col font-sans">
@@ -4051,19 +3926,19 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                       <div className="flex items-center gap-2.5">
                         <button
                           type="button"
-                          onClick={() => setIsBulkShipModalOpen(true)}
+                          onClick={handlePromptBulkShip}
                           className="px-3.5 py-1.5 bg-[#7A8B6F] hover:bg-[#68785c] text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1.5 border-none shadow-xs"
                         >
                           <Truck className="w-4 h-4" />
-                          <span>Bulk Ship</span>
+                          <span>Ship Order</span>
                         </button>
                         <button
                           type="button"
-                          onClick={() => setIsBulkPickupModalOpen(true)}
+                          onClick={handlePromptBulkPickup}
                           className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1.5 border-none shadow-xs"
                         >
                           <Calendar className="w-4 h-4" />
-                          <span>Bulk Pickup</span>
+                          <span>Pickup Order</span>
                         </button>
                         <button
                           type="button"
@@ -11075,174 +10950,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
         </div>
       )}
 
-      {/* Bulk Ship Modal */}
-      {isBulkShipModalOpen && (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-[#3A2E26]/60 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-[#FDFBF7] w-full max-w-md rounded-3xl shadow-2xl relative border border-[#3A2E26]/10 animate-slideUp p-6 sm:p-8 font-sans">
-            <div className="flex justify-between items-center border-b border-[#3A2E26]/10 pb-4 mb-6">
-              <div>
-                <h3 className="text-xl font-bold text-[#3A2E26] uppercase tracking-tight flex items-center gap-2">
-                  <Truck className="w-5 h-5 text-[#7A8B6F]" />
-                  <span>Bulk Ship Orders</span>
-                </h3>
-                <p className="text-xs text-[#3A2E26]/60 mt-0.5">
-                  Book Delhivery shipments for {selectedOrderIds.length} selected order(s)
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsBulkShipModalOpen(false)}
-                className="text-[#3A2E26]/50 hover:text-[#3A2E26] p-1.5 rounded-xl hover:bg-[#3A2E26]/5 transition-colors cursor-pointer border-none"
-              >
-                <X className="w-5 h-5" />
-              </button>
             </div>
-
-            <div className="space-y-4">
-              <div className="p-3 bg-emerald-50 border border-emerald-200/60 rounded-2xl text-xs text-emerald-800 font-medium">
-                <span className="font-bold">{selectedOrderIds.length} order(s)</span> will be processed for consignment booking. Orders that are already shipped or cancelled will be safely skipped.
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">
-                  Package Weight (Grams)
-                </label>
-                <input
-                  type="number"
-                  value={bulkShippingWeight}
-                  onChange={(e) => setBulkShippingWeight(parseInt(e.target.value) || 75)}
-                  className="w-full px-4 py-3 bg-[#FDFBF7] border border-[#E6D5C3] rounded-xl text-xs font-semibold text-[#3A2E26] focus:outline-none focus:border-[#3A2E26] shadow-2xs"
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1">
-                    Length (cm)
-                  </label>
-                  <input
-                    type="number"
-                    value={bulkShippingLength}
-                    onChange={(e) => setBulkShippingLength(parseInt(e.target.value) || 15)}
-                    className="w-full px-3 py-2 bg-[#FDFBF7] border border-[#E6D5C3] rounded-xl text-xs font-semibold text-[#3A2E26] focus:outline-none focus:border-[#3A2E26]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1">
-                    Width (cm)
-                  </label>
-                  <input
-                    type="number"
-                    value={bulkShippingWidth}
-                    onChange={(e) => setBulkShippingWidth(parseInt(e.target.value) || 15)}
-                    className="w-full px-3 py-2 bg-[#FDFBF7] border border-[#E6D5C3] rounded-xl text-xs font-semibold text-[#3A2E26] focus:outline-none focus:border-[#3A2E26]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1">
-                    Height (cm)
-                  </label>
-                  <input
-                    type="number"
-                    value={bulkShippingHeight}
-                    onChange={(e) => setBulkShippingHeight(parseInt(e.target.value) || 10)}
-                    className="w-full px-3 py-2 bg-[#FDFBF7] border border-[#E6D5C3] rounded-xl text-xs font-semibold text-[#3A2E26] focus:outline-none focus:border-[#3A2E26]"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#3A2E26]/10">
-                <button
-                  type="button"
-                  onClick={() => setIsBulkShipModalOpen(false)}
-                  className="px-5 py-2.5 bg-white hover:bg-gray-100 border border-[#3A2E26]/20 text-[#3A2E26] font-bold text-xs rounded-xl uppercase tracking-wider transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleBulkShipment}
-                  disabled={saving}
-                  className="px-6 py-2.5 bg-[#7A8B6F] hover:bg-[#68785c] text-white font-bold text-xs rounded-xl shadow-md uppercase tracking-wider transition-all cursor-pointer border-none flex items-center gap-2"
-                >
-                  {saving ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>Processing...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Truck className="w-4 h-4" />
-                      <span>Confirm Bulk Ship</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Bulk Schedule Pickup Modal */}
-      {isBulkPickupModalOpen && (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-[#3A2E26]/60 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-[#FDFBF7] w-full max-w-md rounded-3xl shadow-2xl relative border border-[#3A2E26]/10 animate-slideUp p-6 sm:p-8 font-sans">
-            <div className="flex justify-between items-center border-b border-[#3A2E26]/10 pb-4 mb-6">
-              <div>
-                <h3 className="text-xl font-bold text-[#3A2E26] uppercase tracking-tight flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-amber-600" />
-                  <span>Bulk Schedule Pickup</span>
-                </h3>
-                <p className="text-xs text-[#3A2E26]/60 mt-0.5">
-                  Schedule Delhivery pickup for {selectedOrderIds.length} selected order(s)
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsBulkPickupModalOpen(false)}
-                className="text-[#3A2E26]/50 hover:text-[#3A2E26] p-1.5 rounded-xl hover:bg-[#3A2E26]/5 transition-colors cursor-pointer border-none"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div className="p-3 bg-amber-50 border border-amber-200/60 rounded-2xl text-xs text-amber-800 font-medium">
-                This will trigger a Delhivery pickup request for all <span className="font-bold">{selectedOrderIds.length} selected order(s)</span>. If an order does not have an AWB yet, it will be automatically booked and scheduled!
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#3A2E26]/10">
-                <button
-                  type="button"
-                  onClick={() => setIsBulkPickupModalOpen(false)}
-                  className="px-5 py-2.5 bg-white hover:bg-gray-100 border border-[#3A2E26]/20 text-[#3A2E26] font-bold text-xs rounded-xl uppercase tracking-wider transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleBulkPickup}
-                  disabled={saving}
-                  className="px-6 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-md uppercase tracking-wider transition-all cursor-pointer border-none flex items-center gap-2"
-                >
-                  {saving ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>Scheduling...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Calendar className="w-4 h-4" />
-                      <span>Confirm Bulk Pickup</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      </div>
     );
   }
 
