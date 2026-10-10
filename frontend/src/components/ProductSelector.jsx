@@ -265,29 +265,28 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
 
                 {/* 2. Bundle Selector */}
                 <div className="pt-6">
-                  <div className="flex items-center mb-3">
-                    <span className="text-[11px] uppercase tracking-[0.15em] font-bold text-[#3A2E26] flex items-center gap-2">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-[11px] sm:text-[12px] uppercase tracking-[0.15em] font-bold text-[#3A2E26] flex items-center gap-2">
                       <Sparkles className="w-4 h-4 text-[#C97C5D]" />
                       Select Bundle & Save
                     </span>
                   </div>
 
-                  {/* Grid */}
-                  <div className={`grid ${items.length === 3 ? 'grid-cols-3' : 'grid-cols-2'} gap-1.5 sm:gap-3`}>
-                    {items.map((item, index) => {
+                  {/* Clean & Simple 3-Column Grid */}
+                  <div className={`grid ${items.length === 3 ? 'grid-cols-3' : 'grid-cols-2'} gap-2 sm:gap-3`}>
+                    {items.map((item) => {
                       const isSelected = item.id === pack.id;
                       const pricePerBar = (item.basePrice / (item.id === 'pack-3' ? 4 : item.count)).toFixed(0);
                       const themeColor = item.id === 'pack-5' ? '#7A8B6F' : '#C97C5D';
-                      const badgeBg = item.id === 'pack-5' ? 'bg-[#7A8B6F]' : 'bg-[#C97C5D]';
 
                       let badgeText = null;
                       if (item.id === 'pack-3') badgeText = "Most Popular";
                       if (item.id === 'pack-5') badgeText = "Best Value";
 
-                      let offerTagText = null;
-                      if (item.id === 'pack-3') offerTagText = "Buy 3 Get 1 Free";
-                      if (item.id === 'single') offerTagText = "Free 25g Soap";
-                      if (item.id === 'pack-5') offerTagText = "Save 16%";
+                      let offerHighlight = null;
+                      if (item.id === 'pack-3') offerHighlight = { text: "+ 1 SOAP FREE", bg: "bg-gradient-to-r from-[#D97757] to-[#C97C5D]", shadow: "shadow-[0_3px_10px_rgba(201,124,93,0.3)]" };
+                      if (item.id === 'single') offerHighlight = { text: "FREE 25g SOAP", bg: "bg-gradient-to-r from-[#D97757] to-[#C97C5D]", shadow: "shadow-[0_3px_10px_rgba(201,124,93,0.3)]" };
+                      if (item.id === 'pack-5') offerHighlight = { text: "SAVE 16% EXTRA", bg: "bg-gradient-to-r from-[#7A8B6F] to-[#65765A]", shadow: "shadow-[0_3px_10px_rgba(122,139,111,0.3)]" };
 
                       const formattedTitle = formatTitle(item.title);
 
@@ -296,52 +295,58 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
                           key={item.id}
                           type="button"
                           onClick={() => setSelectedPack && setSelectedPack(item.id)}
-                          className={`relative p-1.5 sm:p-3 rounded-xl transition-all duration-300 cursor-pointer text-left border ${
+                          className={`relative p-2 sm:p-3 rounded-xl transition-all duration-300 cursor-pointer text-left flex flex-col justify-between border ${
                             isSelected
-                              ? 'bg-[#FDFBF7] shadow-sm'
-                              : 'border-[#3A2E26]/15 bg-white text-[#3A2E26] hover:border-[#C97C5D]/50'
+                              ? 'bg-[#FFFDF9] shadow-md border-2 scale-[1.01] ring-2 ring-offset-1 ring-[#C97C5D]/30'
+                              : 'bg-white border-[#3A2E26]/20 text-[#3A2E26] hover:border-[#C97C5D]/60 hover:shadow-xs'
                           }`}
-                          style={isSelected ? { borderColor: themeColor, boxShadow: `0 0 0 1px ${themeColor}` } : {}}
+                          style={isSelected ? { borderColor: themeColor } : {}}
                         >
-                          {/* Top Right Badge */}
+                          {/* Top Badge */}
                           {badgeText && (
                             <span 
-                              className={`absolute -top-2.5 right-1 text-[8px] sm:text-[9.5px] font-bold text-white px-2 sm:px-2.5 py-0.5 rounded-full shadow-xs ${badgeBg} whitespace-nowrap z-10`}
+                              className={`absolute -top-3 right-1.5 text-[8.5px] sm:text-[9.5px] font-black text-white px-2.5 py-0.5 rounded-full shadow-xs uppercase tracking-wider z-10 ${
+                                item.id === 'pack-5' ? 'bg-[#7A8B6F]' : 'bg-[#C97C5D]'
+                              }`}
                             >
                               {badgeText}
                             </span>
                           )}
 
-                          <div className="flex items-start justify-between gap-1 sm:gap-2">
-                            <div className="flex items-start gap-1 sm:gap-2 min-w-0">
+                          <div>
+                            {/* Checkmark + Title */}
+                            <div className="flex items-start gap-1.5 min-w-0">
                               <div 
                                 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mt-0.5 rounded-full border flex items-center justify-center shrink-0 transition-all"
                                 style={isSelected ? { borderColor: themeColor, backgroundColor: themeColor } : { borderColor: 'rgba(58,46,38,0.3)', backgroundColor: 'transparent' }}
                               >
                                 {isSelected && <Check className="w-2 sm:w-2.5 h-2 sm:h-2.5 text-white stroke-[3]" />}
                               </div>
-                              <div className="min-w-0">
-                                <span className="block text-[9.5px] sm:text-[11px] font-bold text-[#3A2E26] uppercase tracking-tight sm:tracking-wide whitespace-pre-line leading-normal sm:leading-relaxed">
-                                  {formattedTitle}
-                                </span>
-                                <span className="block text-[8px] sm:text-[10px] text-[#3A2E26]/60 mt-0.5 whitespace-nowrap">
-                                  ₹{pricePerBar} / bar
-                                </span>
-                              </div>
-                            </div>
-                            <div className="text-right shrink-0">
-                              <span className="block font-serif-brand text-[11px] sm:text-[15px] font-bold text-[#3A2E26]">
-                                ₹{item.basePrice.toFixed(0)}
+                              <span className="block text-[11px] sm:text-[12.5px] font-extrabold text-[#3A2E26] uppercase tracking-tight whitespace-pre-line leading-snug">
+                                {formattedTitle}
                               </span>
-                              {offerTagText && (
-                                <span 
-                                  className="block text-[8px] sm:text-[9.5px] font-bold mt-0.5 whitespace-nowrap"
-                                  style={{ color: themeColor }}
-                                >
-                                  {offerTagText}
-                                </span>
-                              )}
                             </div>
+
+                            {/* HIGH VISIBILITY OFFER BADGE - NO TEXT CLIPPING */}
+                            {offerHighlight && (
+                              <div className="mt-2.5">
+                                <div className={`w-full py-1.5 px-1 rounded-lg ${offerHighlight.bg} text-white text-center ${offerHighlight.shadow} flex items-center justify-center overflow-hidden`}>
+                                  <span className="text-[9.5px] sm:text-[11.5px] font-black tracking-tight leading-none uppercase whitespace-nowrap drop-shadow-2xs">
+                                    {offerHighlight.text}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Price & Unit Price */}
+                          <div className="mt-2.5 pt-1.5 border-t border-[#3A2E26]/10 flex items-baseline justify-between gap-1">
+                            <span className="font-serif-brand font-bold text-[13px] sm:text-[16px] text-[#3A2E26]">
+                              ₹{item.basePrice.toFixed(0)}
+                            </span>
+                            <span className="text-[8.5px] sm:text-[10px] text-[#3A2E26]/70 font-medium">
+                              ₹{pricePerBar}/bar
+                            </span>
                           </div>
                         </button>
                       );
@@ -350,32 +355,32 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
                 </div>
 
                 {/* 3. Live Price Banner */}
-                <div className="mt-5 p-3.5 bg-[#F9F7F3] border border-[#3A2E26]/10 rounded-xl flex items-center justify-between">
+                <div className="mt-4 p-3 bg-[#F9F7F3] border border-[#3A2E26]/10 rounded-xl flex items-center justify-between">
                   <div>
-                    <span className="text-[9px] uppercase tracking-widest text-[#3A2E26]/50 font-bold block mb-1">
+                    <span className="text-[9px] uppercase tracking-widest text-[#3A2E26]/50 font-bold block mb-0.5">
                       Selected Price
                     </span>
-                    <div className="font-serif-brand text-2xl sm:text-3xl font-bold text-[#3A2E26]">
+                    <div className="font-serif-brand text-xl sm:text-2xl font-bold text-[#3A2E26]">
                       ₹{pack.basePrice.toFixed(2)}
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="text-[10px] uppercase tracking-widest text-[#3A2E26]/60 font-bold block">
+                    <span className="text-[10px] sm:text-[11px] uppercase tracking-wider text-[#3A2E26] font-bold block">
                       {formatTitle(pack.title).replace(/\n/g, ' ')}
                     </span>
                     {pack.id === 'pack-3' && (
-                      <span className="text-[10px] text-[#C97C5D] font-bold block mt-0.5">
+                      <span className="text-[10px] sm:text-[11px] text-[#C97C5D] font-bold block mt-0.5">
                         Buy 3 Get 1 Free (4 Soaps Total)
                       </span>
                     )}
                     {pack.id === 'single' && (
-                      <span className="text-[10px] text-[#7A8B6F] font-bold block mt-0.5">
-                        Includes Free 25g Soap
+                      <span className="text-[10px] sm:text-[11px] text-[#C97C5D] font-bold block mt-0.5">
+                        Includes Free 25g Soap Bar
                       </span>
                     )}
                     {pack.id === 'pack-5' && (
-                      <span className="text-[10px] text-[#7A8B6F] font-bold block mt-0.5">
-                        Save 16%
+                      <span className="text-[10px] sm:text-[11px] text-[#7A8B6F] font-bold block mt-0.5">
+                        Save 16% (5 Soaps Total)
                       </span>
                     )}
                   </div>
