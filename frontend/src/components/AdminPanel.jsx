@@ -75,6 +75,8 @@ import {
   checkDelhiveryServiceability,
   bookDelhiveryShipment,
   scheduleDelhiveryPickup,
+  bulkBookDelhiveryShipment,
+  bulkScheduleDelhiveryPickup,
   syncDelhiveryStatus,
   cancelDelhiveryShipment,
   deleteAdminOrder,
@@ -457,6 +459,15 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   const [shippingHeight, setShippingHeight] = useState(10); // cm
   const [serviceabilityResult, setServiceabilityResult] = useState(null);
   const [checkingServiceability, setCheckingServiceability] = useState(false);
+
+  // Bulk Order actions state
+  const [selectedOrderIds, setSelectedOrderIds] = useState([]);
+  const [isBulkShipModalOpen, setIsBulkShipModalOpen] = useState(false);
+  const [isBulkPickupModalOpen, setIsBulkPickupModalOpen] = useState(false);
+  const [bulkShippingWeight, setBulkShippingWeight] = useState(75);
+  const [bulkShippingLength, setBulkShippingLength] = useState(15);
+  const [bulkShippingWidth, setBulkShippingWidth] = useState(15);
+  const [bulkShippingHeight, setBulkShippingHeight] = useState(10);
 
   const [previewDevice, setPreviewDevice] = useState('pc'); // 'pc', 'tablet', 'mobile'
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -1794,6 +1805,73 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       }
     } catch (err) {
       showNotification(err.message || 'Failed to schedule pickup', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggleSelectOrder = (orderId) => {
+    setSelectedOrderIds(prev => 
+      prev.includes(orderId) ? prev.filter(id => id !== orderId) : [...prev, orderId]
+    );
+  };
+
+  const handleSelectAllOrders = (filteredList) => {
+    const allIds = filteredList.map(o => o.orderId || o._id);
+    const isAllSelected = allIds.length > 0 && allIds.every(id => selectedOrderIds.includes(id));
+    if (isAllSelected) {
+      setSelectedOrderIds(prev => prev.filter(id => !allIds.includes(id)));
+    } else {
+      setSelectedOrderIds(prev => Array.from(new Set([...prev, ...allIds])));
+    }
+  };
+
+  const handleBulkShipment = async () => {
+    if (selectedOrderIds.length === 0) {
+      showNotification('Please select at least one order to ship', 'error');
+      return;
+    }
+    setSaving(true);
+    try {
+      const data = await bulkBookDelhiveryShipment(selectedOrderIds, {
+        weight: bulkShippingWeight,
+        length: bulkShippingLength,
+        width: bulkShippingWidth,
+        height: bulkShippingHeight
+      }, token);
+      if (data.status === 'success') {
+        showNotification(data.detail || `Bulk shipment completed! Processed: ${data.processed_count}`, 'success');
+        setIsBulkShipModalOpen(false);
+        setSelectedOrderIds([]);
+        fetchAdminData(true);
+      } else {
+        showNotification(data.detail || 'Bulk shipping failed', 'error');
+      }
+    } catch (err) {
+      showNotification(err.message || 'Failed to process bulk shipping', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleBulkPickup = async () => {
+    if (selectedOrderIds.length === 0) {
+      showNotification('Please select at least one order for pickup', 'error');
+      return;
+    }
+    setSaving(true);
+    try {
+      const data = await bulkScheduleDelhiveryPickup(selectedOrderIds, token);
+      if (data.status === 'success') {
+        showNotification(data.detail || `Bulk pickup scheduled! Processed: ${data.processed_count}`, 'success');
+        setIsBulkPickupModalOpen(false);
+        setSelectedOrderIds([]);
+        fetchAdminData(true);
+      } else {
+        showNotification(data.detail || 'Bulk pickup failed', 'error');
+      }
+    } catch (err) {
+      showNotification(err.message || 'Failed to schedule bulk pickup', 'error');
     } finally {
       setSaving(false);
     }
@@ -3959,13 +4037,61 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
 
 
 
+                  {/* Bulk Operations Action Bar */}
+                  {selectedOrderIds.length > 0 && (
+                    <div className="mb-4 p-4 bg-[#3A2E26] text-white rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-md animate-fadeIn">
+                      <div className="flex items-center gap-3">
+                        <span className="bg-[#7A8B6F] text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow-xs">
+                          {selectedOrderIds.length} Order{selectedOrderIds.length > 1 ? 's' : ''} Selected
+                        </span>
+                        <span className="text-xs text-[#E6D5C3]">
+                          Choose a bulk action for selected orders
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2.5">
+                        <button
+                          type="button"
+                          onClick={() => setIsBulkShipModalOpen(true)}
+                          className="px-3.5 py-1.5 bg-[#7A8B6F] hover:bg-[#68785c] text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1.5 border-none shadow-xs"
+                        >
+                          <Truck className="w-4 h-4" />
+                          <span>Bulk Ship</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsBulkPickupModalOpen(true)}
+                          className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1.5 border-none shadow-xs"
+                        >
+                          <Calendar className="w-4 h-4" />
+                          <span>Bulk Pickup</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedOrderIds([])}
+                          className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer border-none"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Orders Data Table */}
                   <div className="bg-white rounded-3xl border border-[#3A2E26]/10 shadow-sm overflow-hidden">
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse">
                         <thead>
                           <tr className="bg-[#3A2E26]/5 border-b border-[#3A2E26]/10 text-[10px] font-bold uppercase tracking-widest text-[#3A2E26]/60">
-                            <th className="p-4 pl-6">Order ID</th>
+                            <th className="p-4 pl-6 w-10">
+                              <input
+                                type="checkbox"
+                                checked={filteredOrders.length > 0 && filteredOrders.every(o => selectedOrderIds.includes(o.orderId || o._id))}
+                                onChange={() => handleSelectAllOrders(filteredOrders)}
+                                className="w-4 h-4 accent-[#7A8B6F] rounded cursor-pointer align-middle"
+                                title="Select All Visible Orders"
+                              />
+                            </th>
+                            <th className="p-4">Order ID</th>
                             <th className="p-4">Customer Details</th>
                             <th className="p-4">Items Summary</th>
                             <th className="p-4">Payment Method</th>
@@ -3977,14 +4103,24 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                         <tbody className="divide-y divide-[#3A2E26]/10 text-xs">
                           {filteredOrders.length === 0 ? (
                             <tr>
-                              <td colSpan="7" className="p-8 text-center text-[#3A2E26]/50">
+                              <td colSpan="8" className="p-8 text-center text-[#3A2E26]/50">
                                 No matching order records located.
                               </td>
                             </tr>
                           ) : (
-                            filteredOrders.map((order) => (
-                              <tr key={order._id} className="hover:bg-[#3A2E26]/5 transition-colors">
-                                <td className="p-4 pl-6 align-top">
+                            filteredOrders.map((order) => {
+                              const isSelected = selectedOrderIds.includes(order.orderId || order._id);
+                              return (
+                              <tr key={order._id} className={`hover:bg-[#3A2E26]/5 transition-colors ${isSelected ? 'bg-[#7A8B6F]/10' : ''}`}>
+                                <td className="p-4 pl-6 align-top w-10">
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={() => handleToggleSelectOrder(order.orderId || order._id)}
+                                    className="w-4 h-4 accent-[#7A8B6F] rounded cursor-pointer mt-1"
+                                  />
+                                </td>
+                                <td className="p-4 align-top">
                                   <div className="flex flex-col gap-1">
                                     <span className="font-bold text-[#3A2E26]">{order.orderId}</span>
                                     {order.status === 'cancelled' || order.fulfillment?.status?.toLowerCase() === 'cancelled' ? (
@@ -4150,8 +4286,9 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                   )}
                                 </td>
                               </tr>
-                            ))
-                          )}
+                            );
+                          })
+                        )}
                         </tbody>
                       </table>
                     </div>
@@ -10933,6 +11070,174 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
               >
                 Close
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Ship Modal */}
+      {isBulkShipModalOpen && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-[#3A2E26]/60 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-[#FDFBF7] w-full max-w-md rounded-3xl shadow-2xl relative border border-[#3A2E26]/10 animate-slideUp p-6 sm:p-8 font-sans">
+            <div className="flex justify-between items-center border-b border-[#3A2E26]/10 pb-4 mb-6">
+              <div>
+                <h3 className="text-xl font-bold text-[#3A2E26] uppercase tracking-tight flex items-center gap-2">
+                  <Truck className="w-5 h-5 text-[#7A8B6F]" />
+                  <span>Bulk Ship Orders</span>
+                </h3>
+                <p className="text-xs text-[#3A2E26]/60 mt-0.5">
+                  Book Delhivery shipments for {selectedOrderIds.length} selected order(s)
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsBulkShipModalOpen(false)}
+                className="text-[#3A2E26]/50 hover:text-[#3A2E26] p-1.5 rounded-xl hover:bg-[#3A2E26]/5 transition-colors cursor-pointer border-none"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="p-3 bg-emerald-50 border border-emerald-200/60 rounded-2xl text-xs text-emerald-800 font-medium">
+                <span className="font-bold">{selectedOrderIds.length} order(s)</span> will be processed for consignment booking. Orders that are already shipped or cancelled will be safely skipped.
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">
+                  Package Weight (Grams)
+                </label>
+                <input
+                  type="number"
+                  value={bulkShippingWeight}
+                  onChange={(e) => setBulkShippingWeight(parseInt(e.target.value) || 75)}
+                  className="w-full px-4 py-3 bg-[#FDFBF7] border border-[#E6D5C3] rounded-xl text-xs font-semibold text-[#3A2E26] focus:outline-none focus:border-[#3A2E26] shadow-2xs"
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1">
+                    Length (cm)
+                  </label>
+                  <input
+                    type="number"
+                    value={bulkShippingLength}
+                    onChange={(e) => setBulkShippingLength(parseInt(e.target.value) || 15)}
+                    className="w-full px-3 py-2 bg-[#FDFBF7] border border-[#E6D5C3] rounded-xl text-xs font-semibold text-[#3A2E26] focus:outline-none focus:border-[#3A2E26]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1">
+                    Width (cm)
+                  </label>
+                  <input
+                    type="number"
+                    value={bulkShippingWidth}
+                    onChange={(e) => setBulkShippingWidth(parseInt(e.target.value) || 15)}
+                    className="w-full px-3 py-2 bg-[#FDFBF7] border border-[#E6D5C3] rounded-xl text-xs font-semibold text-[#3A2E26] focus:outline-none focus:border-[#3A2E26]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1">
+                    Height (cm)
+                  </label>
+                  <input
+                    type="number"
+                    value={bulkShippingHeight}
+                    onChange={(e) => setBulkShippingHeight(parseInt(e.target.value) || 10)}
+                    className="w-full px-3 py-2 bg-[#FDFBF7] border border-[#E6D5C3] rounded-xl text-xs font-semibold text-[#3A2E26] focus:outline-none focus:border-[#3A2E26]"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#3A2E26]/10">
+                <button
+                  type="button"
+                  onClick={() => setIsBulkShipModalOpen(false)}
+                  className="px-5 py-2.5 bg-white hover:bg-gray-100 border border-[#3A2E26]/20 text-[#3A2E26] font-bold text-xs rounded-xl uppercase tracking-wider transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBulkShipment}
+                  disabled={saving}
+                  className="px-6 py-2.5 bg-[#7A8B6F] hover:bg-[#68785c] text-white font-bold text-xs rounded-xl shadow-md uppercase tracking-wider transition-all cursor-pointer border-none flex items-center gap-2"
+                >
+                  {saving ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Processing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Truck className="w-4 h-4" />
+                      <span>Confirm Bulk Ship</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Schedule Pickup Modal */}
+      {isBulkPickupModalOpen && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-[#3A2E26]/60 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-[#FDFBF7] w-full max-w-md rounded-3xl shadow-2xl relative border border-[#3A2E26]/10 animate-slideUp p-6 sm:p-8 font-sans">
+            <div className="flex justify-between items-center border-b border-[#3A2E26]/10 pb-4 mb-6">
+              <div>
+                <h3 className="text-xl font-bold text-[#3A2E26] uppercase tracking-tight flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-amber-600" />
+                  <span>Bulk Schedule Pickup</span>
+                </h3>
+                <p className="text-xs text-[#3A2E26]/60 mt-0.5">
+                  Schedule Delhivery pickup for {selectedOrderIds.length} selected order(s)
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsBulkPickupModalOpen(false)}
+                className="text-[#3A2E26]/50 hover:text-[#3A2E26] p-1.5 rounded-xl hover:bg-[#3A2E26]/5 transition-colors cursor-pointer border-none"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="p-3 bg-amber-50 border border-amber-200/60 rounded-2xl text-xs text-amber-800 font-medium">
+                This will trigger a Delhivery pickup request for all <span className="font-bold">{selectedOrderIds.length} selected order(s)</span>. If an order does not have an AWB yet, it will be automatically booked and scheduled!
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#3A2E26]/10">
+                <button
+                  type="button"
+                  onClick={() => setIsBulkPickupModalOpen(false)}
+                  className="px-5 py-2.5 bg-white hover:bg-gray-100 border border-[#3A2E26]/20 text-[#3A2E26] font-bold text-xs rounded-xl uppercase tracking-wider transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBulkPickup}
+                  disabled={saving}
+                  className="px-6 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-md uppercase tracking-wider transition-all cursor-pointer border-none flex items-center gap-2"
+                >
+                  {saving ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Scheduling...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Calendar className="w-4 h-4" />
+                      <span>Confirm Bulk Pickup</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>

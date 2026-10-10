@@ -977,10 +977,207 @@ async def schedule_delhivery_pickup(order_id: str, admin: dict = Depends(get_adm
     )
 
     msg = f"Pickup scheduled successfully with Delhivery! (Pickup Date: {pickup_date_str} {pickup_time_str})"
+    msg = f"Pickup scheduled successfully with Delhivery! (Pickup Date: {pickup_date_str} {pickup_time_str})"
     if pr_id:
         msg += f" [PR ID: {pr_id}]"
 
     return {"status": "success", "message": msg}
+
+@router.post("/api/admin/orders/delhivery/bulk-ship")
+async def bulk_create_delhivery_shipment(payload: dict, admin: dict = Depends(get_admin_user)):
+    order_ids = payload.get("order_ids", [])
+    weight = payload.get("weight", 500)
+    length = payload.get("length", 15)
+    width = payload.get("width", 15)
+    height = payload.get("height", 10)
+    
+    if not order_ids or not isinstance(order_ids, list):
+        raise HTTPException(status_code=400, detail="No order IDs provided")
+        
+    successes = []
+    failures = []
+    
+    for oid in order_ids:
+        order = await orders_collection.find_one({"orderId": oid})
+        if not order:
+            order = await orders_collection.find_one({"_id": oid})
+            if not order:
+                try:
+                    from bson import ObjectId
+                    order = await orders_collection.find_one({"_id": ObjectId(oid)})
+                except Exception:
+                    pass
+        if not order:
+            failures.append({"order_id": oid, "reason": "Order not found"})
+            continue
+            
+        if order.get("status") == "cancelled" or order.get("fulfillment", {}).get("status", "").lower() == "cancelled":
+            failures.append({"order_id": oid, "reason": "Order is cancelled"})
+            continue
+            
+        if order.get("fulfillment") and order.get("fulfillment", {}).get("awb"):
+            failures.append({"order_id": oid, "reason": "Order already shipped"})
+            continue
+            
+        try:
+            fulfillment = await process_delhivery_shipment_booking(
+                order, weight=weight, length=length, width=width, height=height
+            )
+            successes.append({"order_id": oid, "awb": fulfillment.get("awb")})
+        except Exception as e:
+            failures.append({"order_id": oid, "reason": str(e)})
+            
+    return {
+        "status": "success",
+        "processed_count": len(successes),
+        "failed_count": len(failures),
+        "successes": successes,
+        "failures": failures,
+        "detail": f"Successfully shipped {len(successes)} order(s)." + (f" ({len(failures)} skipped/failed)" if failures else "")
+    }
+
+@router.post("/api/admin/orders/delhivery/bulk-pickup")
+async def bulk_schedule_delhivery_pickup(payload: dict, admin: dict = Depends(get_admin_user)):
+    order_ids = payload.get("order_ids", [])
+    if not order_ids or not isinstance(order_ids, list):
+        raise HTTPException(status_code=400, detail="No order IDs provided")
+        
+    successes = []
+    failures = []
+    
+    for oid in order_ids:
+        order = await orders_collection.find_one({"orderId": oid})
+        if not order:
+            order = await orders_collection.find_one({"_id": oid})
+            if not order:
+                try:
+                    from bson import ObjectId
+                    order = await orders_collection.find_one({"_id": ObjectId(oid)})
+                except Exception:
+                    pass
+        if not order:
+            failures.append({"order_id": oid, "reason": "Order not found"})
+            continue
+            
+        if order.get("status") == "cancelled" or order.get("fulfillment", {}).get("status", "").lower() == "cancelled":
+            failures.append({"order_id": oid, "reason": "Order is cancelled"})
+            continue
+            
+        try:
+            fulfillment = order.get("fulfillment", {})
+            if not fulfillment.get("awb"):
+                fulfillment = await process_delhivery_shipment_booking(order)
+                if not fulfillment or not fulfillment.get("awb"):
+                    failures.append({"order_id": oid, "reason": "Shipment booking failed"})
+                    continue
+                    
+            config = await get_delhivery_config_internal()
+            if not config or not config.get("active") or not config.get("api_token"):
+                await orders_collection.update_one(
+                    {"_id": order["_id"]},
+                    {"$set": {
+                        "fulfillment.pickup_scheduled": True, 
+                        "fulfillment.status": "Pickup Scheduled",
+                        "status": "shipped"
+                    }}
+                )
+                successes.append({"order_id": oid, "mode": "mock"})
+                continue
+                
+            token = config["api_token"]
+            mode = config.get("mode", "test")
+            base_url = "https://staging-express.delhivery.com" if mode == "test" else "https://track.delhivery.com"
+            pickup_location_name = config.get("warehouse_name") or "Yogi Arcade"
+            
+            from datetime import timezone
+            ist = timezone(timedelta(hours=5, minutes=30))
+            now_ist = datetime.now(ist)
+            pickup_date_str = now_ist.strftime("%Y-%m-%d")
+            pickup_time_str = (now_ist + timedelta(minutes=15)).strftime("%H:%M:%S")
+            
+            pickup_payload = {
+                "pickup_location": pickup_location_name,
+                "pickup_date": pickup_date_str,
+                "pickup_time": pickup_time_str,
+                "expected_package_count": 1
+            }
+            url = f"{base_url}/fm/request/new/"
+            headers = {
+                "Authorization": f"Token {token}",
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+            
+            delhivery_error = ""
+            is_success = False
+            pr_id = None
+            
+            async with httpx.AsyncClient() as client:
+                try:
+                    resp = await client.post(url, json=pickup_payload, headers=headers, timeout=15.0)
+                    try:
+                        resp_json = resp.json()
+                    except Exception:
+                        resp_json = {}
+                        
+                    if resp.status_code in [200, 201]:
+                        if isinstance(resp_json, dict):
+                            pr_id = resp_json.get("pr_id") or resp_json.get("pickup_id") or resp_json.get("id")
+                            if resp_json.get("pickup_location") and isinstance(resp_json["pickup_location"], list):
+                                delhivery_error = f"Pickup location error: {', '.join(resp_json['pickup_location'])}"
+                            elif resp_json.get("error"):
+                                delhivery_error = str(resp_json["error"])
+                            elif resp_json.get("detail"):
+                                delhivery_error = str(resp_json["detail"])
+                            elif resp_json.get("prepaid") is False and resp_json.get("message"):
+                                delhivery_error = str(resp_json["message"])
+                            elif pr_id is not None or resp_json.get("status") in ["Success", "success", "OK", "ok", True] or resp_json.get("success") is True or resp_json.get("pr_exist") is True:
+                                is_success = True
+                            else:
+                                remarks = resp_json.get("remark") or resp_json.get("remarks") or resp_json.get("data")
+                                delhivery_error = str(remarks) if remarks else f"Missing pickup ID: {resp.text}"
+                        else:
+                            is_success = True
+                    else:
+                        if isinstance(resp_json, dict):
+                            err_detail = resp_json.get("pickup_location") or resp_json.get("error") or resp_json.get("detail") or resp_json.get("message")
+                            delhivery_error = ", ".join(map(str, err_detail)) if isinstance(err_detail, list) else str(err_detail or resp.text)
+                        else:
+                            delhivery_error = resp.text
+                except Exception as e:
+                    delhivery_error = f"Connection exception: {str(e)}"
+                    
+            lower_err = delhivery_error.lower()
+            if not is_success and any(k in lower_err for k in ["already", "exist", "duplicate", "active", "present", "scheduled"]):
+                is_success = True
+                delhivery_error = ""
+                
+            if not is_success:
+                failures.append({"order_id": oid, "reason": delhivery_error})
+            else:
+                await orders_collection.update_one(
+                    {"_id": order["_id"]},
+                    {"$set": {
+                        "fulfillment.pickup_scheduled": True, 
+                        "fulfillment.pickup_id": pr_id,
+                        "fulfillment.pickup_date": pickup_date_str,
+                        "fulfillment.pickup_time": pickup_time_str,
+                        "fulfillment.status": "Pickup Scheduled",
+                        "status": "shipped"
+                    }}
+                )
+                successes.append({"order_id": oid, "pr_id": pr_id})
+        except Exception as e:
+            failures.append({"order_id": oid, "reason": str(e)})
+
+    return {
+        "status": "success",
+        "processed_count": len(successes),
+        "failed_count": len(failures),
+        "successes": successes,
+        "failures": failures,
+        "detail": f"Successfully scheduled pickup for {len(successes)} order(s)." + (f" ({len(failures)} skipped/failed)" if failures else "")
+    }
 
 @router.delete("/api/admin/orders/{order_id}")
 async def delete_admin_order(order_id: str, admin: dict = Depends(get_admin_user)):

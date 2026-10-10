@@ -828,6 +828,43 @@ export async function scheduleDelhiveryPickup(orderId, token) {
   return response.json();
 }
 
+export async function bulkBookDelhiveryShipment(orderIds, weightData, token) {
+  const response = await fetch(`${API_URL}/api/admin/orders/delhivery/bulk-ship`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      order_ids: orderIds,
+      ...weightData
+    })
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || 'Failed to bulk ship orders');
+  }
+  return response.json();
+}
+
+export async function bulkScheduleDelhiveryPickup(orderIds, token) {
+  const response = await fetch(`${API_URL}/api/admin/orders/delhivery/bulk-pickup`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      order_ids: orderIds
+    })
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || 'Failed to bulk schedule pickup');
+  }
+  return response.json();
+}
+
 export async function syncDelhiveryStatus(token) {
   const response = await fetch(`${API_URL}/api/admin/orders/delhivery/sync-status`, {
     method: 'POST',
