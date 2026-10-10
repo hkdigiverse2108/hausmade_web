@@ -72,6 +72,11 @@ export default function CartDrawer({ isOpen, onClose, cartItems, onUpdateQuantit
                   </div>
                   <div className="flex-1 flex flex-col justify-center">
                     <h4 className="font-bold text-[#3A2E26] text-sm leading-tight">{item.name || item.title}</h4>
+                    {item.offerText && (
+                      <span className="inline-block mt-1 px-2 py-0.5 bg-[#C97C5D]/10 text-[#C97C5D] border border-[#C97C5D]/20 text-[10px] font-bold rounded-md">
+                        🎁 {item.offerText}
+                      </span>
+                    )}
                     <p className="text-[#3A2E26]/60 text-xs mt-1">
                       {item.isSubscription ? (
                         <span className="text-[#7A8B6F] font-semibold tracking-wide text-[10px] uppercase">Subscribe & Save (Every {item.deliveryFrequency?.replace('_', ' ') || 'Month'})</span>

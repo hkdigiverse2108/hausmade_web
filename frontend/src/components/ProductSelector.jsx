@@ -1,26 +1,30 @@
 import React, { useState } from 'react';
-import { Star, Check, Plus, Minus, ShieldCheck, Truck, RotateCcw, Sparkles, RefreshCw, Heart } from 'lucide-react';
+import { Star, Check, Plus, Minus, ShieldCheck, Truck, RotateCcw, Sparkles, RefreshCw, Heart, Gift } from 'lucide-react';
 
 export const PACK_OPTIONS = [
-  {
-    id: 'single',
-    title: '1 SOAP BAR',
-    count: 1,
-    basePrice: 299.00,
-    savingsBadge: null,
-    popular: false,
-    bestValue: false,
-    image: '/images/pack-single.png'
-  },
   {
     id: 'pack-3',
     title: 'COMBO\nOF 3\nSOAP',
     count: 3,
     basePrice: 799.00, // ~11% off
-    savingsBadge: 'Save 11%',
+    savingsBadge: 'Buy 3 Get 1 Free',
+    offerBadge: 'Buy 3 Get 1 Free',
+    offerText: 'Buy 3 Get 1 Free (4 Soaps Total)',
     popular: true,
     bestValue: false,
     image: '/images/pack-3.png'
+  },
+  {
+    id: 'single',
+    title: '1 SOAP BAR',
+    count: 1,
+    basePrice: 299.00,
+    savingsBadge: 'Free 25g Soap',
+    offerBadge: 'Free 25g Soap',
+    offerText: 'Includes Free 25g Soap Bar',
+    popular: false,
+    bestValue: false,
+    image: '/images/pack-single.png'
   },
   {
     id: 'pack-5',
@@ -28,6 +32,8 @@ export const PACK_OPTIONS = [
     count: 5,
     basePrice: 1249.00, // ~16% off
     savingsBadge: 'Save 16%',
+    offerBadge: 'Save 16%',
+    offerText: 'Combo of 5 Soap (Save 16%)',
     popular: false,
     bestValue: true,
     image: '/images/pack-5.png'
@@ -69,8 +75,20 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
   const [isMainHovered, setIsMainHovered] = useState(false);
   const isSubscription = false;
 
-  const items = (products && products.length > 0 ? products : PACK_OPTIONS).filter(p => p.active !== false);
-  const pack = items.find(p => p.id === selectedPack) || items[2] || items[0];
+  const rawItems = (products && products.length > 0 ? products : PACK_OPTIONS).filter(p => p.active !== false);
+  
+  // Guarantee exact preferred sequence: COMBO OF 3 (Left) -> SINGLE SOAP (Middle) -> COMBO OF 5 (Right)
+  const preferredOrder = ['pack-3', 'single', 'pack-5'];
+  const items = [...rawItems].sort((a, b) => {
+    const indexA = preferredOrder.indexOf(a.id);
+    const indexB = preferredOrder.indexOf(b.id);
+    if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+    if (indexA !== -1) return -1;
+    if (indexB !== -1) return 1;
+    return 0;
+  });
+
+  const pack = items.find(p => p.id === selectedPack) || items.find(p => p.id === 'single') || items[0];
 
   const headerSettings = settings?.product_selector_header || {
     badge: "Choose Your Ritual",
@@ -118,6 +136,13 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
   const isPackOutOfStock = pack.stock !== undefined && pack.stock <= 0;
   const isPackLowStock = pack.stock !== undefined && pack.stock > 0 && pack.stock <= 5;
 
+  const getOfferText = (p) => {
+    if (p.id === 'pack-3') return 'Buy 3 Get 1 Free (4 Soaps Total)';
+    if (p.id === 'single') return 'Includes Free 25g Soap Bar';
+    if (p.id === 'pack-5') return 'Best Value (Save 16%)';
+    return p.offerText || p.offerBadge || p.savingsBadge || '';
+  };
+
   const handleAdd = () => {
     onAddToCart({
       packId: pack.id,
@@ -129,7 +154,8 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
       packPrice: finalPricePerPack,
       quantity,
       totalPrice,
-      image: images[0].src
+      image: images[0].src,
+      offerText: getOfferText(pack)
     });
   };
 
@@ -144,7 +170,8 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
       packPrice: finalPricePerPack,
       quantity,
       totalPrice,
-      image: images[0].src
+      image: images[0].src,
+      offerText: getOfferText(pack)
     });
   };
 
@@ -249,14 +276,18 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
                   <div className={`grid ${items.length === 3 ? 'grid-cols-3' : 'grid-cols-2'} gap-1.5 sm:gap-3`}>
                     {items.map((item, index) => {
                       const isSelected = item.id === pack.id;
-                      const pricePerBar = (item.basePrice / item.count).toFixed(0);
-                      const themeColor = item.bestValue ? '#7A8B6F' : '#C97C5D';
-                      const badgeBg = item.bestValue ? 'bg-[#7A8B6F]' : 'bg-[#C97C5D]';
-                      
-                      let badgeText = item.savingsBadge;
-                      if (item.popular) badgeText = "Most Popular";
-                      if (item.bestValue) badgeText = "Best Value";
-                      if (item.id === 'pack-2') badgeText = "Save 8%";
+                      const pricePerBar = (item.basePrice / (item.id === 'pack-3' ? 4 : item.count)).toFixed(0);
+                      const themeColor = item.id === 'pack-5' ? '#7A8B6F' : '#C97C5D';
+                      const badgeBg = item.id === 'pack-5' ? 'bg-[#7A8B6F]' : 'bg-[#C97C5D]';
+
+                      let badgeText = null;
+                      if (item.id === 'pack-3') badgeText = "Most Popular";
+                      if (item.id === 'pack-5') badgeText = "Best Value";
+
+                      let offerTagText = null;
+                      if (item.id === 'pack-3') offerTagText = "Buy 3 Get 1 Free";
+                      if (item.id === 'single') offerTagText = "Free 25g Soap";
+                      if (item.id === 'pack-5') offerTagText = "Save 16%";
 
                       const formattedTitle = formatTitle(item.title);
 
@@ -273,9 +304,9 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
                           style={isSelected ? { borderColor: themeColor, boxShadow: `0 0 0 1px ${themeColor}` } : {}}
                         >
                           {/* Top Right Badge */}
-                          {item.id !== 'single' && (
+                          {badgeText && (
                             <span 
-                              className={`absolute -top-2.5 right-0 text-[8px] sm:text-[9.5px] font-bold text-white px-2 sm:px-2.5 py-0.5 rounded-full shadow-sm ${badgeBg} whitespace-nowrap`}
+                              className={`absolute -top-2.5 right-1 text-[8px] sm:text-[9.5px] font-bold text-white px-2 sm:px-2.5 py-0.5 rounded-full shadow-xs ${badgeBg} whitespace-nowrap z-10`}
                             >
                               {badgeText}
                             </span>
@@ -302,16 +333,12 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
                               <span className="block font-serif-brand text-[11px] sm:text-[15px] font-bold text-[#3A2E26]">
                                 ₹{item.basePrice.toFixed(0)}
                               </span>
-                              {item.id === 'single' ? (
-                                <span className="block text-[8px] sm:text-[10px] text-[#3A2E26]/40 mt-0.5 whitespace-nowrap">
-                                  Standard
-                                </span>
-                              ) : (
+                              {offerTagText && (
                                 <span 
-                                  className="block text-[8px] sm:text-[10px] font-bold mt-0.5 whitespace-nowrap"
+                                  className="block text-[8px] sm:text-[9.5px] font-bold mt-0.5 whitespace-nowrap"
                                   style={{ color: themeColor }}
                                 >
-                                  {item.savingsBadge}
+                                  {offerTagText}
                                 </span>
                               )}
                             </div>
@@ -332,10 +359,25 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
                       ₹{pack.basePrice.toFixed(2)}
                     </div>
                   </div>
-                  <div>
-                    <span className="text-[10px] uppercase tracking-widest text-[#3A2E26]/40 font-bold block">
+                  <div className="text-right">
+                    <span className="text-[10px] uppercase tracking-widest text-[#3A2E26]/60 font-bold block">
                       {formatTitle(pack.title).replace(/\n/g, ' ')}
                     </span>
+                    {pack.id === 'pack-3' && (
+                      <span className="text-[10px] text-[#C97C5D] font-bold block mt-0.5">
+                        Buy 3 Get 1 Free (4 Soaps Total)
+                      </span>
+                    )}
+                    {pack.id === 'single' && (
+                      <span className="text-[10px] text-[#7A8B6F] font-bold block mt-0.5">
+                        Includes Free 25g Soap
+                      </span>
+                    )}
+                    {pack.id === 'pack-5' && (
+                      <span className="text-[10px] text-[#7A8B6F] font-bold block mt-0.5">
+                        Save 16%
+                      </span>
+                    )}
                   </div>
                 </div>
 
