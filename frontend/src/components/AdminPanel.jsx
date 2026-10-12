@@ -1242,14 +1242,16 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       setActiveCarts(activeCartsData || []);
       setManualOrders(manualOrdersData || []);
 
-      // Trigger a reload of the live storefront preview iframe so it pulls the latest database changes
-      const iframe = document.getElementById('preview-storefront-frame');
-      if (iframe && iframe.contentWindow) {
-        try {
-          iframe.contentWindow.location.reload();
-        } catch (e) {
-          // Fallback if cross-origin restriction applies temporarily
-          iframe.src = iframe.src;
+      // Only reload the storefront preview iframe when explicitly needed, never on silent background poll
+      if (!silent) {
+        const iframe = document.getElementById('preview-storefront-frame');
+        if (iframe && iframe.contentWindow) {
+          try {
+            iframe.contentWindow.location.reload();
+          } catch (e) {
+            // Fallback if cross-origin restriction applies temporarily
+            iframe.src = iframe.src;
+          }
         }
       }
     } catch (err) {
@@ -1380,7 +1382,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       fetchAdminData();
       const interval = setInterval(() => {
         fetchAdminData(true);
-      }, 10000);
+      }, 30000);
       return () => clearInterval(interval);
     }
   }, [token]);
@@ -1608,6 +1610,154 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     const searchLower = couponSearch.toLowerCase();
     return c.code?.toLowerCase().includes(searchLower) || c.description?.toLowerCase().includes(searchLower);
   });
+
+  const getFilteredStats = () => {
+    const filteredOrdersList = orders.filter(order => {
+      if (statsFilter === 'online' && order.isOffline) return false;
+      if (statsFilter === 'offline' && !order.isOffline) return false;
+      if (statsFilter === 'manual') return false;
+
+      // Filter by Date (Range or Multi-Select)
+      if (dateFilterMode === 'range' && (orderDateRange.startDate || orderDateRange.endDate)) {
+        if (!order.created_at) return false;
+        const orderDateStr = getYYYYMMDD(order.created_at);
+        if (orderDateRange.startDate && orderDateStr < orderDateRange.startDate) return false;
+        if (orderDateRange.endDate && orderDateStr > orderDateRange.endDate) return false;
+      } else if (dateFilterMode === 'multi' && selectedOrderDates.length > 0) {
+        if (!order.created_at) return false;
+        const orderDateStr = getYYYYMMDD(order.created_at);
+        if (!selectedOrderDates.includes(orderDateStr)) return false;
+      }
+      return true;
+    });
+
+    // Filter Delivered Manual Orders (strictly status === 'Delivered' and matching source filter)
+    const filteredDeliveredManualOrders = (manualOrders || []).filter(mo => {
+      if (mo.status !== 'Delivered') return false;
+      if (statsFilter === 'online' || statsFilter === 'offline') return false;
+
+      const moDateRaw = mo.saleDateTime || mo.created_at;
+      if (dateFilterMode === 'range' && (orderDateRange.startDate || orderDateRange.endDate)) {
+        if (!moDateRaw) return false;
+        const moDateStr = getYYYYMMDD(moDateRaw);
+        if (orderDateRange.startDate && moDateStr < orderDateRange.startDate) return false;
+        if (orderDateRange.endDate && moDateStr > orderDateRange.endDate) return false;
+      } else if (dateFilterMode === 'multi' && selectedOrderDates.length > 0) {
+        if (!moDateRaw) return false;
+        const moDateStr = getYYYYMMDD(moDateRaw);
+        if (!selectedOrderDates.includes(moDateStr)) return false;
+      }
+      return true;
+    });
+
+    const main_revenue = filteredOrdersList.reduce((sum, o) => sum + (parseFloat(o.grandTotal) || 0), 0);
+    const manual_revenue = filteredDeliveredManualOrders.reduce((sum, mo) => sum + (parseFloat(mo.totalPrice) || 0), 0);
+    const total_revenue = main_revenue + manual_revenue;
+
+    const order_count = filteredOrdersList.length + filteredDeliveredManualOrders.length;
+    const uniqueCustomers = new Set([
+      ...filteredOrdersList.map(o => o.shippingAddress?.phone || o.shippingAddress?.email).filter(Boolean),
+      ...filteredDeliveredManualOrders.map(mo => mo.customerPhone || mo.customerEmail).filter(Boolean)
+    ]);
+    const customer_count = uniqueCustomers.size || order_count;
+    const average_order_value = order_count > 0 ? total_revenue / order_count : 0;
+
+    return {
+      total_revenue,
+      order_count,
+      customer_count,
+      average_order_value
+    };
+  };
+
+  const getRevenueChartData = (tf = revenueChartTimeframe) => {
+    const data = [];
+    const now = new Date();
+    let daysCount = 7;
+
+    if (tf === '14days') daysCount = 14;
+    else if (tf === '30days') daysCount = 30;
+    else if (tf === 'thisMonth') daysCount = Math.max(now.getDate(), 1);
+    else if (tf === 'filter' && orderDateRange.startDate && orderDateRange.endDate) {
+      const start = new Date(orderDateRange.startDate);
+      const end = new Date(orderDateRange.endDate);
+      const diffTime = Math.abs(end - start);
+      daysCount = Math.min(Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1, 60);
+    }
+
+    for (let i = daysCount - 1; i >= 0; i--) {
+      const d = new Date();
+      if (tf === 'filter' && orderDateRange.endDate) {
+        const endDate = new Date(orderDateRange.endDate);
+        d.setDate(endDate.getDate() - i);
+      } else {
+        d.setDate(now.getDate() - i);
+      }
+
+      const dateStr = d.toISOString().split('T')[0];
+      const label = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', timeZone: 'Asia/Kolkata' });
+
+      let dayOrderCount = 0;
+      let dayTotal = orders.reduce((sum, order) => {
+        if (!order.created_at) return sum;
+        const orderDate = order.created_at.split(' ')[0].split('T')[0];
+        
+        const matchesFilter = 
+          statsFilter === 'all' || 
+          (statsFilter === 'online' && !order.isOffline) ||
+          (statsFilter === 'offline' && order.isOffline);
+
+        if (orderDate === dateStr && matchesFilter) {
+          dayOrderCount++;
+          return sum + (parseFloat(order.grandTotal) || 0);
+        }
+        return sum;
+      }, 0);
+
+      // Add Delivered Manual Orders for this date if statsFilter is 'all' or 'offline'
+      if (statsFilter === 'all' || statsFilter === 'offline') {
+        (manualOrders || []).forEach(mo => {
+          if (mo.status !== 'Delivered') return;
+          const moDateRaw = mo.saleDateTime || mo.created_at;
+          if (!moDateRaw) return;
+          const moDate = moDateRaw.split(' ')[0].split('T')[0];
+          if (moDate === dateStr) {
+            dayOrderCount++;
+            dayTotal += (parseFloat(mo.totalPrice) || 0);
+          }
+        });
+      }
+
+      data.push({ dateStr, label, value: dayTotal, orderCount: dayOrderCount });
+    }
+    return data;
+  };
+
+  const getProductDistributionData = () => {
+    const counts = {};
+    orders.forEach(o => {
+      const matchesFilter = 
+        statsFilter === 'all' || 
+        (statsFilter === 'online' && !o.isOffline) ||
+        (statsFilter === 'offline' && o.isOffline);
+      if (!matchesFilter) return;
+
+      o.cartItems?.forEach(item => {
+        const title = item.title || 'Other';
+        counts[title] = (counts[title] || 0) + (parseInt(item.quantity) || 0);
+      });
+    });
+
+    if (statsFilter === 'all' || statsFilter === 'offline') {
+      (manualOrders || []).forEach(mo => {
+        if (mo.status !== 'Delivered') return;
+        const qty = parseInt(mo.numberOfSoaps) || 1;
+        counts['Manual Soap Orders'] = (counts['Manual Soap Orders'] || 0) + qty;
+      });
+    }
+
+    return Object.entries(counts).map(([label, value]) => ({ label, value }));
+  };
 
   // Product Event Handlers
   const handleOpenAddProduct = () => {

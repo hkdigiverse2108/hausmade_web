@@ -1283,58 +1283,89 @@ async def fetch_delhivery_label(awb: str, admin: dict = Depends(get_admin_user))
                 raise e
             raise HTTPException(status_code=500, detail=str(e))
 
-async def sync_delhivery_orders_live_status(limit: int = 200):
-    updated_count = 0
-    try:
-        config = await get_delhivery_config_internal()
-        if not config or not config.get("active") or not config.get("api_token"):
-            return 0
-        token = config["api_token"]
-        
-        active_orders = await orders_collection.find({
-            "fulfillment.awb": {"$exists": True, "$ne": None},
-            "fulfillment.status": {"$nin": ["Delivered", "Cancelled", "RTO Delivered"]}
-        }).to_list(length=limit)
-        
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            for order in active_orders:
-                awb = order.get("fulfillment", {}).get("awb")
-                if not awb or awb.startswith("DELHIVERY"):
-                    continue
-                url = f"https://track.delhivery.com/api/v2/packages/json/?token={token}&waybill={awb}"
-                try:
-                    resp = await client.get(url)
-                    if resp.status_code == 200:
-                        data = resp.json()
-                        shipment_list = data.get("ShipmentData", [])
-                        if shipment_list and isinstance(shipment_list, list):
-                            st = shipment_list[0].get("Shipment", {}).get("Status", {})
-                            status_name = st.get("Status")
-                            if status_name:
-                                clean_status_name = status_name.lower()
-                                update_fields = {"fulfillment.status": status_name}
-                                if any(term in clean_status_name for term in ["pickup scheduled", "pickup_scheduled", "pickup requested", "pickup created", "ready for pickup"]):
-                                    update_fields["fulfillment.pickup_scheduled"] = True
-                                if any(st_term in clean_status_name for st_term in ["shipped", "dispatched", "in transit", "out for delivery", "in-transit"]):
-                                    update_fields["status"] = "shipped"
-                                    update_fields["fulfillment.pickup_scheduled"] = True
-                                elif "delivered" in clean_status_name:
-                                    update_fields["status"] = "delivered"
-                                    update_fields["fulfillment.pickup_scheduled"] = True
-                                await orders_collection.update_one(
-                                    {"_id": order["_id"]},
-                                    {"$set": update_fields}
-                                )
-                                updated_count += 1
-                except Exception as ex:
-                    print(f"Error syncing AWB {awb}: {ex}")
-    except Exception as e:
-        print(f"Live status sync error: {e}")
-    return updated_count
+_last_delhivery_sync_time = 0.0
+_delhivery_sync_lock = asyncio.Lock()
+
+async def sync_delhivery_orders_live_status(limit: int = 200, force: bool = False):
+    global _last_delhivery_sync_time
+    import time
+
+    now = time.time()
+    # If not explicitly forced, enforce a 120-second cooldown between Delhivery scans
+    if not force and (now - _last_delhivery_sync_time < 120):
+        return 0
+
+    # Avoid duplicate concurrent sync tasks
+    if _delhivery_sync_lock.locked():
+        return 0
+
+    async with _delhivery_sync_lock:
+        updated_count = 0
+        try:
+            config = await get_delhivery_config_internal()
+            if not config or not config.get("active") or not config.get("api_token"):
+                return 0
+            token = config["api_token"]
+
+            active_orders = await orders_collection.find({
+                "fulfillment.awb": {"$exists": True, "$ne": None},
+                "fulfillment.status": {"$nin": ["Delivered", "Cancelled", "RTO Delivered"]}
+            }).to_list(length=limit)
+
+            if not active_orders:
+                _last_delhivery_sync_time = time.time()
+                return 0
+
+            semaphore = asyncio.Semaphore(10)  # Query up to 10 AWBs concurrently
+
+            async with httpx.AsyncClient(timeout=6.0) as client:
+                async def sync_single_order(order):
+                    awb = order.get("fulfillment", {}).get("awb")
+                    if not awb or awb.startswith("DELHIVERY"):
+                        return 0
+                    url = f"https://track.delhivery.com/api/v2/packages/json/?token={token}&waybill={awb}"
+                    async with semaphore:
+                        try:
+                            resp = await client.get(url)
+                            if resp.status_code == 200:
+                                data = resp.json()
+                                shipment_list = data.get("ShipmentData", [])
+                                if shipment_list and isinstance(shipment_list, list):
+                                    st = shipment_list[0].get("Shipment", {}).get("Status", {})
+                                    status_name = st.get("Status")
+                                    if status_name:
+                                        clean_status_name = status_name.lower()
+                                        update_fields = {"fulfillment.status": status_name}
+                                        if any(term in clean_status_name for term in ["pickup scheduled", "pickup_scheduled", "pickup requested", "pickup created", "ready for pickup"]):
+                                            update_fields["fulfillment.pickup_scheduled"] = True
+                                        if any(st_term in clean_status_name for st_term in ["shipped", "dispatched", "in transit", "out for delivery", "in-transit"]):
+                                            update_fields["status"] = "shipped"
+                                            update_fields["fulfillment.pickup_scheduled"] = True
+                                        elif "delivered" in clean_status_name:
+                                            update_fields["status"] = "delivered"
+                                            update_fields["fulfillment.pickup_scheduled"] = True
+                                        await orders_collection.update_one(
+                                            {"_id": order["_id"]},
+                                            {"$set": update_fields}
+                                        )
+                                        return 1
+                        except Exception as ex:
+                            print(f"Error syncing AWB {awb}: {ex}")
+                    return 0
+
+                results = await asyncio.gather(*(sync_single_order(o) for o in active_orders), return_exceptions=True)
+                for res in results:
+                    if isinstance(res, int):
+                        updated_count += res
+
+            _last_delhivery_sync_time = time.time()
+        except Exception as e:
+            print(f"Live status sync error: {e}")
+        return updated_count
 
 @router.post("/api/admin/orders/delhivery/sync-status")
 async def admin_sync_delhivery_status(admin: dict = Depends(get_admin_user)):
-    count = await sync_delhivery_orders_live_status(limit=200)
+    count = await sync_delhivery_orders_live_status(limit=200, force=True)
     return {"status": "success", "message": "Successfully synced status from Delhivery", "updated_count": count}
 
 @router.get("/api/orders/track/{tracking_id}")

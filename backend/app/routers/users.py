@@ -1,3 +1,4 @@
+import asyncio
 from typing import List, Optional
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, Depends
@@ -188,9 +189,10 @@ async def get_admin_recent_users(admin: dict = Depends(get_admin_user)):
 async def get_admin_orders(admin: dict = Depends(get_admin_user)):
     try:
         from app.routers.orders import sync_delhivery_orders_live_status
-        await sync_delhivery_orders_live_status(limit=200)
+        # Run live status sync as a non-blocking background task
+        asyncio.create_task(sync_delhivery_orders_live_status(limit=200, force=False))
     except Exception as e:
-        print(f"Auto-sync live status error: {e}")
+        print(f"Auto-sync live status trigger error: {e}")
         
     orders = await orders_collection.find({"status": {"$ne": "pending_payment"}}).to_list(length=None)
     for order in orders:
