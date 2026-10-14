@@ -726,6 +726,7 @@ async def process_delhivery_shipment_booking(order_or_id, weight=500, length=15,
                 "return_country": "India",
                 "return_name": warehouse_name,
                 "return_phone": config.get("pickup_phone") or "7600081431",
+                "seller_gst_tin": (config.get("gst_number") or "").strip().upper(),
             }
         ],
         "pickup_location": {
@@ -1817,7 +1818,8 @@ async def generate_delhivery_shipping_label(awb: str):
     shipper_state = config.get("pickup_state") or "Gujarat"
     shipper_pin = str(config.get("pickup_pincode") or "395010")
     shipper_phone = config.get("pickup_phone") or "7600081431"
-    shipper_gst = await fetch_delhivery_gst(config, clean_awb) or "N/A"
+    # Admin-entered GST (Delhivery settings) wins; otherwise fall back to what Delhivery has on record.
+    shipper_gst = (config.get("gst_number") or "").strip().upper() or await fetch_delhivery_gst(config, clean_awb) or "N/A"
     shipped_date = datetime.utcnow().strftime("%Y-%m-%d")
     shipped_time = datetime.utcnow().strftime("%H:%M:%S")
     mode_tag = (config.get("mode", "test") if config else "TEST").upper()

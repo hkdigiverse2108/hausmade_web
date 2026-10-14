@@ -339,7 +339,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     subscription_offers: [],
     social_links: { instagram: '', facebook: '', whatsapp: '', twitter: '', youtube: '' },
     cashfree: { app_id_test: '', secret_key_test: '', app_id_live: '', secret_key_live: '', mode: 'test', active: false },
-    delhivery: { api_token: '', mode: 'test', active: false, warehouse_name: '', pickup_name: '', pickup_phone: '', pickup_email: '', pickup_pincode: '', pickup_state: '', pickup_city: '', pickup_address: '' },
+    delhivery: { api_token: '', mode: 'test', active: false, warehouse_name: '', pickup_name: '', pickup_phone: '', pickup_email: '', pickup_pincode: '', pickup_state: '', pickup_city: '', pickup_address: '', gst_number: '' },
     shipping: { standard_fee: 49, free_shipping_threshold: 499 },
     login_modal: {
       image_url: '/botanical_soap.png',
@@ -515,8 +515,8 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       const newSocial = settings.social_links || { instagram: '', facebook: '', whatsapp: '', twitter: '', youtube: '' };
       const currentCashfree = settingsForm.cashfree || { app_id_test: '', secret_key_test: '', app_id_live: '', secret_key_live: '', mode: 'test', active: false };
       const newCashfree = settings.cashfree || { app_id_test: '', secret_key_test: '', app_id_live: '', secret_key_live: '', mode: 'test', active: false };
-      const currentDelhivery = settingsForm.delhivery || { api_token: '', mode: 'test', active: false, pickup_name: '', pickup_phone: '', pickup_email: '', pickup_pincode: '', pickup_state: '', pickup_city: '', pickup_address: '' };
-      const newDelhivery = settings.delhivery || { api_token: '', mode: 'test', active: false, pickup_name: '', pickup_phone: '', pickup_email: '', pickup_pincode: '', pickup_state: '', pickup_city: '', pickup_address: '' };
+      const currentDelhivery = settingsForm.delhivery || { api_token: '', mode: 'test', active: false, pickup_name: '', pickup_phone: '', pickup_email: '', pickup_pincode: '', pickup_state: '', pickup_city: '', pickup_address: '', gst_number: '' };
+      const newDelhivery = settings.delhivery || { api_token: '', mode: 'test', active: false, pickup_name: '', pickup_phone: '', pickup_email: '', pickup_pincode: '', pickup_state: '', pickup_city: '', pickup_address: '', gst_number: '' };
       const currentProductSelectorHeader = settingsForm.product_selector_header || {};
       const newProductSelectorHeader = settings.product_selector_header || {};
 
@@ -600,7 +600,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
           subscription_offers: settings.subscription_offers || [],
           social_links: settings.social_links || { instagram: '', facebook: '', whatsapp: '', twitter: '', youtube: '' },
           cashfree: settings.cashfree || { app_id_test: '', secret_key_test: '', app_id_live: '', secret_key_live: '', mode: 'test', active: false },
-          delhivery: settings.delhivery || { api_token: '', mode: 'test', active: false, warehouse_name: '', pickup_name: '', pickup_phone: '', pickup_email: '', pickup_pincode: '', pickup_state: '', pickup_city: '', pickup_address: '' },
+          delhivery: settings.delhivery || { api_token: '', mode: 'test', active: false, warehouse_name: '', pickup_name: '', pickup_phone: '', pickup_email: '', pickup_pincode: '', pickup_state: '', pickup_city: '', pickup_address: '', gst_number: '' },
           shipping: settings.shipping || { standard_fee: 49, free_shipping_threshold: 499 },
           faqs: settings.faqs || [],
           ingredients: settings.ingredients || [],
@@ -7178,6 +7178,21 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                               placeholder="e.g. 305 Muktidham Society, Near Sitanagar Chowk"
                               className="w-full px-3 py-2 bg-white border border-[#E6D5C3]/40 rounded-xl text-xs font-semibold text-[#3A2E26]"
                             />
+                          </div>
+                          <div className="sm:col-span-2">
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1">Seller GST Number</label>
+                            <input
+                              type="text"
+                              value={settingsForm.delhivery?.gst_number || ''}
+                              onChange={(e) => setSettingsForm({
+                                ...settingsForm,
+                                delhivery: { ...settingsForm.delhivery, gst_number: e.target.value.toUpperCase() }
+                              })}
+                              placeholder="e.g. 24JVLPK1207E1ZT"
+                              maxLength={15}
+                              className="w-full px-3 py-2 bg-white border border-[#E6D5C3]/40 rounded-xl text-xs font-semibold text-[#3A2E26] uppercase"
+                            />
+                            <p className="mt-1 text-[10px] text-[#3A2E26]/50">Shown on shipping labels. Leave empty to use the GST Delhivery has on record.</p>
                           </div>
                         </div>
 

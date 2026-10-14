@@ -311,6 +311,7 @@ class DelhiverySettings(BaseModel):
     pickup_state: str = ""
     pickup_city: str = ""
     pickup_address: str = ""
+    gst_number: str = ""
 
 class ReviewsHeaderSettings(BaseModel):
     badge: str = "Reviews"
