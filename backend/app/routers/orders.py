@@ -11,7 +11,6 @@ from fastapi.responses import HTMLResponse, Response
 from app.schemas.models import OrderCreate, OfflineSaleCreate, GuestOrderCancelRequest
 from app.database.connection import orders_collection, products_collection, users_collection, settings_collection
 from app.dependencies.auth_deps import get_current_user_email, get_admin_user
-from app.config.settings import DELHIVERY_GST_NUMBER
 from app.security.email_sender import send_order_confirmation_email
 
 router = APIRouter(tags=["Orders"])
@@ -727,7 +726,6 @@ async def process_delhivery_shipment_booking(order_or_id, weight=500, length=15,
                 "return_country": "India",
                 "return_name": warehouse_name,
                 "return_phone": config.get("pickup_phone") or "7600081431",
-                "seller_gst_tin": DELHIVERY_GST_NUMBER,
             }
         ],
         "pickup_location": {
@@ -1819,9 +1817,7 @@ async def generate_delhivery_shipping_label(awb: str):
     shipper_state = config.get("pickup_state") or "Gujarat"
     shipper_pin = str(config.get("pickup_pincode") or "395010")
     shipper_phone = config.get("pickup_phone") or "7600081431"
-    # Delhivery often returns only a state code + "UR" (e.g. "24-UR"); prefer a full 15-char GSTIN.
-    delhivery_gst = await fetch_delhivery_gst(config, clean_awb)
-    shipper_gst = delhivery_gst if len(delhivery_gst) == 15 else (DELHIVERY_GST_NUMBER or delhivery_gst or "N/A")
+    shipper_gst = await fetch_delhivery_gst(config, clean_awb) or "N/A"
     shipped_date = datetime.utcnow().strftime("%Y-%m-%d")
     shipped_time = datetime.utcnow().strftime("%H:%M:%S")
     mode_tag = (config.get("mode", "test") if config else "TEST").upper()
