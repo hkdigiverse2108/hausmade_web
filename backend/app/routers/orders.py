@@ -11,6 +11,7 @@ from fastapi.responses import HTMLResponse, Response
 from app.schemas.models import OrderCreate, OfflineSaleCreate, GuestOrderCancelRequest
 from app.database.connection import orders_collection, products_collection, users_collection, settings_collection
 from app.dependencies.auth_deps import get_current_user_email, get_admin_user
+from app.config.settings import DELHIVERY_GST_NUMBER
 from app.security.email_sender import send_order_confirmation_email
 
 router = APIRouter(tags=["Orders"])
@@ -726,6 +727,7 @@ async def process_delhivery_shipment_booking(order_or_id, weight=500, length=15,
                 "return_country": "India",
                 "return_name": warehouse_name,
                 "return_phone": config.get("pickup_phone") or "7600081431",
+                "seller_gst_tin": DELHIVERY_GST_NUMBER,
             }
         ],
         "pickup_location": {
@@ -1737,6 +1739,30 @@ async def cancel_user_order(order_id: str, current_user_email: str = Depends(get
         "orderId": order.get("orderId")
     }
 
+async def fetch_delhivery_gst(config: dict, awb: str) -> str:
+    """Read the GST number Delhivery has on record for this shipment from the packing slip API."""
+    if not config.get("active") or not config.get("api_token") or awb.startswith("DELHIVERY"):
+        return ""
+    base_url = "https://staging-express.delhivery.com" if config.get("mode", "test") == "test" else "https://track.delhivery.com"
+    url = f"{base_url}/api/p/packing_slip?wbns={awb}"
+    headers = {"Authorization": f"Token {config['api_token']}", "Accept": "application/json"}
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(url, headers=headers, timeout=10.0)
+        if resp.status_code != 200:
+            return ""
+        packages = resp.json().get("packages") or []
+        if not packages:
+            return ""
+        package = packages[0]
+        for key in ("seller_gst_tin", "client_gst_tin", "tin"):
+            value = str(package.get(key) or "").strip()
+            if value and value.lower() != "none":
+                return value.upper()
+    except Exception as e:
+        print(f"Delhivery GST fetch exception for {awb}: {e}")
+    return ""
+
 @router.get("/api/orders/label/{awb}", response_class=HTMLResponse)
 @router.get("/api/orders/track/{awb}/mock-label", response_class=HTMLResponse)
 async def generate_delhivery_shipping_label(awb: str):
@@ -1754,25 +1780,8 @@ async def generate_delhivery_shipping_label(awb: str):
     # 2. Get Delhivery settings from DB
     config = await get_delhivery_config_internal() or {}
     
-    # 3. If connected to live Delhivery API, attempt to fetch official packing slip
-    if config.get("active") and config.get("api_token") and not clean_awb.startswith("DELHIVERY"):
-        token = config["api_token"]
-        mode = config.get("mode", "test")
-        base_url = "https://staging-express.delhivery.com" if mode == "test" else "https://express.delhivery.com"
-        url = f"{base_url}/api/p/packing_slip?wbns={clean_awb}"
-        headers = {"Authorization": f"Token {token}"}
-        
-        async with httpx.AsyncClient() as client:
-            try:
-                resp = await client.get(url, headers=headers, timeout=10.0)
-                if resp.status_code == 200:
-                    content_type = resp.headers.get("content-type", "")
-                    if "pdf" in content_type:
-                        return Response(content=resp.content, media_type="application/pdf")
-                    elif "html" in content_type or resp.text.strip().startswith("<"):
-                        return HTMLResponse(content=resp.text)
-            except Exception as e:
-                print(f"Live Delhivery packing slip fetch exception: {e}")
+    # 3. Always render our own template (even for already-booked AWBs) so the label
+    #    reflects current settings such as the seller GST number.
 
     # 4. High-Fidelity Official Delhivery Shipping Label Template
     order_id = (order.get("orderId") if order else None) or clean_awb
@@ -1810,6 +1819,9 @@ async def generate_delhivery_shipping_label(awb: str):
     shipper_state = config.get("pickup_state") or "Gujarat"
     shipper_pin = str(config.get("pickup_pincode") or "395010")
     shipper_phone = config.get("pickup_phone") or "7600081431"
+    # Delhivery often returns only a state code + "UR" (e.g. "24-UR"); prefer a full 15-char GSTIN.
+    delhivery_gst = await fetch_delhivery_gst(config, clean_awb)
+    shipper_gst = delhivery_gst if len(delhivery_gst) == 15 else (DELHIVERY_GST_NUMBER or delhivery_gst or "N/A")
     shipped_date = datetime.utcnow().strftime("%Y-%m-%d")
     shipped_time = datetime.utcnow().strftime("%H:%M:%S")
     mode_tag = (config.get("mode", "test") if config else "TEST").upper()
@@ -2008,7 +2020,7 @@ async def generate_delhivery_shipping_label(awb: str):
                     <div><strong>Seller:</strong> {shipper_name}</div>
                     <div><strong>Address:</strong> {shipper_add},</div>
                     <div style="padding-left: 55px;">{shipper_city}, {shipper_state}</div>
-                    <div><strong>GST:</strong> 24-UR</div>
+                    <div><strong>GST:</strong> {shipper_gst}</div>
                 </div>
                 <div class="col seller-right">
                     <div><strong>Date:</strong><br>{shipped_date}<br>{shipped_time}</div>

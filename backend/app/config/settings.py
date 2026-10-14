@@ -16,6 +16,8 @@ CLOUDINARY_CLOUD_NAME = os.getenv("CLOUDINARY_CLOUD_NAME")
 CLOUDINARY_API_KEY = os.getenv("CLOUDINARY_API_KEY")
 CLOUDINARY_API_SECRET = os.getenv("CLOUDINARY_API_SECRET")
 
+DELHIVERY_GST_NUMBER = os.getenv("DELHIVERY_GST_NUMBER", "").strip().upper()
+
 ENV = os.getenv("ENV", "development")
 
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
