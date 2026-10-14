@@ -1738,10 +1738,11 @@ async def cancel_user_order(order_id: str, current_user_email: str = Depends(get
         "orderId": order.get("orderId")
     }
 
-async def fetch_delhivery_gst(config: dict, awb: str) -> str:
-    """Read the GST number Delhivery has on record for this shipment from the packing slip API."""
+async def fetch_delhivery_seller_info(config: dict, awb: str) -> dict:
+    """Read the seller name and GST number Delhivery has on record for this shipment (packing slip API)."""
+    info = {"name": "", "gst": ""}
     if not config.get("active") or not config.get("api_token") or awb.startswith("DELHIVERY"):
-        return ""
+        return info
     base_url = "https://staging-express.delhivery.com" if config.get("mode", "test") == "test" else "https://track.delhivery.com"
     url = f"{base_url}/api/p/packing_slip?wbns={awb}"
     headers = {"Authorization": f"Token {config['api_token']}", "Accept": "application/json"}
@@ -1749,18 +1750,25 @@ async def fetch_delhivery_gst(config: dict, awb: str) -> str:
         async with httpx.AsyncClient() as client:
             resp = await client.get(url, headers=headers, timeout=10.0)
         if resp.status_code != 200:
-            return ""
+            return info
         packages = resp.json().get("packages") or []
         if not packages:
-            return ""
+            return info
         package = packages[0]
         for key in ("seller_gst_tin", "client_gst_tin", "tin"):
             value = str(package.get(key) or "").strip()
             if value and value.lower() != "none":
-                return value.upper()
+                info["gst"] = value.upper()
+                break
+        # Seller name: explicit "snm", else the brand part of the client code (e.g. "1b55cf-HAUSMADE-do" -> "HAUSMADE")
+        name = str(package.get("snm") or "").strip()
+        if not name:
+            parts = str(package.get("cl") or "").strip().split("-")
+            name = "-".join(parts[1:-1]) if len(parts) >= 3 else "-".join(parts)
+        info["name"] = name.strip()
     except Exception as e:
-        print(f"Delhivery GST fetch exception for {awb}: {e}")
-    return ""
+        print(f"Delhivery seller info fetch exception for {awb}: {e}")
+    return info
 
 @router.get("/api/orders/label/{awb}", response_class=HTMLResponse)
 @router.get("/api/orders/track/{awb}/mock-label", response_class=HTMLResponse)
@@ -1812,14 +1820,15 @@ async def generate_delhivery_shipping_label(awb: str):
     items_desc = ", ".join([f"{item.get('title', 'Botanical Soap')} (x{item.get('quantity', 1)})" for item in cart_items]) if cart_items else "Botanical Cleanse Bars (75g)"
     total_qty = sum(item.get("quantity", 1) for item in cart_items) if cart_items else 1
     
-    shipper_name = config.get("pickup_name") or "Hausmade Soap Shop"
+    delhivery_seller = await fetch_delhivery_seller_info(config, clean_awb)
+    shipper_name = delhivery_seller["name"] or config.get("pickup_name") or "Hausmade Soap Shop"
     shipper_add = config.get("pickup_address") or "305 Muktidham Society, Dabholi"
     shipper_city = config.get("pickup_city") or "Surat"
     shipper_state = config.get("pickup_state") or "Gujarat"
     shipper_pin = str(config.get("pickup_pincode") or "395010")
     shipper_phone = config.get("pickup_phone") or "7600081431"
     # Admin-entered GST (Delhivery settings) wins; otherwise fall back to what Delhivery has on record.
-    shipper_gst = (config.get("gst_number") or "").strip().upper() or await fetch_delhivery_gst(config, clean_awb) or "N/A"
+    shipper_gst = (config.get("gst_number") or "").strip().upper() or delhivery_seller["gst"] or "N/A"
     shipped_date = datetime.utcnow().strftime("%Y-%m-%d")
     shipped_time = datetime.utcnow().strftime("%H:%M:%S")
     mode_tag = (config.get("mode", "test") if config else "TEST").upper()
