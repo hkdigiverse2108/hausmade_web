@@ -1932,7 +1932,7 @@ async def generate_delhivery_shipping_label(awb: str):
         
         /* Top Row */
         .top-row {{ height: 42px; align-items: center; padding: 0; }}
-        .seller-name {{ font-size: 15px; font-weight: bold; width: 33%; text-align: center; height: 100%; display: flex; align-items: center; justify-content: center; padding: 0; color: #002B49; }}
+        .seller-name {{ font-size: 15px; font-weight: normal; font-family: Arial, sans-serif; width: 33%; text-align: center; height: 100%; display: flex; align-items: center; justify-content: center; padding: 0; color: #000; }}
         .delhivery-logo {{ width: 67%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 0; overflow: hidden; }}
         .delhivery-logo h1 {{ margin: 0; font-family: Arial, sans-serif; letter-spacing: 2px; }}
         
