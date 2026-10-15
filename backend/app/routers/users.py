@@ -131,7 +131,14 @@ async def update_profile(user_data: UserUpdate, current_user_email: str = Depend
 async def get_admin_stats(admin: dict = Depends(get_admin_user)):
     orders = await orders_collection.find({"status": {"$ne": "pending_payment"}}).to_list(length=None)
     users = await users_collection.find({}).to_list(length=None)
-    
+
+    # Orders coming back to us (RTO) are not sales, so they are left out of revenue
+    def is_returned(order):
+        f = order.get("fulfillment") or {}
+        st = str(f.get("status") or "").lower()
+        return "rto" in st or "return" in st or str(f.get("status_type") or "").upper() == "RT"
+    orders = [o for o in orders if not is_returned(o)]
+
     total_revenue = 0.0
     for order in orders:
         try:

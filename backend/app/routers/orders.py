@@ -1310,7 +1310,7 @@ async def sync_delhivery_orders_live_status(limit: int = 200, force: bool = Fals
 
             active_orders = await orders_collection.find({
                 "fulfillment.awb": {"$exists": True, "$ne": None},
-                "fulfillment.status": {"$nin": ["Delivered", "Cancelled", "RTO Delivered"]}
+                "fulfillment.status": {"$nin": ["Delivered", "Cancelled", "RTO Delivered", "Returned to Origin"]}
             }).to_list(length=limit)
 
             if not active_orders:
@@ -1334,9 +1334,27 @@ async def sync_delhivery_orders_live_status(limit: int = 200, force: bool = Fals
                                 if shipment_list and isinstance(shipment_list, list):
                                     st = shipment_list[0].get("Shipment", {}).get("Status", {})
                                     status_name = st.get("Status")
+                                    status_type = str(st.get("StatusType") or "").upper()
                                     if status_name:
+                                        base_fields = {"fulfillment.status_type": status_type}
+                                        if st.get("StatusDateTime"):
+                                            base_fields["fulfillment.status_updated_at"] = st.get("StatusDateTime")
+                                        # Delhivery reports returns via StatusType: "RT" = on its way back,
+                                        # Status "RTO" + StatusType "DL" = received back at origin
+                                        if status_name.upper() == "RTO" and status_type == "DL":
+                                            await orders_collection.update_one(
+                                                {"_id": order["_id"]},
+                                                {"$set": {**base_fields, "fulfillment.status": "Returned to Origin"}}
+                                            )
+                                            return 1
+                                        if status_type == "RT" or status_name.upper() == "RTO":
+                                            await orders_collection.update_one(
+                                                {"_id": order["_id"]},
+                                                {"$set": {**base_fields, "fulfillment.status": "RTO - In transit", "status": "shipped", "fulfillment.pickup_scheduled": True}}
+                                            )
+                                            return 1
                                         clean_status_name = status_name.lower()
-                                        update_fields = {"fulfillment.status": status_name}
+                                        update_fields = {**base_fields, "fulfillment.status": status_name}
                                         if any(term in clean_status_name for term in ["pickup scheduled", "pickup_scheduled", "pickup requested", "pickup created", "ready for pickup"]):
                                             update_fields["fulfillment.pickup_scheduled"] = True
                                         if any(st_term in clean_status_name for st_term in ["shipped", "dispatched", "in transit", "out for delivery", "in-transit"]):

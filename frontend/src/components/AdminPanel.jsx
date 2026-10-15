@@ -1397,6 +1397,8 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     'Ready for pickup',
     'In transit',
     'Delivered',
+    'RTO - In transit',
+    'Returned to Origin',
     'Cancelled'
   ];
 
@@ -1404,18 +1406,22 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     if (order.status === 'cancelled' || order.fulfillment?.status?.toLowerCase() === 'cancelled') {
       return 'Cancelled';
     }
-    if (order.status === 'delivered' || order.fulfillment?.status?.toLowerCase() === 'delivered') {
+    const rawStatus = (order.fulfillment?.status || '').toLowerCase();
+    const isRtoType = (order.fulfillment?.status_type || '').toUpperCase() === 'RT';
+    if (order.fulfillment?.awb && (isRtoType || rawStatus.includes('rto') || rawStatus.includes('return'))) {
+      if (rawStatus.includes('delivered') || rawStatus.includes('returned')) {
+        return 'Returned to Origin';
+      }
+      return 'RTO - In transit';
+    }
+    if (order.status === 'delivered' || rawStatus === 'delivered') {
       return 'Delivered';
     }
     if (!order.fulfillment || !order.fulfillment.awb) {
       return 'Unfulfilled';
     }
-    const rawStatus = (order.fulfillment.status || '').toLowerCase();
     if (rawStatus.includes('delivered')) {
       return 'Delivered';
-    }
-    if (rawStatus.includes('rto') || rawStatus.includes('return')) {
-      return 'In transit';
     }
     if (rawStatus.includes('out for delivery') || rawStatus.includes('transit') || rawStatus.includes('dispatched') || rawStatus.includes('shipped') || rawStatus.includes('in-transit')) {
       return 'In transit';
@@ -1424,6 +1430,12 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       return 'Ready for pickup';
     }
     return 'Ready to ship';
+  };
+
+  // Orders coming back to us (RTO) are not sales, so they are left out of revenue
+  const isReturnedOrder = (order) => {
+    const st = getShipmentStatus(order);
+    return st === 'RTO - In transit' || st === 'Returned to Origin';
   };
 
   // Helper function to extract YYYY-MM-DD from any date value
@@ -1542,6 +1554,27 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     }
   }
 
+  const getStatusSortTime = (order) => {
+    const toTime = (v) => {
+      const t = v ? new Date(v).getTime() : NaN;
+      return isNaN(t) ? null : t;
+    };
+    const f = order.fulfillment || {};
+    const created = toTime(order.created_at) || 0;
+    const shipped = toTime(f.shipped_at);
+    switch (getShipmentStatus(order)) {
+      case 'Unfulfilled':
+        return created;
+      case 'Ready to ship':
+      case 'Ready for pickup':
+        return shipped || created;
+      case 'Cancelled':
+        return toTime(order.cancelled_at) || toTime(f.cancelled_at) || created;
+      default:
+        return toTime(f.status_updated_at) || shipped || created;
+    }
+  };
+
   // Filter orders based on search, source, shipment status, and date
   const filteredOrders = orders.filter(order => {
     const isCancelled = order.status === 'cancelled' || order.fulfillment?.status?.toLowerCase() === 'cancelled';
@@ -1588,6 +1621,11 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     const itemMatch = (order.cartItems || []).some(item => (item.title || '').toLowerCase().includes(searchTrimmed));
     const awbMatch = (order.fulfillment?.awb || '').toLowerCase().includes(searchTrimmed);
     return orderIdMatch || nameMatch || emailMatch || phoneMatch || itemMatch || awbMatch;
+  }).sort((a, b) => {
+    // When a shipment status filter is active, order like Delhivery: newest first by the
+    // date relevant to that stage (order date → manifest date → latest scan / cancellation)
+    if (selectedShipmentStatuses.length === 0) return 0;
+    return getStatusSortTime(b) - getStatusSortTime(a);
   });
 
   // Filter customers based on search
@@ -1612,7 +1650,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   });
 
   const getFilteredStats = () => {
-    const filteredOrdersList = orders.filter(order => {
+    const scopedOrders = orders.filter(order => {
       if (statsFilter === 'online' && order.isOffline) return false;
       if (statsFilter === 'offline' && !order.isOffline) return false;
       if (statsFilter === 'manual') return false;
@@ -1630,6 +1668,10 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       }
       return true;
     });
+    const filteredOrdersList = scopedOrders.filter(order => !isReturnedOrder(order));
+    const returned_count = scopedOrders.length - filteredOrdersList.length;
+    const rto_in_transit_count = scopedOrders.filter(order => getShipmentStatus(order) === 'RTO - In transit').length;
+    const returned_to_origin_count = returned_count - rto_in_transit_count;
 
     // Filter Delivered Manual Orders (strictly status === 'Delivered' and matching source filter)
     const filteredDeliveredManualOrders = (manualOrders || []).filter(mo => {
@@ -1666,7 +1708,10 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       total_revenue,
       order_count,
       customer_count,
-      average_order_value
+      average_order_value,
+      returned_count,
+      rto_in_transit_count,
+      returned_to_origin_count
     };
   };
 
@@ -1699,7 +1744,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
 
       let dayOrderCount = 0;
       let dayTotal = orders.reduce((sum, order) => {
-        if (!order.created_at) return sum;
+        if (!order.created_at || isReturnedOrder(order)) return sum;
         const orderDate = order.created_at.split(' ')[0].split('T')[0];
         
         const matchesFilter = 
@@ -1740,7 +1785,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
         statsFilter === 'all' || 
         (statsFilter === 'online' && !o.isOffline) ||
         (statsFilter === 'offline' && o.isOffline);
-      if (!matchesFilter) return;
+      if (!matchesFilter || isReturnedOrder(o)) return;
 
       o.cartItems?.forEach(item => {
         const title = item.title || 'Other';
@@ -3121,7 +3166,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                   {(() => {
                     const filteredStats = getFilteredStats();
                     return (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
                         <div className="bg-white p-6 rounded-3xl border border-[#3A2E26]/10 shadow-sm flex items-center gap-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
                           <div className="w-12 h-12 rounded-2xl bg-[#7A8B6F]/10 text-[#7A8B6F] flex items-center justify-center shrink-0">
                             <TrendingUp className="w-6 h-6" />
@@ -3161,6 +3206,19 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                             <h3 className="text-xl font-bold tracking-tight text-[#3A2E26] mt-1">
                               {formatCurrency(filteredStats.average_order_value)}
                             </h3>
+                          </div>
+                        </div>
+
+                        <div className="bg-white p-6 rounded-3xl border border-[#3A2E26]/10 shadow-sm flex items-center gap-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+                          <div className="w-12 h-12 rounded-2xl bg-red-500/10 text-red-600 flex items-center justify-center shrink-0">
+                            <RotateCcw className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold text-[#3A2E26]/50 uppercase tracking-widest">Returned Orders</p>
+                            <h3 className="text-xl font-bold tracking-tight text-[#3A2E26] mt-1">{filteredStats.returned_count}</h3>
+                            <p className="text-[10px] font-semibold text-[#3A2E26]/60 mt-0.5">
+                              RTO - In transit: {filteredStats.rto_in_transit_count} · Returned: {filteredStats.returned_to_origin_count}
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -3470,8 +3528,8 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                           </h3>
                           <div className="flex flex-col gap-4 py-2">
                             {(() => {
-                              const onlineOrders = orders.filter(o => !o.isOffline);
-                              const offlineOrders = orders.filter(o => !!o.isOffline);
+                              const onlineOrders = orders.filter(o => !o.isOffline && !isReturnedOrder(o));
+                              const offlineOrders = orders.filter(o => !!o.isOffline && !isReturnedOrder(o));
 
                               const onlineRev = onlineOrders.reduce((sum, o) => sum + (parseFloat(o.grandTotal) || 0), 0);
                               const offlineRev = offlineOrders.reduce((sum, o) => sum + (parseFloat(o.grandTotal) || 0), 0);
@@ -4233,7 +4291,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                       <div className="flex gap-2 justify-end mt-1 flex-wrap items-center">
                                         {(() => {
                                           const shipSt = getShipmentStatus(order);
-                                          const isDelivered = order.status === 'delivered' || order.fulfillment?.status?.toLowerCase() === 'delivered' || shipSt === 'Delivered';
+                                          const isDelivered = order.status === 'delivered' || order.fulfillment?.status?.toLowerCase() === 'delivered' || shipSt === 'Delivered' || shipSt === 'Returned to Origin';
                                           const isScheduled = order.fulfillment?.pickup_scheduled || ['Ready for pickup', 'In transit', 'RTO - In transit', 'Out for delivery', 'In-Transit'].includes(shipSt);
                                           
                                           if (isDelivered) return null;

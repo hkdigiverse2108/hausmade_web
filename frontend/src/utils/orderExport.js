@@ -64,15 +64,17 @@ const getShipmentStatusStr = (order) => {
   if (order.status === 'cancelled' || order.fulfillment?.status?.toLowerCase() === 'cancelled') {
     return 'Cancelled';
   }
-  if (order.status === 'delivered' || order.fulfillment?.status?.toLowerCase() === 'delivered' || order.status === 'Delivered') {
+  const rawStatus = (order.fulfillment?.status || '').toLowerCase();
+  if (order.fulfillment?.awb && (rawStatus.includes('rto') || rawStatus.includes('return'))) {
+    return (rawStatus.includes('delivered') || rawStatus.includes('returned')) ? 'Returned to Origin' : 'RTO - In transit';
+  }
+  if (order.status === 'delivered' || rawStatus === 'delivered' || order.status === 'Delivered') {
     return 'Delivered';
   }
   if (!order.fulfillment || !order.fulfillment.awb) {
     return order.isOffline ? (order.status || 'Delivered') : 'Unfulfilled';
   }
-  const rawStatus = (order.fulfillment.status || '').toLowerCase();
   if (rawStatus.includes('delivered')) return 'Delivered';
-  if (rawStatus.includes('rto') || rawStatus.includes('return')) return 'In transit';
   if (rawStatus.includes('out for delivery') || rawStatus.includes('transit') || rawStatus.includes('dispatched') || rawStatus.includes('shipped') || rawStatus.includes('in-transit')) return 'In transit';
   if (order.fulfillment.pickup_scheduled || rawStatus.includes('pickup') || rawStatus.includes('scheduled')) return 'Ready for pickup';
   return 'Ready to ship';
