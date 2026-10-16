@@ -134,6 +134,7 @@ async def log_offline_order(order_data: OfflineSaleCreate, admin: dict = Depends
         "discountAmount": 0.0,
         "shippingFee": 0.0,
         "grandTotal": order_data.totalPrice,
+        "pricePerSoap": order_data.pricePerSoap,
         "paymentMethod": pm_raw,
         "created_at": dt_now,
         "user_email": order_data.customerEmail or "",
@@ -146,6 +147,79 @@ async def log_offline_order(order_data: OfflineSaleCreate, admin: dict = Depends
     await orders_collection.insert_one(order_doc)
     order_doc["_id"] = str(order_doc["_id"])
     return order_doc
+
+@router.put("/api/admin/orders/offline/{order_id}")
+async def update_offline_order(order_id: str, order_data: OfflineSaleCreate, admin: dict = Depends(get_admin_user)):
+    order = await orders_collection.find_one({"orderId": order_id, "isOffline": True})
+    if not order:
+        raise HTTPException(status_code=404, detail="Offline order not found")
+    if order.get("fulfillment"):
+        raise HTTPException(status_code=400, detail="Order already shipped via Delhivery; cancel the shipment before editing")
+
+    prod = await products_collection.find_one({"id": order_data.packId})
+    if not prod:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Product with pack ID '{order_data.packId}' not found"
+        )
+
+    shipping_address = {
+        "fullName": order_data.customerName,
+        "email": order_data.customerEmail or "",
+        "phone": order_data.customerPhone,
+        "address": order_data.address or "Offline Sale",
+        "city": order_data.city or "Offline",
+        "pincode": order_data.pincode or "000000",
+        "state": order_data.state or "Offline Store"
+    }
+
+    cart_item = {
+        "packId": order_data.packId,
+        "title": prod.get("title", "Botanical Soap"),
+        "count": prod.get("count", 1),
+        "isSubscription": False,
+        "frequency": None,
+        "unitPrice": str(prod.get("basePrice", 0)),
+        "packPrice": str(prod.get("basePrice", 0)),
+        "quantity": order_data.quantity,
+        "totalPrice": str(order_data.totalPrice),
+        "image": prod.get("image", "")
+    }
+
+    created_at = order.get("created_at")
+    if order_data.created_at:
+        try:
+            parsed_dt = datetime.fromisoformat(order_data.created_at.replace("Z", "+00:00"))
+            if parsed_dt.tzinfo is not None:
+                created_at = parsed_dt.astimezone(timezone.utc).replace(tzinfo=None)
+            else:
+                created_at = parsed_dt
+        except Exception:
+            pass
+
+    pm_raw = str(order_data.paymentMethod or "Cash").strip()
+    is_cod_sale = pm_raw.lower() in ["cash", "cod", "cash on delivery", "cash_on_delivery"]
+
+    updates = {
+        "shippingAddress": shipping_address,
+        "cartItems": [cart_item],
+        "subtotal": order_data.totalPrice,
+        "discountAmount": 0.0,
+        "shippingFee": 0.0,
+        "grandTotal": order_data.totalPrice,
+        "pricePerSoap": order_data.pricePerSoap,
+        "paymentMethod": pm_raw,
+        "created_at": created_at,
+        "user_email": order_data.customerEmail or "",
+        "notes": order_data.notes or "",
+        "payment_status": "COD" if is_cod_sale else "PAID",
+        "updated_at": datetime.utcnow()
+    }
+
+    await orders_collection.update_one({"_id": order["_id"]}, {"$set": updates})
+    updated = await orders_collection.find_one({"_id": order["_id"]})
+    updated["_id"] = str(updated["_id"])
+    return updated
 
 @router.get("/api/orders")
 async def get_orders(current_user_email: str = Depends(get_current_user_email)):

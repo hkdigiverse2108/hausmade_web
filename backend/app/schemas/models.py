@@ -84,6 +84,7 @@ class OfflineSaleCreate(BaseModel):
     customerEmail: Optional[str] = None
     packId: str
     quantity: int
+    pricePerSoap: Optional[float] = None
     totalPrice: float
     paymentMethod: str
     created_at: Optional[str] = None

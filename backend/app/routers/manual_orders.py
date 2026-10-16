@@ -66,6 +66,58 @@ async def get_manual_orders(admin: dict = Depends(get_admin_user)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+async def find_manual_order(order_id: str):
+    query = {"orderId": order_id}
+    order = await manual_orders_collection.find_one(query)
+    if not order:
+        from bson import ObjectId
+        try:
+            query = {"_id": ObjectId(order_id)}
+            order = await manual_orders_collection.find_one(query)
+        except Exception:
+            pass
+    return query, order
+
+@router.put("/api/admin/manual-orders/{order_id}")
+async def update_manual_order(order_id: str, order_data: ManualOrderCreate, admin: dict = Depends(get_admin_user)):
+    try:
+        query, order = await find_manual_order(order_id)
+        if not order:
+            raise HTTPException(status_code=404, detail="Manual order not found")
+
+        if order.get("status") == "Delivered":
+            raise HTTPException(status_code=400, detail="Delivered orders cannot be edited")
+
+        status = order_data.status if order_data.status in ["Pending", "Delivered"] else order.get("status", "Pending")
+        sale_dt = order_data.saleDateTime or order.get("saleDateTime") or datetime.now().isoformat()
+
+        updates = {
+            "customerName": order_data.customerName,
+            "customerPhone": order_data.customerPhone,
+            "customerEmail": order_data.customerEmail,
+            "numberOfSoaps": order_data.numberOfSoaps,
+            "pricePerSoap": order_data.pricePerSoap,
+            "totalPrice": order_data.totalPrice,
+            "paymentMethod": order_data.paymentMethod or "COD",
+            "saleDateTime": sale_dt,
+            "created_at": sale_dt,
+            "address": order_data.address,
+            "city": order_data.city,
+            "state": order_data.state,
+            "pincode": order_data.pincode,
+            "notes": order_data.notes,
+            "status": status,
+            "updated_at": datetime.now().isoformat()
+        }
+
+        await manual_orders_collection.update_one(query, {"$set": updates})
+        updated = await manual_orders_collection.find_one(query)
+        return format_doc(updated)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.patch("/api/admin/manual-orders/{order_id}/status")
 async def update_manual_order_status(order_id: str, payload: ManualOrderStatusUpdate, admin: dict = Depends(get_admin_user)):
     try:

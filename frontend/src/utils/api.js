@@ -590,6 +590,22 @@ export async function adminLogOfflineSale(offlineSaleData, token) {
   return response.json();
 }
 
+export async function adminUpdateOfflineSale(orderId, offlineSaleData, token) {
+  const response = await fetch(`${API_URL}/api/admin/orders/offline/${encodeURIComponent(orderId)}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(offlineSaleData)
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Failed to update offline sale');
+  }
+  return response.json();
+}
+
 export async function createSubscription(subData, token = null) {
   const headers = {
     'Content-Type': 'application/json',
@@ -994,6 +1010,22 @@ export async function adminCreateManualOrder(payload, token) {
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.detail || 'Failed to create manual order');
+  }
+  return response.json();
+}
+
+export async function adminUpdateManualOrder(orderId, payload, token) {
+  const response = await fetch(`${API_URL}/api/admin/manual-orders/${encodeURIComponent(orderId)}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(payload)
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Failed to update manual order');
   }
   return response.json();
 }

@@ -81,8 +81,10 @@ import {
   cancelDelhiveryShipment,
   deleteAdminOrder,
   adminLogOfflineSale,
+  adminUpdateOfflineSale,
   adminGetManualOrders,
   adminCreateManualOrder,
+  adminUpdateManualOrder,
   adminUpdateManualOrderStatus,
   adminDeleteManualOrder,
   API_URL
@@ -477,6 +479,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   // Manual Orders state
   const [manualOrders, setManualOrders] = useState([]);
   const [isManualOrderModalOpen, setIsManualOrderModalOpen] = useState(false);
+  const [editingManualOrderId, setEditingManualOrderId] = useState(null);
   const [viewingManualOrder, setViewingManualOrder] = useState(null);
   const [manualOrderFilter, setManualOrderFilter] = useState('all');
   const [manualOrderSearch, setManualOrderSearch] = useState('');
@@ -925,6 +928,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   });
 
   const [isOfflineSaleModalOpen, setIsOfflineSaleModalOpen] = useState(false);
+  const [editingOfflineOrderId, setEditingOfflineOrderId] = useState(null);
 
   useEffect(() => {
     if (isReviewModalOpen) {
@@ -1048,6 +1052,44 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       state: '',
       pincode: ''
     });
+    setEditingOfflineOrderId(null);
+    setIsOfflineSaleModalOpen(true);
+  };
+
+  const toLocalInputDateTime = (dateVal) => {
+    if (!dateVal) return getLocalDateTimeString();
+    let parseStr = String(dateVal);
+    if (!parseStr.endsWith('Z') && !parseStr.includes('+')) parseStr += 'Z';
+    const d = new Date(parseStr);
+    return isNaN(d.getTime()) ? getLocalDateTimeString() : getLocalDateTimeString(d);
+  };
+
+  const handleEditOfflineSale = (order) => {
+    const addr = order.shippingAddress || {};
+    const item = (order.cartItems || [])[0] || {};
+    const clean = (val, placeholder) => (val && val !== placeholder ? val : '');
+    const qty = parseInt(item.quantity) || 1;
+    const total = parseFloat(order.grandTotal) || 0;
+    const pricePerSoap = parseFloat(order.pricePerSoap) || (total > 0
+      ? Math.round((total / qty) * 100) / 100
+      : (parseFloat(item.unitPrice) || products.find(p => p.id === item.packId)?.basePrice || 299));
+    setOfflineSaleForm({
+      customerName: addr.fullName || '',
+      customerPhone: addr.phone || '',
+      customerEmail: addr.email || order.user_email || '',
+      packId: item.packId || (products[0]?.id ?? ''),
+      pricePerSoap,
+      quantity: qty,
+      totalPrice: total,
+      paymentMethod: order.paymentMethod || 'Cash',
+      created_at: toLocalInputDateTime(order.created_at),
+      notes: order.notes || '',
+      address: clean(addr.address, 'Offline Sale'),
+      city: clean(addr.city, 'Offline'),
+      state: clean(addr.state, 'Offline Store'),
+      pincode: clean(addr.pincode, '000000')
+    });
+    setEditingOfflineOrderId(order.orderId);
     setIsOfflineSaleModalOpen(true);
   };
 
@@ -1085,6 +1127,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
         customerEmail: offlineSaleForm.customerEmail || null,
         packId: offlineSaleForm.packId,
         quantity: parseInt(offlineSaleForm.quantity) || 1,
+        pricePerSoap: parseFloat(offlineSaleForm.pricePerSoap) || null,
         totalPrice: parseFloat(offlineSaleForm.totalPrice) || 0,
         paymentMethod: offlineSaleForm.paymentMethod,
         created_at: offlineSaleForm.created_at ? new Date(offlineSaleForm.created_at).toISOString() : new Date().toISOString(),
@@ -1094,12 +1137,18 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
         state: offlineSaleForm.state || null,
         pincode: offlineSaleForm.pincode || null
       };
-      await adminLogOfflineSale(payload, token);
-      showNotification('Offline sale logged successfully!', 'success');
+      if (editingOfflineOrderId) {
+        await adminUpdateOfflineSale(editingOfflineOrderId, payload, token);
+        showNotification('Offline sale updated successfully!', 'success');
+      } else {
+        await adminLogOfflineSale(payload, token);
+        showNotification('Offline sale logged successfully!', 'success');
+      }
       setIsOfflineSaleModalOpen(false);
+      setEditingOfflineOrderId(null);
       fetchAdminData(true);
     } catch (err) {
-      showNotification(err.message || 'Failed to log offline sale', 'error');
+      showNotification(err.message || (editingOfflineOrderId ? 'Failed to update offline sale' : 'Failed to log offline sale'), 'error');
     } finally {
       setSaving(false);
     }
@@ -1129,9 +1178,16 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
         notes: manualOrderForm.notes || null,
         status: manualOrderForm.status || 'Pending'
       };
-      await adminCreateManualOrder(payload, token);
-      showNotification('Manual order added successfully!', 'success');
+      if (editingManualOrderId) {
+        await adminUpdateManualOrder(editingManualOrderId, payload, token);
+        showNotification('Manual order updated successfully!', 'success');
+        setViewingManualOrder(null);
+      } else {
+        await adminCreateManualOrder(payload, token);
+        showNotification('Manual order added successfully!', 'success');
+      }
       setIsManualOrderModalOpen(false);
+      setEditingManualOrderId(null);
       setManualOrderForm({
         customerName: '',
         customerPhone: '',
@@ -1150,10 +1206,31 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       });
       fetchAdminData(true);
     } catch (err) {
-      showNotification(err.message || 'Failed to create manual order', 'error');
+      showNotification(err.message || (editingManualOrderId ? 'Failed to update manual order' : 'Failed to create manual order'), 'error');
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleEditManualOrder = (order) => {
+    setManualOrderForm({
+      customerName: order.customerName || '',
+      customerPhone: order.customerPhone || '',
+      customerEmail: order.customerEmail || '',
+      numberOfSoaps: order.numberOfSoaps || 1,
+      pricePerSoap: parseFloat(order.pricePerSoap) || (parseFloat(order.totalPrice) > 0 ? Math.round((parseFloat(order.totalPrice) / (parseInt(order.numberOfSoaps) || 1)) * 100) / 100 : 299),
+      totalPrice: order.totalPrice ?? 0,
+      paymentMethod: order.paymentMethod || 'COD',
+      saleDateTime: toLocalInputDateTime(order.saleDateTime || order.created_at),
+      address: order.address || '',
+      city: order.city || '',
+      state: order.state || '',
+      pincode: order.pincode || '',
+      notes: order.notes || '',
+      status: order.status || 'Pending'
+    });
+    setEditingManualOrderId(order.orderId || order._id);
+    setIsManualOrderModalOpen(true);
   };
 
   const handleUpdateManualOrderStatus = async (orderId, newStatus) => {
@@ -4353,11 +4430,20 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                           setSelectedOrderForShipping(order);
                                           setServiceabilityResult(null);
                                         }}
-                                        className="px-3.5 py-1.5 bg-[#3A2E26] hover:bg-[#2A201A] text-white rounded-xl text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1.5 border-none"
+                                        className="px-3.5 py-1.5 bg-[#3A2E26] hover:bg-[#2A201A] text-white rounded-xl text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1.5 border-none whitespace-nowrap shrink-0"
                                       >
-                                        <Truck className="w-3.5 h-3.5" />
+                                        <Truck className="w-3.5 h-3.5 shrink-0" />
                                         <span>Ship Order</span>
                                       </button>
+                                      {order.isOffline && (
+                                        <button
+                                          onClick={() => handleEditOfflineSale(order)}
+                                          title="Edit Offline Sale"
+                                          className="p-1.5 bg-[#C97C5D]/10 hover:bg-[#C97C5D]/20 text-[#C97C5D] rounded-lg transition-colors cursor-pointer border-none flex items-center justify-center shrink-0"
+                                        >
+                                          <Edit className="w-3.5 h-3.5" />
+                                        </button>
+                                      )}
                                       <button
                                         onClick={() => handleDeleteOrder(order.orderId || order._id)}
                                         title="Delete Order Permanently"
@@ -4410,6 +4496,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                           notes: '',
                           status: 'Pending'
                         });
+                        setEditingManualOrderId(null);
                         setIsManualOrderModalOpen(true);
                       }}
                       className="px-5 py-2.5 bg-[#C97C5D] hover:bg-[#B36B4C] text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer uppercase tracking-wider border-none"
@@ -4965,6 +5052,15 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                       >
                                         <Eye className="w-4 h-4" />
                                       </button>
+                                      {order.status !== 'Delivered' && (
+                                        <button
+                                          onClick={() => handleEditManualOrder(order)}
+                                          title="Edit Order"
+                                          className="p-2 bg-[#C97C5D]/10 hover:bg-[#C97C5D]/20 text-[#C97C5D] rounded-xl transition-colors cursor-pointer border-none"
+                                        >
+                                          <Edit className="w-4 h-4" />
+                                        </button>
+                                      )}
                                       <button
                                         onClick={() => handleDeleteManualOrder(order.orderId || order._id)}
                                         title="Delete Order"
@@ -10201,7 +10297,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       {isOfflineSaleModalOpen && (
         <div className="fixed inset-0 bg-[#3A2E26]/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 border border-[#E6D5C3]/40 shadow-2xl relative animate-scaleUp max-h-[90vh] overflow-y-auto">
-            <h3 className="text-xl font-bold mb-2 text-[#3A2E26]">Log Offline Sale</h3>
+            <h3 className="text-xl font-bold mb-2 text-[#3A2E26]">{editingOfflineOrderId ? `Edit Offline Sale (${editingOfflineOrderId})` : 'Log Offline Sale'}</h3>
             <p className="text-xs text-[#3A2E26]/60 mb-6">Enter details of the offline transaction. This will update the revenue and sales metrics but will NOT deduct from online inventory stock.</p>
 
             <form onSubmit={handleSaveOfflineSale} className="space-y-4">
@@ -10391,7 +10487,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                   disabled={saving}
                   className="px-5 py-2.5 bg-[#7A8B6F] hover:bg-[#68785c] text-white font-bold text-sm rounded-2xl shadow-sm transition-colors cursor-pointer flex items-center justify-center min-w-[5rem]"
                 >
-                  {saving ? 'Logging...' : 'Log Sale'}
+                  {saving ? (editingOfflineOrderId ? 'Saving...' : 'Logging...') : (editingOfflineOrderId ? 'Save Changes' : 'Log Sale')}
                 </button>
               </div>
             </form>
@@ -10749,9 +10845,9 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
               <div>
                 <h3 className="text-xl font-bold text-[#3A2E26] uppercase tracking-tight flex items-center gap-2">
                   <FileText className="w-5 h-5 text-[#C97C5D]" />
-                  <span>Add Manual Order</span>
+                  <span>{editingManualOrderId ? 'Edit Manual Order' : 'Add Manual Order'}</span>
                 </h3>
-                <p className="text-xs text-[#3A2E26]/60 mt-0.5">Add an independent manual order record (No Delhivery integration)</p>
+                <p className="text-xs text-[#3A2E26]/60 mt-0.5">{editingManualOrderId ? `Update details for ${formatManualOrderId(editingManualOrderId)}` : 'Add an independent manual order record (No Delhivery integration)'}</p>
               </div>
               <button
                 type="button"
@@ -11039,7 +11135,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                       <span>Saving...</span>
                     </>
                   ) : (
-                    <span>Add Manual Order</span>
+                    <span>{editingManualOrderId ? 'Save Changes' : 'Add Manual Order'}</span>
                   )}
                 </button>
               </div>
@@ -11161,7 +11257,16 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
               )}
             </div>
 
-            <div className="mt-6 flex justify-end">
+            <div className="mt-6 flex justify-end gap-3">
+              {viewingManualOrder.status !== 'Delivered' && (
+                <button
+                  onClick={() => handleEditManualOrder(viewingManualOrder)}
+                  className="px-6 py-2 bg-[#C97C5D] text-white font-bold text-xs rounded-xl uppercase tracking-wider hover:bg-[#B36B4C] transition-colors border-none cursor-pointer flex items-center gap-1.5"
+                >
+                  <Edit className="w-3.5 h-3.5" />
+                  <span>Edit</span>
+                </button>
+              )}
               <button
                 onClick={() => setViewingManualOrder(null)}
                 className="px-6 py-2 bg-[#3A2E26] text-white font-bold text-xs rounded-xl uppercase tracking-wider hover:bg-[#2A201A] transition-colors border-none cursor-pointer"
