@@ -78,6 +78,17 @@ class OrderCreate(BaseModel):
     grandTotal: float
     paymentMethod: str
 
+class OnlineOrderUpdate(BaseModel):
+    shippingAddress: ShippingAddress
+    cartItems: List[CartItem]
+    subtotal: float
+    discountAmount: float = 0.0
+    shippingFee: float = 0.0
+    grandTotal: float
+    paymentMethod: str
+    created_at: Optional[str] = None
+    notes: Optional[str] = None
+
 class OfflineSaleCreate(BaseModel):
     customerName: str
     customerPhone: str

@@ -606,6 +606,22 @@ export async function adminUpdateOfflineSale(orderId, offlineSaleData, token) {
   return response.json();
 }
 
+export async function adminUpdateOnlineOrder(orderId, orderData, token) {
+  const response = await fetch(`${API_URL}/api/admin/orders/online/${encodeURIComponent(orderId)}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(orderData)
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Failed to update order');
+  }
+  return response.json();
+}
+
 export async function createSubscription(subData, token = null) {
   const headers = {
     'Content-Type': 'application/json',

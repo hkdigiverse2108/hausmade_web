@@ -8,7 +8,7 @@ import base64
 import asyncio
 from fastapi import APIRouter, HTTPException, Depends, status
 from fastapi.responses import HTMLResponse, Response
-from app.schemas.models import OrderCreate, OfflineSaleCreate, GuestOrderCancelRequest
+from app.schemas.models import OrderCreate, OfflineSaleCreate, OnlineOrderUpdate, GuestOrderCancelRequest
 from app.database.connection import orders_collection, products_collection, users_collection, settings_collection
 from app.dependencies.auth_deps import get_current_user_email, get_admin_user
 from app.security.email_sender import send_order_confirmation_email
@@ -215,6 +215,87 @@ async def update_offline_order(order_id: str, order_data: OfflineSaleCreate, adm
         "payment_status": "COD" if is_cod_sale else "PAID",
         "updated_at": datetime.utcnow()
     }
+
+    await orders_collection.update_one({"_id": order["_id"]}, {"$set": updates})
+    updated = await orders_collection.find_one({"_id": order["_id"]})
+    updated["_id"] = str(updated["_id"])
+    return updated
+
+@router.put("/api/admin/orders/online/{order_id}")
+async def update_online_order(order_id: str, order_data: OnlineOrderUpdate, admin: dict = Depends(get_admin_user)):
+    order = await orders_collection.find_one({"orderId": order_id, "isOffline": {"$ne": True}})
+    if not order:
+        raise HTTPException(status_code=404, detail="Online order not found")
+    if order.get("fulfillment"):
+        raise HTTPException(status_code=400, detail="Order already shipped via Delhivery; cancel the shipment before editing")
+    if order.get("status") == "cancelled":
+        raise HTTPException(status_code=400, detail="Cancelled orders cannot be edited")
+    if not order_data.cartItems:
+        raise HTTPException(status_code=400, detail="Order must contain at least one item")
+
+    cart_items = []
+    for item in order_data.cartItems:
+        item_dict = item.dict()
+        prod = await products_collection.find_one({"id": item.packId})
+        if prod:
+            item_dict["title"] = item_dict.get("title") or prod.get("title", "Botanical Soap")
+            item_dict["count"] = item_dict.get("count") or prod.get("count", 1)
+            item_dict["image"] = item_dict.get("image") or prod.get("image", "")
+        cart_items.append(item_dict)
+
+    # Stock was deducted when the order got confirmed/paid, so apply only the quantity difference
+    stock_deducted = order.get("status") not in ["pending_payment", "failed", "cancelled"]
+    if stock_deducted:
+        qty_delta = {}
+        for item in order.get("cartItems", []):
+            qty_delta[item.get("packId")] = qty_delta.get(item.get("packId"), 0) - int(item.get("quantity", 0) or 0)
+        for item in cart_items:
+            qty_delta[item["packId"]] = qty_delta.get(item["packId"], 0) + int(item["quantity"] or 0)
+        for pack_id, delta in qty_delta.items():
+            if not pack_id or delta == 0:
+                continue
+            prod = await products_collection.find_one({"id": pack_id})
+            if not prod:
+                continue
+            current_stock = prod.get("stock", 0)
+            if delta > 0 and current_stock < delta:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Insufficient stock for {prod.get('title')}. Available stock: {current_stock}"
+                )
+        for pack_id, delta in qty_delta.items():
+            if not pack_id or delta == 0:
+                continue
+            prod = await products_collection.find_one({"id": pack_id})
+            if prod:
+                await products_collection.update_one({"id": pack_id}, {"$set": {"stock": max(0, prod.get("stock", 0) - delta)}})
+
+    created_at = order.get("created_at")
+    if order_data.created_at:
+        try:
+            parsed_dt = datetime.fromisoformat(order_data.created_at.replace("Z", "+00:00"))
+            if parsed_dt.tzinfo is not None:
+                created_at = parsed_dt.astimezone(timezone.utc).replace(tzinfo=None)
+            else:
+                created_at = parsed_dt
+        except Exception:
+            pass
+
+    shipping_address = order_data.shippingAddress.dict()
+    updates = {
+        "shippingAddress": shipping_address,
+        "cartItems": cart_items,
+        "subtotal": order_data.subtotal,
+        "discountAmount": order_data.discountAmount,
+        "shippingFee": order_data.shippingFee,
+        "grandTotal": order_data.grandTotal,
+        "paymentMethod": order_data.paymentMethod,
+        "created_at": created_at,
+        "notes": order_data.notes or "",
+        "updated_at": datetime.utcnow()
+    }
+    if shipping_address.get("email"):
+        updates["user_email"] = shipping_address["email"].strip().lower()
 
     await orders_collection.update_one({"_id": order["_id"]}, {"$set": updates})
     updated = await orders_collection.find_one({"_id": order["_id"]})

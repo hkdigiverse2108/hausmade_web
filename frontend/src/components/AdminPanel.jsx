@@ -82,6 +82,7 @@ import {
   deleteAdminOrder,
   adminLogOfflineSale,
   adminUpdateOfflineSale,
+  adminUpdateOnlineOrder,
   adminGetManualOrders,
   adminCreateManualOrder,
   adminUpdateManualOrder,
@@ -929,6 +930,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
 
   const [isOfflineSaleModalOpen, setIsOfflineSaleModalOpen] = useState(false);
   const [editingOfflineOrderId, setEditingOfflineOrderId] = useState(null);
+  const [onlineOrderForm, setOnlineOrderForm] = useState(null);
 
   useEffect(() => {
     if (isReviewModalOpen) {
@@ -1111,6 +1113,124 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       quantity: qty,
       totalPrice: price * qty
     }));
+  };
+
+  const handleEditOnlineOrder = (order) => {
+    const addr = order.shippingAddress || {};
+    setOnlineOrderForm({
+      orderId: order.orderId,
+      fullName: addr.fullName || '',
+      email: addr.email || '',
+      phone: addr.phone || '',
+      address: addr.address || '',
+      city: addr.city || '',
+      state: addr.state || '',
+      pincode: addr.pincode || '',
+      items: (order.cartItems || []).map(item => ({ ...item, quantity: parseInt(item.quantity) || 1, packPrice: item.packPrice ?? item.unitPrice ?? '0' })),
+      discountAmount: order.discountAmount ?? 0,
+      shippingFee: order.shippingFee ?? 0,
+      paymentMethod: order.paymentMethod || '',
+      created_at: toLocalInputDateTime(order.created_at),
+      notes: order.notes || ''
+    });
+  };
+
+  const updateOnlineOrderItem = (idx, changes) => {
+    setOnlineOrderForm(prev => {
+      const items = prev.items.map((item, i) => {
+        if (i !== idx) return item;
+        const next = { ...item, ...changes };
+        if (changes.packId !== undefined) {
+          const prod = products.find(p => p.id === changes.packId);
+          if (prod) {
+            next.title = prod.title;
+            next.count = prod.count || 1;
+            next.image = prod.image || '';
+            next.unitPrice = String(prod.basePrice ?? 0);
+            next.packPrice = String(prod.basePrice ?? 0);
+          }
+        }
+        next.totalPrice = String(Math.round((parseFloat(next.packPrice) || 0) * (parseInt(next.quantity) || 0) * 100) / 100);
+        return next;
+      });
+      return { ...prev, items };
+    });
+  };
+
+  const addOnlineOrderItem = () => {
+    const prod = products[0];
+    setOnlineOrderForm(prev => ({
+      ...prev,
+      items: [...prev.items, {
+        packId: prod?.id || '',
+        title: prod?.title || '',
+        count: prod?.count || 1,
+        isSubscription: false,
+        frequency: null,
+        unitPrice: String(prod?.basePrice ?? 0),
+        packPrice: String(prod?.basePrice ?? 0),
+        quantity: 1,
+        totalPrice: String(prod?.basePrice ?? 0),
+        image: prod?.image || ''
+      }]
+    }));
+  };
+
+  const onlineOrderSubtotal = onlineOrderForm
+    ? Math.round(onlineOrderForm.items.reduce((sum, item) => sum + (parseFloat(item.totalPrice) || 0), 0) * 100) / 100
+    : 0;
+  const onlineOrderGrandTotal = onlineOrderForm
+    ? Math.max(0, Math.round((onlineOrderSubtotal - (parseFloat(onlineOrderForm.discountAmount) || 0) + (parseFloat(onlineOrderForm.shippingFee) || 0)) * 100) / 100)
+    : 0;
+
+  const handleSaveOnlineOrder = async (e) => {
+    e.preventDefault();
+    if (!onlineOrderForm.items.length) {
+      showNotification('Order must contain at least one item', 'error');
+      return;
+    }
+    setSaving(true);
+    try {
+      const payload = {
+        shippingAddress: {
+          fullName: onlineOrderForm.fullName,
+          email: onlineOrderForm.email || null,
+          phone: onlineOrderForm.phone,
+          address: onlineOrderForm.address,
+          city: onlineOrderForm.city,
+          pincode: onlineOrderForm.pincode,
+          state: onlineOrderForm.state
+        },
+        cartItems: onlineOrderForm.items.map(item => ({
+          packId: item.packId,
+          title: item.title || '',
+          count: parseInt(item.count) || 1,
+          isSubscription: !!item.isSubscription,
+          frequency: item.frequency || null,
+          unitPrice: String(item.unitPrice ?? item.packPrice ?? '0'),
+          packPrice: String(item.packPrice ?? '0'),
+          quantity: parseInt(item.quantity) || 1,
+          totalPrice: String(item.totalPrice ?? '0'),
+          image: item.image || '',
+          price: item.price != null ? String(item.price) : null
+        })),
+        subtotal: onlineOrderSubtotal,
+        discountAmount: parseFloat(onlineOrderForm.discountAmount) || 0,
+        shippingFee: parseFloat(onlineOrderForm.shippingFee) || 0,
+        grandTotal: onlineOrderGrandTotal,
+        paymentMethod: onlineOrderForm.paymentMethod,
+        created_at: onlineOrderForm.created_at ? new Date(onlineOrderForm.created_at).toISOString() : null,
+        notes: onlineOrderForm.notes || null
+      };
+      await adminUpdateOnlineOrder(onlineOrderForm.orderId, payload, token);
+      showNotification('Order updated successfully!', 'success');
+      setOnlineOrderForm(null);
+      fetchAdminData(true);
+    } catch (err) {
+      showNotification(err.message || 'Failed to update order', 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleSaveOfflineSale = async (e) => {
@@ -4435,15 +4555,13 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                         <Truck className="w-3.5 h-3.5 shrink-0" />
                                         <span>Ship Order</span>
                                       </button>
-                                      {order.isOffline && (
-                                        <button
-                                          onClick={() => handleEditOfflineSale(order)}
-                                          title="Edit Offline Sale"
-                                          className="p-1.5 bg-[#C97C5D]/10 hover:bg-[#C97C5D]/20 text-[#C97C5D] rounded-lg transition-colors cursor-pointer border-none flex items-center justify-center shrink-0"
-                                        >
-                                          <Edit className="w-3.5 h-3.5" />
-                                        </button>
-                                      )}
+                                      <button
+                                        onClick={() => order.isOffline ? handleEditOfflineSale(order) : handleEditOnlineOrder(order)}
+                                        title={order.isOffline ? 'Edit Offline Sale' : 'Edit Order'}
+                                        className="p-1.5 bg-[#C97C5D]/10 hover:bg-[#C97C5D]/20 text-[#C97C5D] rounded-lg transition-colors cursor-pointer border-none flex items-center justify-center shrink-0"
+                                      >
+                                        <Edit className="w-3.5 h-3.5" />
+                                      </button>
                                       <button
                                         onClick={() => handleDeleteOrder(order.orderId || order._id)}
                                         title="Delete Order Permanently"
@@ -10152,7 +10270,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
 
       {/* Coupon Edit / Add Modal */}
       {isCouponModalOpen && (
-        <div className="fixed inset-0 bg-[#3A2E26]/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
+        <div className="fixed inset-0 bg-[#3A2E26]/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn" onMouseDown={(e) => { if (e.target === e.currentTarget) setIsCouponModalOpen(false); }}>
           <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 border border-[#E6D5C3]/40 shadow-2xl relative">
             <h3 className="text-xl font-bold mb-2 text-[#3A2E26]">
               {editingCoupon ? 'Edit Discount Coupon' : 'Create Promo Offer Coupon'}
@@ -10294,8 +10412,213 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
 
 
       {/* Log Offline Sale Modal */}
+      {onlineOrderForm && (
+        <div className="fixed inset-0 bg-[#3A2E26]/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn" onMouseDown={(e) => { if (e.target === e.currentTarget) setOnlineOrderForm(null); }}>
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 border border-[#E6D5C3]/40 shadow-2xl relative animate-scaleUp max-h-[90vh] overflow-y-auto">
+            <h3 className="text-xl font-bold mb-2 text-[#3A2E26]">Edit Order ({onlineOrderForm.orderId})</h3>
+            <p className="text-xs text-[#3A2E26]/60 mb-6">Update customer, address, items and pricing. Stock is adjusted automatically when item quantities change.</p>
+
+            <form onSubmit={handleSaveOnlineOrder} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">Customer Name *</label>
+                  <input
+                    required
+                    type="text"
+                    value={onlineOrderForm.fullName}
+                    onChange={(e) => setOnlineOrderForm({ ...onlineOrderForm, fullName: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">Phone *</label>
+                  <input
+                    required
+                    type="text"
+                    value={onlineOrderForm.phone}
+                    onChange={(e) => setOnlineOrderForm({ ...onlineOrderForm, phone: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">Email</label>
+                  <input
+                    type="email"
+                    value={onlineOrderForm.email}
+                    onChange={(e) => setOnlineOrderForm({ ...onlineOrderForm, email: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">Address *</label>
+                  <input
+                    required
+                    type="text"
+                    value={onlineOrderForm.address}
+                    onChange={(e) => setOnlineOrderForm({ ...onlineOrderForm, address: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">City *</label>
+                  <input
+                    required
+                    type="text"
+                    value={onlineOrderForm.city}
+                    onChange={(e) => setOnlineOrderForm({ ...onlineOrderForm, city: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">State *</label>
+                  <input
+                    required
+                    type="text"
+                    value={onlineOrderForm.state}
+                    onChange={(e) => setOnlineOrderForm({ ...onlineOrderForm, state: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">Pincode *</label>
+                  <input
+                    required
+                    type="text"
+                    value={onlineOrderForm.pincode}
+                    onChange={(e) => setOnlineOrderForm({ ...onlineOrderForm, pincode: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">Order Date & Time</label>
+                  <input
+                    type="datetime-local"
+                    value={onlineOrderForm.created_at}
+                    onChange={(e) => setOnlineOrderForm({ ...onlineOrderForm, created_at: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans mb-0">Items *</label>
+                  <button
+                    type="button"
+                    onClick={addOnlineOrderItem}
+                    className="flex items-center gap-1 px-2.5 py-1 bg-[#7A8B6F]/10 hover:bg-[#7A8B6F]/20 text-[#7A8B6F] rounded-lg text-[10px] font-bold uppercase tracking-wider cursor-pointer border-none"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Add Item
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {onlineOrderForm.items.map((item, idx) => (
+                    <div key={idx} className="grid grid-cols-12 gap-2 items-end bg-[#3A2E26]/5 p-3 rounded-2xl border border-[#3A2E26]/10">
+                      <div className="col-span-12 sm:col-span-5">
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/60 mb-1">Product</label>
+                        <select
+                          value={item.packId}
+                          onChange={(e) => updateOnlineOrderItem(idx, { packId: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-[#E6D5C3]/50 rounded-xl text-xs focus:outline-none focus:border-[#3A2E26] font-sans"
+                        >
+                          {!products.some(p => p.id === item.packId) && <option value={item.packId}>{item.title || item.packId}</option>}
+                          {products.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
+                        </select>
+                      </div>
+                      <div className="col-span-3 sm:col-span-2">
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/60 mb-1">Qty</label>
+                        <input
+                          required
+                          type="number"
+                          min="1"
+                          value={item.quantity}
+                          onChange={(e) => updateOnlineOrderItem(idx, { quantity: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-[#E6D5C3]/50 rounded-xl text-xs focus:outline-none focus:border-[#3A2E26] font-sans"
+                        />
+                      </div>
+                      <div className="col-span-4 sm:col-span-2">
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/60 mb-1">Price (₹)</label>
+                        <input
+                          required
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={item.packPrice}
+                          onChange={(e) => updateOnlineOrderItem(idx, { packPrice: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-[#E6D5C3]/50 rounded-xl text-xs focus:outline-none focus:border-[#3A2E26] font-sans"
+                        />
+                      </div>
+                      <div className="col-span-3 sm:col-span-2 text-right text-xs font-bold text-[#3A2E26] pb-2">
+                        {formatCurrency(parseFloat(item.totalPrice) || 0)}
+                      </div>
+                      <div className="col-span-2 sm:col-span-1 flex justify-end pb-1">
+                        <button
+                          type="button"
+                          onClick={() => setOnlineOrderForm(prev => ({ ...prev, items: prev.items.filter((_, i) => i !== idx) }))}
+                          disabled={onlineOrderForm.items.length <= 1}
+                          title="Remove Item"
+                          className="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors cursor-pointer border-none disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5 font-sans">Payment Method *</label>
+                <input
+                  required
+                  type="text"
+                  list="online-order-payment-methods"
+                  value={onlineOrderForm.paymentMethod}
+                  onChange={(e) => setOnlineOrderForm({ ...onlineOrderForm, paymentMethod: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-sans"
+                />
+                <datalist id="online-order-payment-methods">
+                  <option value="Cash on Delivery" />
+                  <option value="cod" />
+                  <option value="RAZORPAY" />
+                  <option value="CASHFREE" />
+                </datalist>
+              </div>
+
+              <div className="bg-[#3A2E26]/5 rounded-2xl p-4 text-xs space-y-1 text-[#3A2E26]">
+                <div className="flex justify-between"><span>Subtotal</span><span className="font-bold">{formatCurrency(onlineOrderSubtotal)}</span></div>
+                {parseFloat(onlineOrderForm.discountAmount) > 0 && (
+                  <div className="flex justify-between"><span>Discount</span><span className="font-bold">- {formatCurrency(parseFloat(onlineOrderForm.discountAmount))}</span></div>
+                )}
+                {parseFloat(onlineOrderForm.shippingFee) > 0 && (
+                  <div className="flex justify-between"><span>Shipping</span><span className="font-bold">{formatCurrency(parseFloat(onlineOrderForm.shippingFee))}</span></div>
+                )}
+                <div className="flex justify-between text-sm pt-1 border-t border-[#3A2E26]/10"><span className="font-bold">Grand Total</span><span className="font-bold">{formatCurrency(onlineOrderGrandTotal)}</span></div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setOnlineOrderForm(null)}
+                  className="px-5 py-2.5 bg-[#3A2E26]/5 hover:bg-[#3A2E26]/10 text-[#3A2E26] font-bold text-sm rounded-2xl transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-5 py-2.5 bg-[#7A8B6F] hover:bg-[#68785c] text-white font-bold text-sm rounded-2xl shadow-sm transition-colors cursor-pointer flex items-center justify-center min-w-[5rem]"
+                >
+                  {saving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {isOfflineSaleModalOpen && (
-        <div className="fixed inset-0 bg-[#3A2E26]/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
+        <div className="fixed inset-0 bg-[#3A2E26]/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn" onMouseDown={(e) => { if (e.target === e.currentTarget) setIsOfflineSaleModalOpen(false); }}>
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 border border-[#E6D5C3]/40 shadow-2xl relative animate-scaleUp max-h-[90vh] overflow-y-auto">
             <h3 className="text-xl font-bold mb-2 text-[#3A2E26]">{editingOfflineOrderId ? `Edit Offline Sale (${editingOfflineOrderId})` : 'Log Offline Sale'}</h3>
             <p className="text-xs text-[#3A2E26]/60 mb-6">Enter details of the offline transaction. This will update the revenue and sales metrics but will NOT deduct from online inventory stock.</p>
@@ -10497,7 +10820,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
 
       {/* Delhivery Order Booking Modal */}
       {selectedOrderForShipping && (
-        <div className="fixed inset-0 bg-[#3A2E26]/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
+        <div className="fixed inset-0 bg-[#3A2E26]/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn" onMouseDown={(e) => { if (e.target === e.currentTarget) setSelectedOrderForShipping(null); }}>
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 border border-[#E6D5C3]/40 shadow-2xl relative animate-scaleUp">
             <h3 className="text-xl font-bold mb-1 text-[#3A2E26]">Ship with Delhivery Express</h3>
             <p className="text-xs text-[#3A2E26]/60 mb-6">Create shipment consignment for order {selectedOrderForShipping.orderId}.</p>
@@ -10736,7 +11059,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       />
       {/* Add New Feed Post Modal */}
       {isInstaModalOpen && (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-[#3A2E26]/60 backdrop-blur-sm animate-fadeIn">
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-[#3A2E26]/60 backdrop-blur-sm animate-fadeIn" onMouseDown={(e) => { if (e.target === e.currentTarget) setIsInstaModalOpen(false); }}>
           <div className="bg-[#F6F5F2] w-full max-w-[500px] max-h-[90vh] overflow-y-auto shadow-2xl relative animate-slideUp">
             
             {/* Modal Header */}
@@ -10838,7 +11161,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
 
       {/* Add Manual Order Modal */}
       {isManualOrderModalOpen && (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-[#3A2E26]/60 backdrop-blur-sm animate-fadeIn">
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-[#3A2E26]/60 backdrop-blur-sm animate-fadeIn" onMouseDown={(e) => { if (e.target === e.currentTarget) setIsManualOrderModalOpen(false); }}>
           <div className="bg-[#FDFBF7] w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl shadow-2xl relative border border-[#3A2E26]/10 animate-slideUp p-6 sm:p-8 font-sans">
             {/* Header */}
             <div className="flex justify-between items-center border-b border-[#3A2E26]/10 pb-4 mb-6">
@@ -11146,7 +11469,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
 
       {/* View Manual Order Details Modal */}
       {viewingManualOrder && (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-[#3A2E26]/60 backdrop-blur-sm animate-fadeIn">
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-[#3A2E26]/60 backdrop-blur-sm animate-fadeIn" onMouseDown={(e) => { if (e.target === e.currentTarget) setViewingManualOrder(null); }}>
           <div className="bg-[#FDFBF7] w-full max-w-lg rounded-3xl shadow-2xl relative border border-[#3A2E26]/10 animate-slideUp p-6 font-sans">
             <div className="flex justify-between items-center border-b border-[#3A2E26]/10 pb-4 mb-4">
               <div>
