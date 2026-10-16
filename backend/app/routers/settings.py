@@ -382,7 +382,8 @@ async def get_site_settings():
                     "pickup_state": "",
                     "pickup_city": "",
                     "pickup_address": "",
-                    "gst_number": ""
+                    "gst_number": "",
+                    "gst_rate": 18
                 }
                 settings["delhivery"] = default_delhivery
                 await settings_collection.update_one({"key": "site_settings"}, {"$set": {"delhivery": default_delhivery}})

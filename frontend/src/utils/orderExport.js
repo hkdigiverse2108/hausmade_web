@@ -324,3 +324,182 @@ export const exportOrdersToPDF = async (orders, filterSummary = {}) => {
   const fileDateStr = new Date().toISOString().slice(0, 10);
   doc.save(`Hausmade_Orders_Export_${fileDateStr}.pdf`);
 };
+
+// ---------------- GST Report ----------------
+
+const gstPeriodLabel = (report) => {
+  const fmt = (d) => (d ? d.split('-').reverse().join('/') : '');
+  if (report.from && report.to) return `${fmt(report.from)} to ${fmt(report.to)}`;
+  if (report.from) return `From ${fmt(report.from)}`;
+  if (report.to) return `Up to ${fmt(report.to)}`;
+  return 'All dates';
+};
+
+const gstFileSuffix = (report) => `${report.from || 'start'}_to_${report.to || 'today'}`;
+
+const formatGstDate = (d) => (d ? d.split('-').reverse().join('/') : '');
+
+export const exportGstReportToExcel = (report) => {
+  if (!report || !report.rows || report.rows.length === 0) {
+    alert('No GST data available to export.');
+    return;
+  }
+  const header = [
+    ['Hausmade - GST Sales Report'],
+    [`Seller GSTIN: ${report.sellerGstin || 'N/A'}`, `Seller State: ${report.sellerState || ''}`],
+    [`Period: ${gstPeriodLabel(report)}`, `GST Rate: ${report.gstRate}% (inclusive)`],
+    []
+  ];
+
+  const orderRows = report.rows.map(r => ({
+    'Order Date': formatGstDate(r.date),
+    'Delivered Date': r.deliveredDate ? formatGstDate(r.deliveredDate) : '-',
+    'Order ID': r.orderId,
+    'AWB': r.awb,
+    'Channel': r.channel,
+    'Payment': r.payment || '-',
+    'State': r.state,
+    'Note': r.source === 'missing' ? 'Delhivery data missing' : '',
+    'Taxable (₹)': r.taxable,
+    'CGST (₹)': r.cgst,
+    'SGST (₹)': r.sgst,
+    'IGST (₹)': r.igst,
+    'Total GST (₹)': r.gst,
+    'Total (₹)': r.total
+  }));
+  orderRows.push({
+    'Order Date': 'TOTAL',
+    'Delivered Date': '',
+    'Order ID': `${report.totals.orders} orders`,
+    'AWB': '',
+    'Channel': '',
+    'Payment': '',
+    'State': '',
+    'Note': '',
+    'Taxable (₹)': report.totals.taxable,
+    'CGST (₹)': report.totals.cgst,
+    'SGST (₹)': report.totals.sgst,
+    'IGST (₹)': report.totals.igst,
+    'Total GST (₹)': report.totals.gst,
+    'Total (₹)': report.totals.total
+  });
+
+  const stateRows = report.stateSummary.map(s => ({
+    'State': s.state,
+    'Orders': s.orders,
+    'Taxable (₹)': s.taxable,
+    'CGST (₹)': s.cgst,
+    'SGST (₹)': s.sgst,
+    'IGST (₹)': s.igst,
+    'Total GST (₹)': s.gst,
+    'Total (₹)': s.total
+  }));
+  stateRows.push({
+    'State': 'TOTAL',
+    'Orders': report.totals.orders,
+    'Taxable (₹)': report.totals.taxable,
+    'CGST (₹)': report.totals.cgst,
+    'SGST (₹)': report.totals.sgst,
+    'IGST (₹)': report.totals.igst,
+    'Total GST (₹)': report.totals.gst,
+    'Total (₹)': report.totals.total
+  });
+
+  const wb = XLSX.utils.book_new();
+
+  const ws1 = XLSX.utils.aoa_to_sheet(header);
+  XLSX.utils.sheet_add_json(ws1, orderRows, { origin: -1 });
+  ws1['!cols'] = [{ wch: 12 }, { wch: 14 }, { wch: 18 }, { wch: 16 }, { wch: 10 }, { wch: 10 }, { wch: 18 }, { wch: 22 }, { wch: 13 }, { wch: 11 }, { wch: 11 }, { wch: 11 }, { wch: 13 }, { wch: 12 }];
+  XLSX.utils.book_append_sheet(wb, ws1, 'Order-wise');
+
+  const ws2 = XLSX.utils.aoa_to_sheet(header);
+  XLSX.utils.sheet_add_json(ws2, stateRows, { origin: -1 });
+  ws2['!cols'] = [{ wch: 20 }, { wch: 8 }, { wch: 13 }, { wch: 11 }, { wch: 11 }, { wch: 11 }, { wch: 13 }, { wch: 12 }];
+  XLSX.utils.book_append_sheet(wb, ws2, 'State-wise Summary');
+
+  // Show every amount with 2 digits after the decimal point
+  [ws1, ws2].forEach(ws => {
+    Object.keys(ws).forEach(addr => {
+      if (addr[0] === '!') return;
+      const cell = ws[addr];
+      const isCount = ws === ws2 && addr.startsWith('B');
+      if (cell.t === 'n' && !isCount) cell.z = '0.00';
+    });
+  });
+
+  XLSX.writeFile(wb, `Hausmade_GST_Report_${gstFileSuffix(report)}.xlsx`);
+};
+
+export const exportGstReportToPDF = (report) => {
+  if (!report || !report.rows || report.rows.length === 0) {
+    alert('No GST data available to export.');
+    return;
+  }
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const money = (v) => (Number(v) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const brand = [58, 46, 38];
+
+  // Hausmade logo (same as the orders PDF), with a text fallback
+  const logoData = createHausmadeLogoDataUrl();
+  let logoDrawn = false;
+  if (logoData) {
+    try {
+      doc.addImage(logoData, 'PNG', 14, 5, 65, 16.25);
+      logoDrawn = true;
+    } catch (err) {
+      logoDrawn = false;
+    }
+  }
+  if (!logoDrawn) {
+    doc.setFont('times', 'bold');
+    doc.setFontSize(26);
+    doc.setTextColor(...brand);
+    doc.text('Hausmade', 14, 17);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(201, 124, 93);
+    doc.text('TM', 68, 12);
+  }
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.setTextColor(...brand);
+  doc.text('GST Sales Report', 14, 29);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text(`Seller GSTIN: ${report.sellerGstin || 'N/A'}    Seller State: ${report.sellerState || ''}`, 14, 35);
+  doc.text(`Period: ${gstPeriodLabel(report)}    GST Rate: ${report.gstRate}% (inclusive)    Orders: ${report.totals.orders}`, 14, 40);
+
+  const t = report.totals;
+  autoTable(doc, {
+    startY: 45,
+    head: [['Order Date', 'Delivered Date', 'Order ID', 'AWB', 'Channel', 'Payment', 'State', 'Taxable', 'CGST', 'SGST', 'IGST', 'Total GST', 'Total']],
+    body: report.rows.map(r => [formatGstDate(r.date), r.deliveredDate ? formatGstDate(r.deliveredDate) : '-', r.source === 'missing' ? `${r.orderId} *` : r.orderId, r.awb, r.channel, r.payment || '-', r.state, money(r.taxable), money(r.cgst), money(r.sgst), money(r.igst), money(r.gst), money(r.total)]),
+    foot: [['TOTAL', '', `${t.orders} orders`, '', '', '', '', money(t.taxable), money(t.cgst), money(t.sgst), money(t.igst), money(t.gst), money(t.total)]],
+    styles: { fontSize: 8, cellPadding: 2 },
+    headStyles: { fillColor: brand, textColor: 255 },
+    footStyles: { fillColor: [230, 213, 195], textColor: brand, fontStyle: 'bold' },
+    columnStyles: { 7: { halign: 'right' }, 8: { halign: 'right' }, 9: { halign: 'right' }, 10: { halign: 'right' }, 11: { halign: 'right' }, 12: { halign: 'right' } }
+  });
+
+  let y = doc.lastAutoTable.finalY + 10;
+  if (y > 180) {
+    doc.addPage();
+    y = 15;
+  }
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.text('State-wise Summary', 14, y);
+  autoTable(doc, {
+    startY: y + 3,
+    head: [['State', 'Orders', 'Taxable', 'CGST', 'SGST', 'IGST', 'Total GST', 'Total']],
+    body: report.stateSummary.map(s => [s.state, s.orders, money(s.taxable), money(s.cgst), money(s.sgst), money(s.igst), money(s.gst), money(s.total)]),
+    foot: [['TOTAL', t.orders, money(t.taxable), money(t.cgst), money(t.sgst), money(t.igst), money(t.gst), money(t.total)]],
+    styles: { fontSize: 8, cellPadding: 2 },
+    headStyles: { fillColor: brand, textColor: 255 },
+    footStyles: { fillColor: [230, 213, 195], textColor: brand, fontStyle: 'bold' },
+    columnStyles: { 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' }, 7: { halign: 'right' } }
+  });
+
+  doc.save(`Hausmade_GST_Report_${gstFileSuffix(report)}.pdf`);
+};
