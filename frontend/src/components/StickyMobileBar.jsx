@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingBag, ArrowUp } from 'lucide-react';
 
-export default function StickyMobileBar({ packTitle, price, onAddToCart, onScrollToSelector }) {
+export default function StickyMobileBar({ packTitle, price, mrp, onAddToCart, onScrollToSelector }) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -27,7 +27,12 @@ export default function StickyMobileBar({ packTitle, price, onAddToCart, onScrol
     <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md p-3.5 pb-[calc(14px+env(safe-area-inset-bottom,0px))] border-t border-[#3A2E26]/10 shadow-2xl flex items-center justify-between gap-3 animate-slideUp">
       <div onClick={onScrollToSelector} className="cursor-pointer">
         <p className="font-serif-brand font-bold text-xs text-[#3A2E26] truncate">{packTitle}</p>
-        <p className="text-sm font-bold text-[#7A8B6F]">₹{price}</p>
+        <p className="text-sm font-bold text-[#7A8B6F]">
+          ₹{price}
+          {parseFloat(mrp) > parseFloat(price) && (
+            <span className="ml-1.5 text-[13px] font-semibold text-[#3A2E26]/75 line-through">₹{parseFloat(mrp).toFixed(2)}</span>
+          )}
+        </p>
       </div>
 
       <button

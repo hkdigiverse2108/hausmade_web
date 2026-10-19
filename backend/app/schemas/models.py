@@ -6,6 +6,7 @@ class ProductModel(BaseModel):
     title: str
     count: int
     basePrice: float
+    mrp: Optional[float] = None  # Actual price (shown with strike-through when > basePrice)
     savingsBadge: Optional[str] = None
     popular: bool = False
     bestValue: bool = False

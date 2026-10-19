@@ -132,6 +132,9 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
   const finalPricePerPack = pack.basePrice.toFixed(2);
   const unitPrice = (pack.basePrice / pack.count).toFixed(2);
   const totalPrice = (pack.basePrice * quantity).toFixed(2);
+  const packMrp = parseFloat(pack.mrp) || 0;
+  const packHasDiscount = packMrp > pack.basePrice;
+  const packDiscountPct = packHasDiscount ? Math.round((1 - pack.basePrice / packMrp) * 100) : 0;
   
   const isPackOutOfStock = pack.stock !== undefined && pack.stock <= 0;
   const isPackLowStock = pack.stock !== undefined && pack.stock > 0 && pack.stock <= 5;
@@ -277,6 +280,8 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
                     {items.map((item) => {
                       const isSelected = item.id === pack.id;
                       const pricePerBar = (item.basePrice / (item.id === 'pack-3' ? 4 : item.count)).toFixed(0);
+                      const itemMrp = parseFloat(item.mrp) || 0;
+                      const itemHasDiscount = itemMrp > item.basePrice;
                       const themeColor = item.id === 'pack-5' ? '#7A8B6F' : '#C97C5D';
 
                       let badgeText = null;
@@ -341,8 +346,15 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
 
                           {/* Price & Unit Price */}
                           <div className="mt-2.5 pt-1.5 border-t border-[#3A2E26]/10 flex items-baseline justify-between gap-1">
-                            <span className="font-serif-brand font-bold text-[13px] sm:text-[16px] text-[#3A2E26]">
-                              ₹{item.basePrice.toFixed(0)}
+                            <span className="flex items-baseline gap-1 flex-wrap">
+                              <span className="font-serif-brand font-bold text-[13px] sm:text-[16px] text-[#3A2E26]">
+                                ₹{item.basePrice.toFixed(0)}
+                              </span>
+                              {itemHasDiscount && (
+                                <span className="text-[11px] sm:text-[13px] text-[#3A2E26]/75 line-through font-semibold">
+                                  ₹{itemMrp.toFixed(0)}
+                                </span>
+                              )}
                             </span>
                             <span className="text-[8.5px] sm:text-[10px] text-[#3A2E26]/70 font-medium">
                               ₹{pricePerBar}/bar
@@ -360,8 +372,20 @@ export default function ProductSelector({ products = [], onAddToCart, onBuyNow, 
                     <span className="text-[9px] uppercase tracking-widest text-[#3A2E26]/50 font-bold block mb-0.5">
                       Selected Price
                     </span>
-                    <div className="font-serif-brand text-xl sm:text-2xl font-bold text-[#3A2E26]">
-                      ₹{pack.basePrice.toFixed(2)}
+                    <div className="flex items-baseline gap-2 flex-wrap">
+                      <span className="font-serif-brand text-xl sm:text-2xl font-bold text-[#3A2E26]">
+                        ₹{pack.basePrice.toFixed(2)}
+                      </span>
+                      {packHasDiscount && (
+                        <>
+                          <span className="text-base sm:text-lg text-[#3A2E26]/75 line-through font-semibold">
+                            ₹{packMrp.toFixed(2)}
+                          </span>
+                          <span className="text-[10px] sm:text-[11px] font-black text-white bg-[#C97C5D] px-1.5 py-0.5 rounded">
+                            {packDiscountPct}% OFF
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
                   <div className="text-right">

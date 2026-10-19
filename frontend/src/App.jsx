@@ -902,6 +902,7 @@ export default function App() {
       <StickyMobileBar
         packTitle={currentPack.title}
         price={currentPrice}
+        mrp={currentPack.mrp}
         onAddToCart={() => {
           handleAddToCart({
             packId: currentPack.id,

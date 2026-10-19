@@ -835,6 +835,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     title: '',
     count: 1,
     basePrice: 0,
+    mrp: '',
     savingsBadge: '',
     popular: false,
     bestValue: false,
@@ -846,8 +847,11 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   const baseSinglePrice = parseFloat(globalBasePrice) || 299;
   const currentCount = parseInt(productForm.count) || 1;
   const currentPackPrice = parseFloat(productForm.basePrice) || 0;
-  const calculatedDiscountPct = currentCount > 0 && baseSinglePrice > 0 
-    ? Math.max(0, Math.round((1 - (currentPackPrice / (baseSinglePrice * currentCount))) * 100))
+  const currentMrp = parseFloat(productForm.mrp) || 0;
+  // Discount is measured against the Actual Price (MRP) when set, else against single-bar price x count
+  const discountReferencePrice = currentMrp > 0 ? currentMrp : baseSinglePrice * currentCount;
+  const calculatedDiscountPct = discountReferencePrice > 0
+    ? Math.max(0, Math.round((1 - (currentPackPrice / discountReferencePrice)) * 100))
     : 0;
 
   // Real-time synchronization of settings changes to the storefront preview iframe
@@ -873,6 +877,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
         ...productForm,
         count: parseInt(productForm.count) || 1,
         basePrice: parseFloat(productForm.basePrice) || 0,
+        mrp: parseFloat(productForm.mrp) || null,
         stock: parseInt(productForm.stock) || 0,
         savingsBadge: productForm.savingsBadge || null,
         active: productForm.active !== false
@@ -2009,6 +2014,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       title: '',
       count: 1,
       basePrice: 0,
+      mrp: '',
       savingsBadge: '',
       popular: false,
       bestValue: false,
@@ -2026,6 +2032,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       title: prod.title,
       count: prod.count,
       basePrice: prod.basePrice,
+      mrp: prod.mrp ?? '',
       savingsBadge: prod.savingsBadge || '',
       popular: prod.popular || false,
       bestValue: prod.bestValue || false,
@@ -2054,12 +2061,20 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       showNotification('Product image is required. Please upload or paste a URL.', 'error');
       return;
     }
+    if (parseFloat(productForm.mrp) > 0 && parseFloat(productForm.mrp) < parseFloat(productForm.basePrice)) {
+      showNotification('Actual Price (MRP) must be greater than or equal to Discount Price', 'error');
+      return;
+    }
     setSaving(true);
     try {
       const payloadCount = parseInt(productForm.count) || 1;
       const payloadBasePrice = parseFloat(productForm.basePrice) || 0;
+      const payloadMrp = parseFloat(productForm.mrp) || null;
       let savingsBadge = productForm.savingsBadge || null;
-      if (payloadCount > 1 && baseSinglePrice > 0) {
+      if (payloadMrp && payloadMrp > payloadBasePrice) {
+        const pct = Math.round((1 - (payloadBasePrice / payloadMrp)) * 100);
+        savingsBadge = pct > 0 ? `Save ${pct}%` : savingsBadge;
+      } else if (payloadCount > 1 && baseSinglePrice > 0) {
         const pct = Math.max(0, Math.round((1 - (payloadBasePrice / (baseSinglePrice * payloadCount))) * 100));
         savingsBadge = pct > 0 ? `Save ${pct}%` : null;
       } else if (payloadCount === 1) {
@@ -2070,6 +2085,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
         ...productForm,
         count: payloadCount,
         basePrice: payloadBasePrice,
+        mrp: payloadMrp,
         stock: parseInt(productForm.stock) || 0,
         savingsBadge: savingsBadge,
         active: productForm.active !== false
@@ -5494,7 +5510,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                             />
                           </div>
 
-                          <div className="grid grid-cols-3 gap-4">
+                          <div className="grid grid-cols-2 gap-4">
                             <div>
                               <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Soap Count</label>
                               <input
@@ -5515,6 +5531,18 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                               />
                             </div>
                             <div>
+                              <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Actual Price / MRP (₹)</label>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                placeholder="Optional – shown with strike-through"
+                                value={productForm.mrp}
+                                onChange={(e) => setProductForm({ ...productForm, mrp: e.target.value })}
+                                className="w-full px-4 py-2.5 bg-[#FDFBF7] border border-[#E6D5C3]/50 rounded-2xl text-sm focus:outline-none focus:border-[#3A2E26] font-medium"
+                              />
+                            </div>
+                            <div>
                               <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Discount (%)</label>
                               <input
                                 type="number"
@@ -5523,7 +5551,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                 value={calculatedDiscountPct !== undefined ? calculatedDiscountPct : ''}
                                 onChange={(e) => {
                                   const newDisc = e.target.value === '' ? '' : (parseFloat(e.target.value) || 0);
-                                  const updatedPrice = (baseSinglePrice * currentCount * (1 - (newDisc === '' ? 0 : newDisc) / 100)).toFixed(2);
+                                  const updatedPrice = (discountReferencePrice * (1 - (newDisc === '' ? 0 : newDisc) / 100)).toFixed(2);
                                   setProductForm({
                                     ...productForm,
                                     basePrice: updatedPrice
@@ -5533,7 +5561,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                               />
                             </div>
                             <div>
-                              <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Pack Price (₹)</label>
+                              <label className="block text-xs font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1.5">Discount Price / Selling (₹)</label>
                               <input
                                 type="number"
                                 required
@@ -5743,6 +5771,9 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                         <td className="p-4 align-middle font-semibold text-[#3A2E26]/80">{p.count} {p.count === 1 ? 'bar' : 'bars'}</td>
                                         <td className="p-4 align-middle font-bold text-[#7A8B6F]">
                                           {formatCurrency(p.basePrice)}
+                                          {parseFloat(p.mrp) > p.basePrice && (
+                                            <span className="block text-[13px] font-semibold text-gray-600 line-through">{formatCurrency(p.mrp)}</span>
+                                          )}
                                         </td>
                                         <td className="p-4 align-middle">
                                           <div className="flex flex-wrap gap-1">
