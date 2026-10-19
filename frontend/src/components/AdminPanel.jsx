@@ -4532,7 +4532,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                         <span>GST Report</span>
                       </h2>
                       <p className="text-xs text-[#3A2E26]/60">
-                        Order-wise sales: Delhivery shipments, offline sales and delivered manual orders. GST {gstReport?.gstRate ?? settingsForm.delhivery?.gst_rate ?? 18}% included in price. Same state as seller ({gstReport?.sellerState || settingsForm.delhivery?.pickup_state || 'Gujarat'}) = CGST + SGST, other states = IGST.
+                        Order-wise sales: Delhivery shipments, offline sales and delivered manual orders. GST {gstReport?.gstRate ?? 5}% included in price. Same state as seller ({gstReport?.sellerState || settingsForm.delhivery?.pickup_state || 'Gujarat'}) = CGST + SGST, other states = IGST.
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -7589,21 +7589,6 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                               className="w-full px-3 py-2 bg-white border border-[#E6D5C3]/40 rounded-xl text-xs font-semibold text-[#3A2E26] uppercase"
                             />
                             <p className="mt-1 text-[10px] text-[#3A2E26]/50">Shown on shipping labels. Leave empty to use the GST Delhivery has on record.</p>
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1">GST Rate (%)</label>
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={settingsForm.delhivery?.gst_rate ?? 18}
-                              onChange={(e) => setSettingsForm({
-                                ...settingsForm,
-                                delhivery: { ...settingsForm.delhivery, gst_rate: e.target.value === '' ? '' : parseFloat(e.target.value) }
-                              })}
-                              className="w-full px-3 py-2 bg-white border border-[#E6D5C3]/40 rounded-xl text-xs font-semibold text-[#3A2E26]"
-                            />
-                            <p className="mt-1 text-[10px] text-[#3A2E26]/50">Used for the GST Report (price includes GST).</p>
                           </div>
                         </div>
 

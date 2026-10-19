@@ -1495,6 +1495,9 @@ def _normalize_state(raw):
     return lookup[match[0]] if match else text
 
 
+GST_RATE = 5.0  # fixed GST rate (%) for the GST report; prices include GST
+
+
 def _is_excluded_from_gst(order):
     if str(order.get("status") or "").lower() == "cancelled":
         return True
@@ -1507,10 +1510,7 @@ async def get_gst_report(from_date: Optional[str] = None, to_date: Optional[str]
     if not config or not config.get("api_token"):
         raise HTTPException(status_code=400, detail="Delhivery API token is not configured in Site Settings.")
 
-    try:
-        gst_rate = float(config.get("gst_rate") or 18)
-    except (TypeError, ValueError):
-        gst_rate = 18.0
+    gst_rate = GST_RATE
     seller_state = _normalize_state(config.get("pickup_state") or "Gujarat")
     ist = timedelta(hours=5, minutes=30)
 

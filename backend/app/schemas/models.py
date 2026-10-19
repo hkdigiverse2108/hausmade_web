@@ -313,7 +313,6 @@ class DelhiverySettings(BaseModel):
     pickup_city: str = ""
     pickup_address: str = ""
     gst_number: str = ""
-    gst_rate: float = 18.0
 
 class ReviewsHeaderSettings(BaseModel):
     badge: str = "Reviews"
