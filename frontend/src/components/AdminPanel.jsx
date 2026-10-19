@@ -88,11 +88,12 @@ import {
   adminUpdateManualOrder,
   adminUpdateManualOrderStatus,
   adminDeleteManualOrder,
+  adminGetGstReport,
   API_URL
 } from '../utils/api';
 import ConfirmModal from './ConfirmModal';
 import { defaultTerms, defaultPrivacy, defaultShipping, defaultRefund } from '../utils/policyDefaults';
-import { exportOrdersToExcel, exportOrdersToPDF } from '../utils/orderExport';
+import { exportOrdersToExcel, exportOrdersToPDF, exportGstReportToExcel, exportGstReportToPDF } from '../utils/orderExport';
 
 const AutoResizeTextarea = ({ value, onChange, placeholder, className, rows = 3, ...props }) => {
   const textareaRef = React.useRef(null);
@@ -476,6 +477,37 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [customDuration, setCustomDuration] = useState('');
   const [customFreq, setCustomFreq] = useState('');
+
+  // GST Report state
+  const [gstReport, setGstReport] = useState(null);
+  const [gstLoading, setGstLoading] = useState(false);
+  const [gstFrom, setGstFrom] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+  });
+  const [gstTo, setGstTo] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  });
+
+  const handleFetchGstReport = async () => {
+    if (gstFrom && gstTo && gstFrom > gstTo) {
+      showNotification('From date must be before To date.', 'error');
+      return;
+    }
+    setGstLoading(true);
+    try {
+      const data = await adminGetGstReport(gstFrom, gstTo, token);
+      setGstReport(data);
+      if (data.missing && data.missing.length > 0) {
+        showNotification(`${data.missing.length} shipment(s) not returned by Delhivery; used order data for those.`, 'error');
+      }
+    } catch (err) {
+      showNotification(err.message || 'Failed to fetch GST report', 'error');
+    } finally {
+      setGstLoading(false);
+    }
+  };
 
   // Manual Orders state
   const [manualOrders, setManualOrders] = useState([]);
@@ -2677,12 +2709,22 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   };
 
   const formatCurrency = (amount) => {
+    const num = Number(amount) || 0;
+    const digits = Number.isInteger(Math.round(num * 100) / 100) ? 0 : 2;
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
-      maximumFractionDigits: 0
-    }).format(amount);
+      minimumFractionDigits: digits,
+      maximumFractionDigits: 2
+    }).format(num);
   };
+
+  const formatGstAmount = (amount) => new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(Number(amount) || 0);
 
   const formatDate = (dateStr) => {
     if (!dateStr) return 'N/A';
@@ -2944,6 +2986,21 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
           >
             <FileText className="w-4 h-4 text-[#C97C5D]" />
             {!sidebarCollapsed && <span>Manual Orders</span>}
+          </button>
+
+          <button
+            onClick={() => setActiveTab('gst_report')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+              sidebarCollapsed ? 'justify-center px-0' : ''
+            } ${
+              activeTab === 'gst_report'
+                ? 'bg-[#3A2E26] text-white shadow-lg shadow-[#3A2E26]/10 translate-x-1'
+                : 'hover:bg-[#3A2E26]/5 text-[#3A2E26]/75 hover:text-[#3A2E26]'
+            }`}
+            title="GST Report"
+          >
+            <Percent className="w-4 h-4" />
+            {!sidebarCollapsed && <span>GST Report</span>}
           </button>
 
           <button
@@ -4596,6 +4653,191 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                       </table>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* Tab: GST Report */}
+              {activeTab === 'gst_report' && (
+                <div className="flex flex-col gap-6">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[#3A2E26]/10 pb-4">
+                    <div>
+                      <h2 className="text-xl font-bold tracking-tight uppercase text-[#3A2E26] font-sans flex items-center gap-2">
+                        <Percent className="w-5 h-5 text-[#C97C5D]" />
+                        <span>GST Report</span>
+                      </h2>
+                      <p className="text-xs text-[#3A2E26]/60">
+                        Order-wise sales: Delhivery shipments, offline sales and delivered manual orders. GST {gstReport?.gstRate ?? 5}% included in price. Same state as seller ({gstReport?.sellerState || settingsForm.delhivery?.pickup_state || 'Gujarat'}) = CGST + SGST, other states = IGST.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => exportGstReportToExcel(gstReport)}
+                        disabled={!gstReport?.rows?.length}
+                        className="px-4 py-2.5 bg-[#7A8B6F] hover:bg-[#68785c] disabled:opacity-40 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer uppercase tracking-wider border-none"
+                      >
+                        <FileSpreadsheet className="w-4 h-4" />
+                        <span>Excel</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => exportGstReportToPDF(gstReport)}
+                        disabled={!gstReport?.rows?.length}
+                        className="px-4 py-2.5 bg-[#3A2E26] hover:bg-[#2A201A] disabled:opacity-40 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer uppercase tracking-wider border-none"
+                      >
+                        <Download className="w-4 h-4" />
+                        <span>PDF</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-end gap-3 bg-white/60 border border-[#E6D5C3]/50 rounded-2xl p-4">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1">From (Order Date)</label>
+                      <input
+                        type="date"
+                        value={gstFrom}
+                        onChange={(e) => setGstFrom(e.target.value)}
+                        className="px-3 py-2 bg-white border border-[#E6D5C3] rounded-xl text-xs font-semibold text-[#3A2E26]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/70 mb-1">To (Order Date)</label>
+                      <input
+                        type="date"
+                        value={gstTo}
+                        onChange={(e) => setGstTo(e.target.value)}
+                        className="px-3 py-2 bg-white border border-[#E6D5C3] rounded-xl text-xs font-semibold text-[#3A2E26]"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleFetchGstReport}
+                      disabled={gstLoading}
+                      className="px-5 py-2.5 bg-[#C97C5D] hover:bg-[#B36B4C] text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer uppercase tracking-wider border-none whitespace-nowrap"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${gstLoading ? 'animate-spin' : ''}`} />
+                      <span>{gstLoading ? 'Fetching...' : 'Fetch Report'}</span>
+                    </button>
+                  </div>
+
+                  {gstReport && (
+                    <>
+                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                        {[
+                          ['Orders', gstReport.totals.orders, false],
+                          ['Taxable', gstReport.totals.taxable, true],
+                          ['CGST + SGST', gstReport.totals.cgst + gstReport.totals.sgst, true],
+                          ['IGST', gstReport.totals.igst, true],
+                          ['Total', gstReport.totals.total, true]
+                        ].map(([label, val, isMoney]) => (
+                          <div key={label} className="bg-white border border-[#E6D5C3]/50 rounded-2xl p-4">
+                            <div className="text-[10px] font-bold uppercase tracking-wider text-[#3A2E26]/60">{label}</div>
+                            <div className="text-lg font-black text-[#3A2E26] font-sans">{isMoney ? formatGstAmount(val) : val}</div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="bg-white border border-[#E6D5C3]/50 rounded-2xl overflow-x-auto">
+                        <table className="w-full text-xs text-[#3A2E26]">
+                          <thead className="bg-[#3A2E26]/5 text-[10px] uppercase tracking-wider">
+                            <tr>
+                              <th className="p-3 text-left">Order Date</th>
+                              <th className="p-3 text-left">Delivered Date</th>
+                              <th className="p-3 text-left">Order ID</th>
+                              <th className="p-3 text-left">Channel</th>
+                              <th className="p-3 text-left">Payment</th>
+                              <th className="p-3 text-left">State</th>
+                              <th className="p-3 text-right">Taxable</th>
+                              <th className="p-3 text-right">CGST</th>
+                              <th className="p-3 text-right">SGST</th>
+                              <th className="p-3 text-right">IGST</th>
+                              <th className="p-3 text-right">Total GST</th>
+                              <th className="p-3 text-right">Total</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-[#3A2E26]/5">
+                            {gstReport.rows.length === 0 ? (
+                              <tr><td colSpan={12} className="p-6 text-center text-[#3A2E26]/50">No sales in this period.</td></tr>
+                            ) : gstReport.rows.map(r => (
+                              <tr key={`${r.channel}-${r.orderId}-${r.awb}`} className="hover:bg-[#3A2E26]/5">
+                                <td className="p-3 whitespace-nowrap">{r.date.split('-').reverse().join('/')}</td>
+                                <td className="p-3 whitespace-nowrap">{r.deliveredDate ? r.deliveredDate.split('-').reverse().join('/') : '-'}</td>
+                                <td className="p-3 font-bold whitespace-nowrap">
+                                  {r.orderId}
+                                  {r.source === 'missing' && <span title="Delhivery data missing; order data used" className="ml-1 text-red-700">*</span>}
+                                </td>
+                                <td className="p-3 whitespace-nowrap">
+                                  <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md border ${
+                                    r.channel === 'Online' ? 'text-green-800 bg-green-50 border-green-200' : r.channel === 'Offline' ? 'text-amber-800 bg-amber-50 border-amber-200' : 'text-[#C97C5D] bg-[#C97C5D]/10 border-[#C97C5D]/30'
+                                  }`}>{r.channel}</span>
+                                </td>
+                                <td className="p-3 whitespace-nowrap">{r.payment || '-'}</td>
+                                <td className="p-3 whitespace-nowrap">{r.state}</td>
+                                <td className="p-3 text-right whitespace-nowrap">{formatGstAmount(r.taxable)}</td>
+                                <td className="p-3 text-right whitespace-nowrap">{formatGstAmount(r.cgst)}</td>
+                                <td className="p-3 text-right whitespace-nowrap">{formatGstAmount(r.sgst)}</td>
+                                <td className="p-3 text-right whitespace-nowrap">{formatGstAmount(r.igst)}</td>
+                                <td className="p-3 text-right whitespace-nowrap">{formatGstAmount(r.gst)}</td>
+                                <td className="p-3 text-right whitespace-nowrap font-bold">{formatGstAmount(r.total)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                          {gstReport.rows.length > 0 && (
+                            <tfoot className="bg-[#E6D5C3]/40 font-bold">
+                              <tr>
+                                <td className="p-3" colSpan={6}>TOTAL ({gstReport.totals.orders} orders)</td>
+                                <td className="p-3 text-right whitespace-nowrap">{formatGstAmount(gstReport.totals.taxable)}</td>
+                                <td className="p-3 text-right whitespace-nowrap">{formatGstAmount(gstReport.totals.cgst)}</td>
+                                <td className="p-3 text-right whitespace-nowrap">{formatGstAmount(gstReport.totals.sgst)}</td>
+                                <td className="p-3 text-right whitespace-nowrap">{formatGstAmount(gstReport.totals.igst)}</td>
+                                <td className="p-3 text-right whitespace-nowrap">{formatGstAmount(gstReport.totals.gst)}</td>
+                                <td className="p-3 text-right whitespace-nowrap">{formatGstAmount(gstReport.totals.total)}</td>
+                              </tr>
+                            </tfoot>
+                          )}
+                        </table>
+                      </div>
+
+                      {gstReport.stateSummary.length > 0 && (
+                        <div className="bg-white border border-[#E6D5C3]/50 rounded-2xl overflow-x-auto">
+                          <div className="px-4 pt-4 text-xs font-bold uppercase tracking-wider text-[#3A2E26]">State-wise Summary</div>
+                          <table className="w-full text-xs text-[#3A2E26]">
+                            <thead className="text-[10px] uppercase tracking-wider">
+                              <tr>
+                                <th className="p-3 text-left">State</th>
+                                <th className="p-3 text-right">Orders</th>
+                                <th className="p-3 text-right">Taxable</th>
+                                <th className="p-3 text-right">CGST</th>
+                                <th className="p-3 text-right">SGST</th>
+                                <th className="p-3 text-right">IGST</th>
+                                <th className="p-3 text-right">Total GST</th>
+                                <th className="p-3 text-right">Total</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-[#3A2E26]/5">
+                              {gstReport.stateSummary.map(st => (
+                                <tr key={st.state}>
+                                  <td className="p-3 font-bold">{st.state}</td>
+                                  <td className="p-3 text-right whitespace-nowrap">{st.orders}</td>
+                                  <td className="p-3 text-right whitespace-nowrap">{formatGstAmount(st.taxable)}</td>
+                                  <td className="p-3 text-right whitespace-nowrap">{formatGstAmount(st.cgst)}</td>
+                                  <td className="p-3 text-right whitespace-nowrap">{formatGstAmount(st.sgst)}</td>
+                                  <td className="p-3 text-right whitespace-nowrap">{formatGstAmount(st.igst)}</td>
+                                  <td className="p-3 text-right whitespace-nowrap">{formatGstAmount(st.gst)}</td>
+                                  <td className="p-3 text-right whitespace-nowrap font-bold">{formatGstAmount(st.total)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+
+                      {gstReport.rows.some(r => r.source === 'missing') && (
+                        <p className="text-[10px] text-red-700">* Delhivery data missing for this shipment, so the order data was used. Please check it in the Delhivery panel.</p>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
 

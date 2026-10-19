@@ -9,7 +9,7 @@ import asyncio
 from fastapi import APIRouter, HTTPException, Depends, status
 from fastapi.responses import HTMLResponse, Response
 from app.schemas.models import OrderCreate, OfflineSaleCreate, OnlineOrderUpdate, GuestOrderCancelRequest
-from app.database.connection import orders_collection, products_collection, users_collection, settings_collection
+from app.database.connection import orders_collection, products_collection, users_collection, settings_collection, manual_orders_collection
 from app.dependencies.auth_deps import get_current_user_email, get_admin_user
 from app.security.email_sender import send_order_confirmation_email
 
@@ -1542,6 +1542,240 @@ async def admin_sync_delhivery_status(admin: dict = Depends(get_admin_user)):
     count = await sync_delhivery_orders_live_status(limit=200, force=True)
     return {"status": "success", "message": "Successfully synced status from Delhivery", "updated_count": count}
 
+INDIAN_STATES = [
+    "Andaman and Nicobar Islands", "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chandigarh",
+    "Chhattisgarh", "Dadra and Nagar Haveli and Daman and Diu", "Delhi", "Goa", "Gujarat", "Haryana",
+    "Himachal Pradesh", "Jammu and Kashmir", "Jharkhand", "Karnataka", "Kerala", "Ladakh", "Lakshadweep",
+    "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Puducherry",
+    "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand",
+    "West Bengal"
+]
+STATE_ALIASES = {
+    "gj": "Gujarat", "mh": "Maharashtra", "rj": "Rajasthan", "dl": "Delhi", "new delhi": "Delhi",
+    "nct of delhi": "Delhi", "ka": "Karnataka", "tn": "Tamil Nadu", "up": "Uttar Pradesh", "mp": "Madhya Pradesh",
+    "orissa": "Odisha", "pondicherry": "Puducherry", "uttaranchal": "Uttarakhand", "hr": "Haryana", "wb": "West Bengal",
+    "j&k": "Jammu and Kashmir", "jammu & kashmir": "Jammu and Kashmir", "telengana": "Telangana"
+}
+
+
+def _normalize_state(raw):
+    """Map spelling variants (e.g. 'Gujrat', 'GJ') to the official state name; unknown values are kept as-is."""
+    import difflib
+    text = " ".join(str(raw or "").replace("&", " and ").split()).strip()
+    if not text:
+        return ""
+    key = text.lower()
+    if str(raw).strip().lower() in STATE_ALIASES:
+        return STATE_ALIASES[str(raw).strip().lower()]
+    if key in STATE_ALIASES:
+        return STATE_ALIASES[key]
+    lookup = {st.lower(): st for st in INDIAN_STATES}
+    if key in lookup:
+        return lookup[key]
+    match = difflib.get_close_matches(key, list(lookup.keys()), n=1, cutoff=0.8)
+    return lookup[match[0]] if match else text
+
+
+GST_RATE = 5.0  # fixed GST rate (%) for the GST report; prices include GST
+
+
+def _is_excluded_from_gst(order):
+    if str(order.get("status") or "").lower() == "cancelled":
+        return True
+    f_status = str((order.get("fulfillment") or {}).get("status") or "").lower()
+    return f_status == "cancelled" or "rto" in f_status or "return" in f_status
+
+@router.get("/api/admin/reports/gst")
+async def get_gst_report(from_date: Optional[str] = None, to_date: Optional[str] = None, admin: dict = Depends(get_admin_user)):
+    config = await get_delhivery_config_internal()
+    if not config or not config.get("api_token"):
+        raise HTTPException(status_code=400, detail="Delhivery API token is not configured in Site Settings.")
+
+    gst_rate = GST_RATE
+    seller_state = _normalize_state(config.get("pickup_state") or "Gujarat")
+    ist = timedelta(hours=5, minutes=30)
+
+    def order_date_ist(order):
+        dt = order.get("created_at")
+        if isinstance(dt, str):
+            try:
+                dt = datetime.fromisoformat(dt.replace("Z", "+00:00"))
+            except ValueError:
+                return None
+        if not isinstance(dt, datetime):
+            return None
+        if dt.tzinfo is not None:
+            dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+        return dt + ist
+
+    orders = await orders_collection.find({"fulfillment.awb": {"$exists": True, "$ne": ""}}).to_list(length=None)
+    selected = []
+    for o in orders:
+        awb = str(o.get("fulfillment", {}).get("awb") or "")
+        if not awb or awb.startswith("DELHIVERY") or _is_excluded_from_gst(o):
+            continue
+        local_dt = order_date_ist(o)
+        day = local_dt.strftime("%Y-%m-%d") if local_dt else ""
+        if from_date and (not day or day < from_date):
+            continue
+        if to_date and (not day or day > to_date):
+            continue
+        selected.append((o, awb, local_dt))
+
+    # Fetch shipment details from Delhivery in batches of 50 AWBs
+    token = config.get("api_token")
+    base_url = "https://staging-express.delhivery.com" if config.get("mode") == "test" else "https://track.delhivery.com"
+    shipments = {}
+    awbs = [awb for _, awb, _ in selected]
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        for i in range(0, len(awbs), 50):
+            batch = awbs[i:i + 50]
+            try:
+                resp = await client.get(f"{base_url}/api/v2/packages/json/", params={"token": token, "waybill": ",".join(batch)})
+                if resp.status_code != 200:
+                    print(f"[GST REPORT] Delhivery returned {resp.status_code}: {resp.text[:200]}")
+                    continue
+                for entry in resp.json().get("ShipmentData", []) or []:
+                    shp = entry.get("Shipment", {}) or {}
+                    if shp.get("AWB"):
+                        shipments[str(shp.get("AWB"))] = shp
+            except Exception as e:
+                print(f"[GST REPORT] Delhivery fetch error: {e}")
+
+    divisor = 1 + gst_rate / 100
+    rows, missing = [], []
+    state_summary = {}
+
+    def add_row(local_dt, order_id, awb, state, total, source, channel, delivered_date="", qty=0, payment=""):
+        state = _normalize_state(state)
+        total = round(total, 2)
+        taxable = round(total / divisor, 2)
+        gst = round(total - taxable, 2)
+        intra = state.lower() == seller_state.lower()
+        cgst = round(gst / 2, 2) if intra else 0.0
+        sgst = round(gst - cgst, 2) if intra else 0.0
+        igst = 0.0 if intra else gst
+
+        row = {
+            "date": local_dt.strftime("%Y-%m-%d") if local_dt else "",
+            "deliveredDate": delivered_date or "",
+            "orderId": order_id,
+            "awb": awb,
+            "channel": channel,
+            "payment": payment or "",
+            "qty": qty,
+            "state": state or "Unknown",
+            "taxable": taxable,
+            "cgst": cgst,
+            "sgst": sgst,
+            "igst": igst,
+            "gst": gst,
+            "total": total,
+            "source": source
+        }
+        rows.append(row)
+
+        key = state or "Unknown"
+        summary_row = state_summary.setdefault(key, {"state": key, "orders": 0, "taxable": 0.0, "cgst": 0.0, "sgst": 0.0, "igst": 0.0, "gst": 0.0, "total": 0.0})
+        summary_row["orders"] += 1
+        for k in ["taxable", "cgst", "sgst", "igst", "gst", "total"]:
+            summary_row[k] = round(summary_row[k] + row[k], 2)
+
+    def in_range(local_dt):
+        day = local_dt.strftime("%Y-%m-%d") if local_dt else ""
+        if from_date and (not day or day < from_date):
+            return False
+        if to_date and (not day or day > to_date):
+            return False
+        return True
+
+    for o, awb, local_dt in selected:
+        channel = "Offline" if o.get("isOffline") else "Online"
+        shp = shipments.get(awb)
+        if not shp:
+            # Delhivery returned nothing for this AWB: keep the sale (so GST is not under-reported) but flag it
+            missing.append(awb)
+            item_qty = sum(int(i.get("quantity") or 1) for i in (o.get("cartItems") or [])) or 1
+            add_row(local_dt, o.get("orderId"), awb, str((o.get("shippingAddress") or {}).get("state") or "").strip(),
+                    float(o.get("grandTotal") or 0), "missing", channel, "", item_qty, "")
+            continue
+
+        st = shp.get("Status", {}) or {}
+        st_name = str(st.get("Status") or "").upper()
+        st_type = str(st.get("StatusType") or "").upper()
+        if st_type == "RT" or st_name in ["RTO", "CANCELLED"] or "CANCEL" in st_name or shp.get("RTOStartedDate") or shp.get("ReturnedDate"):
+            continue
+
+        state = str((shp.get("Consignee") or {}).get("State") or "").strip()
+        try:
+            total = float(shp.get("InvoiceAmount") or 0)
+        except (TypeError, ValueError):
+            total = 0.0
+        try:
+            qty = int(float(shp.get("Quantity") or 0))
+        except (TypeError, ValueError):
+            qty = 0
+
+        delivered_date = ""
+        if shp.get("DeliveryDate"):
+            delivered_date = str(shp.get("DeliveryDate"))[:10]
+        elif st_name == "DELIVERED" and st.get("StatusDateTime"):
+            delivered_date = str(st.get("StatusDateTime"))[:10]
+
+        source = "delhivery" if state and total > 0 else "missing"
+        add_row(local_dt, shp.get("ReferenceNo") or o.get("orderId"), awb, state, total, source, channel,
+                delivered_date, qty, str(shp.get("OrderType") or ""))
+
+    # Offline sales not shipped through Delhivery (sold directly); placeholder state means sold at the store
+    offline_placeholders = ["", "offline store", "offline"]
+    offline_orders = await orders_collection.find({"isOffline": True}).to_list(length=None)
+    for o in offline_orders:
+        if (o.get("fulfillment") or {}).get("awb") or _is_excluded_from_gst(o):
+            continue
+        local_dt = order_date_ist(o)
+        if not in_range(local_dt):
+            continue
+        state = str((o.get("shippingAddress") or {}).get("state") or "").strip()
+        if state.lower() in offline_placeholders:
+            state = seller_state
+        item_qty = sum(int(i.get("quantity") or 1) for i in (o.get("cartItems") or [])) or 1
+        add_row(local_dt, o.get("orderId"), "", state, float(o.get("grandTotal") or 0), "order", "Offline",
+                local_dt.strftime("%Y-%m-%d") if local_dt else "", item_qty, str(o.get("paymentMethod") or ""))
+
+    # Manual orders: counted once Delivered, same as revenue stats
+    manual_orders = await manual_orders_collection.find({"status": "Delivered"}).to_list(length=None)
+    for mo in manual_orders:
+        local_dt = order_date_ist({"created_at": mo.get("saleDateTime") or mo.get("created_at")})
+        if not in_range(local_dt):
+            continue
+        state = str(mo.get("state") or "").strip() or seller_state
+        try:
+            total = float(mo.get("totalPrice") or 0)
+        except (TypeError, ValueError):
+            total = 0.0
+        delivered_dt = order_date_ist({"created_at": mo.get("updated_at")}) if mo.get("updated_at") else None
+        delivered_date = delivered_dt.strftime("%Y-%m-%d") if delivered_dt else (local_dt.strftime("%Y-%m-%d") if local_dt else "")
+        add_row(local_dt, mo.get("orderId") or str(mo.get("_id")), "", state, total, "order", "Manual", delivered_date,
+                int(mo.get("numberOfSoaps") or 1), str(mo.get("paymentMethod") or ""))
+
+    rows.sort(key=lambda r: (r["date"], str(r["orderId"])))
+    summary = sorted(state_summary.values(), key=lambda x: x["state"])
+    totals = {"orders": len(rows)}
+    for k in ["taxable", "cgst", "sgst", "igst", "gst", "total"]:
+        totals[k] = round(sum(r[k] for r in rows), 2)
+
+    return {
+        "rows": rows,
+        "stateSummary": summary,
+        "totals": totals,
+        "sellerState": seller_state,
+        "sellerGstin": (config.get("gst_number") or "").strip().upper(),
+        "gstRate": gst_rate,
+        "from": from_date,
+        "to": to_date,
+        "missing": missing
+    }
+
 @router.get("/api/orders/track/{tracking_id}")
 async def track_order_shipment(tracking_id: str):
     clean_id = tracking_id.strip()
@@ -1642,7 +1876,7 @@ async def track_order_shipment(tracking_id: str):
     token = config["api_token"]
     mode = config.get("mode", "test")
     base_url = "https://staging-express.delhivery.com" if mode == "test" else "https://track.delhivery.com"
-    url = f"{base_url}/api/v1/packages/json/?waybill={awb}"
+    url = f"{base_url}/api/v2/packages/json/?waybill={awb}"
     headers = {"Authorization": f"Token {token}"}
     
     async with httpx.AsyncClient() as client:

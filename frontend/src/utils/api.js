@@ -1001,6 +1001,22 @@ export async function cancelGuestOrder(orderId, emailOrPhone) {
   return response.json();
 }
 
+export async function adminGetGstReport(fromDate, toDate, token) {
+  const params = new URLSearchParams();
+  if (fromDate) params.set('from_date', fromDate);
+  if (toDate) params.set('to_date', toDate);
+  const response = await fetch(`${API_URL}/api/admin/reports/gst?${params.toString()}`, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Failed to fetch GST report');
+  }
+  return response.json();
+}
+
 export async function adminGetManualOrders(token) {
   const response = await fetch(`${API_URL}/api/admin/manual-orders`, {
     headers: {
