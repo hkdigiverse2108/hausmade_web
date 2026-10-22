@@ -1675,6 +1675,17 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
   // Helper function to extract YYYY-MM-DD from any date value
   const getYYYYMMDD = (dVal) => {
     if (!dVal) return '';
+    if (typeof dVal === 'string') {
+      // Plain date strings are already a calendar day
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dVal)) return dVal;
+      // Backend timestamps are UTC (often without 'Z') — bucket them by IST day, same as formatDate
+      let parseStr = dVal;
+      if (!parseStr.endsWith('Z') && !parseStr.includes('+')) parseStr += 'Z';
+      const utc = new Date(parseStr);
+      if (!isNaN(utc.getTime())) {
+        return utc.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+      }
+    }
     const d = new Date(dVal);
     if (isNaN(d.getTime())) {
       return String(dVal).split('T')[0].split(' ')[0];
@@ -1965,21 +1976,16 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     }
 
     for (let i = daysCount - 1; i >= 0; i--) {
-      const d = new Date();
-      if (tf === 'filter' && orderDateRange.endDate) {
-        const endDate = new Date(orderDateRange.endDate);
-        d.setDate(endDate.getDate() - i);
-      } else {
-        d.setDate(now.getDate() - i);
-      }
+      const d = (tf === 'filter' && orderDateRange.endDate) ? new Date(orderDateRange.endDate) : new Date();
+      d.setDate(d.getDate() - i);
 
-      const dateStr = d.toISOString().split('T')[0];
+      const dateStr = getYYYYMMDD(d);
       const label = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', timeZone: 'Asia/Kolkata' });
 
       let dayOrderCount = 0;
       let dayTotal = orders.reduce((sum, order) => {
         if (!order.created_at || isReturnedOrder(order)) return sum;
-        const orderDate = order.created_at.split(' ')[0].split('T')[0];
+        const orderDate = getYYYYMMDD(order.created_at);
         
         const matchesFilter = 
           statsFilter === 'all' || 
@@ -1999,7 +2005,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
           if (mo.status !== 'Delivered') return;
           const moDateRaw = mo.saleDateTime || mo.created_at;
           if (!moDateRaw) return;
-          const moDate = moDateRaw.split(' ')[0].split('T')[0];
+          const moDate = getYYYYMMDD(moDateRaw);
           if (moDate === dateStr) {
             dayOrderCount++;
             dayTotal += (parseFloat(mo.totalPrice) || 0);

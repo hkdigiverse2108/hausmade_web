@@ -50,14 +50,18 @@ const getTotalAmount = (order) => {
 
 const formatDateStr = (dateVal) => {
   if (!dateVal) return 'N/A';
-  const d = new Date(dateVal);
+  // Backend timestamps are UTC (often without 'Z') — show them in IST
+  let parseStr = String(dateVal);
+  if (!parseStr.endsWith('Z') && !parseStr.includes('+')) parseStr += 'Z';
+  const d = new Date(parseStr);
   if (isNaN(d.getTime())) return String(dateVal);
-  const day = String(d.getDate()).padStart(2, '0');
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const year = d.getFullYear();
-  const hours = String(d.getHours()).padStart(2, '0');
-  const mins = String(d.getMinutes()).padStart(2, '0');
-  return `${day}/${month}/${year} ${hours}:${mins}`;
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Kolkata', day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+    }).formatToParts(d).map(({ type, value }) => [type, value])
+  );
+  return `${p.day}/${p.month}/${p.year} ${p.hour}:${p.minute}`;
 };
 
 const getShipmentStatusStr = (order) => {
