@@ -50,7 +50,7 @@ const getTotalAmount = (order) => {
 
 const formatDateStr = (dateVal) => {
   if (!dateVal) return 'N/A';
-  // Backend timestamps are UTC (often without 'Z') — show them in IST
+a  // Backend timestamps are UTC (often without 'Z') — show them in IST
   let parseStr = String(dateVal);
   if (!parseStr.endsWith('Z') && !parseStr.includes('+')) parseStr += 'Z';
   const d = new Date(parseStr);

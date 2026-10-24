@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, CheckCircle2, ShieldCheck, CreditCard, Truck, Smartphone, Banknote, ArrowRight, ArrowLeft, Loader2, Compass, Navigation } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { placeOrder, updateUserProfile, validateCoupon, getActiveCoupons, createSubscription, createCashfreeSession, verifyCashfreePayment, createRazorpaySession, verifyRazorpayPayment } from '../utils/api';
@@ -50,6 +50,8 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
     }
   }, [isOpen]);
   const [orderId, setOrderId] = useState('');
+  const [paidTotal, setPaidTotal] = useState('0.00');
+  const preConfirmUrl = useRef(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -208,6 +210,23 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
       }
     }
   }, [user, isOpen, settings]);
+
+  // Give the confirmation screen its own URL: /order-confirmed?id=HM-XXXXXX
+  useEffect(() => {
+    if (step !== 'success' || !orderId) return;
+    if (window.location.pathname !== '/order-confirmed') {
+      preConfirmUrl.current = window.location.pathname + window.location.search + window.location.hash;
+      window.history.pushState(null, '', `/order-confirmed?id=${encodeURIComponent(orderId)}`);
+    }
+    const handlePopState = () => {
+      if (window.location.pathname !== '/order-confirmed') {
+        preConfirmUrl.current = null;
+        onClose();
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [step, orderId, onClose]);
 
   if (!isOpen) return null;
 
@@ -491,6 +510,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
         await placeOrder(orderData, token);
         setOrderId(generatedId);
       }
+      setPaidTotal(grandTotal);
       setStep('success');
       if (onOrderComplete) onOrderComplete();
     } catch (err) {
@@ -498,6 +518,14 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleClose = () => {
+    if (window.location.pathname === '/order-confirmed') {
+      window.history.replaceState(null, '', preConfirmUrl.current || '/products');
+      preConfirmUrl.current = null;
+    }
+    onClose();
   };
 
   const handleSelectAddress = (addr) => {
@@ -536,7 +564,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
       <div className="sticky top-0 bg-white/70 backdrop-blur-xl border-b border-[#3A2E26]/10 px-4 sm:px-6 py-4 flex items-center justify-between z-10 shrink-0">
         <div className="flex items-center gap-3 sm:gap-4">
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="w-10 h-10 rounded-full border border-[#3A2E26]/15 flex items-center justify-center text-[#3A2E26] hover:bg-[#3A2E26]/5 transition-all cursor-pointer shrink-0"
             title="Back to Shop"
             aria-label="Back to Shop"
@@ -600,14 +628,14 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
               </div>
               <div className="flex justify-between">
                 <span>Total Paid:</span>
-                <span className="font-bold text-[#C97C5D]">₹{grandTotal}</span>
+                <span className="font-bold text-[#C97C5D]">₹{paidTotal}</span>
               </div>
             </div>
 
             <p className="text-xs text-gray-500">A confirmation SMS & email has been sent to {formData.phone || 'your mobile'}.</p>
 
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="px-8 py-3 bg-[#3A2E26] hover:bg-black text-white font-bold text-xs uppercase tracking-widest rounded-none transition-all cursor-pointer "
             >
               Continue Shopping
