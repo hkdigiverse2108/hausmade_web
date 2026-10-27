@@ -39,7 +39,23 @@
       s.parentNode.insertBefore(t, s)
     }(window, document, 'script',
       'https://connect.facebook.net/en_US/fbevents.js');
-    fbq('init', '1620937612969079');
+    // Manual advanced matching: values are hashed automatically by the pixel using SHA-256
+    var fbUserData = {};
+    try {
+      var hmUser = JSON.parse(localStorage.getItem('hausmade_user') || 'null');
+      if (hmUser) {
+        var hmPhone = String(hmUser.mobile || hmUser.phone || '').replace(/\D/g, '');
+        var hmName = String(hmUser.name || '').trim().toLowerCase().split(/\s+/);
+        if (hmUser.email) fbUserData.em = String(hmUser.email).trim().toLowerCase();
+        if (hmPhone) fbUserData.ph = hmPhone.length === 10 ? '91' + hmPhone : hmPhone;
+        if (hmName[0] && hmName[0] !== 'member') {
+          fbUserData.fn = hmName[0];
+          if (hmName.length > 1) fbUserData.ln = hmName[hmName.length - 1];
+        }
+        fbUserData.country = 'in';
+      }
+    } catch (e) {}
+    fbq('init', '1620937612969079', fbUserData);
     fbq('track', 'PageView');
   </script>
   <!-- End Meta Pixel Code -->
