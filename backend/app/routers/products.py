@@ -24,6 +24,8 @@ async def create_product(product: ProductModel, admin: dict = Depends(get_admin_
             raise HTTPException(status_code=400, detail="Product ID already exists")
         
         doc = product.dict()
+        if doc.get("defaultSelected"):
+            await products_collection.update_many({"defaultSelected": True}, {"$set": {"defaultSelected": False}})
         await products_collection.insert_one(doc)
         if "_id" in doc:
             doc["_id"] = str(doc["_id"])
@@ -41,6 +43,8 @@ async def update_product(id: str, product: ProductModel, admin: dict = Depends(g
             raise HTTPException(status_code=404, detail="Product not found")
             
         doc = product.dict()
+        if doc.get("defaultSelected"):
+            await products_collection.update_many({"id": {"$ne": id}, "defaultSelected": True}, {"$set": {"defaultSelected": False}})
         await products_collection.update_one({"id": id}, {"$set": doc})
         return {"status": "success", "product": doc}
     except Exception as e:

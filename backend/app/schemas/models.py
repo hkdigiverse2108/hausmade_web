@@ -10,6 +10,7 @@ class ProductModel(BaseModel):
     savingsBadge: Optional[str] = None
     popular: bool = False
     bestValue: bool = False
+    defaultSelected: bool = False  # Pre-selected pack on the storefront (only one product)
     image: str
     stock: int
     active: bool = True

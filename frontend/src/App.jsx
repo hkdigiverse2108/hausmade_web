@@ -146,6 +146,8 @@ export default function App() {
       .then(data => {
         if (data && data.length > 0) {
           setProducts(data);
+          const defaultPack = data.find(p => p.defaultSelected && p.active !== false);
+          if (defaultPack) setSelectedPack(defaultPack.id);
         }
       })
       .catch(err => console.error("Error loading products:", err));

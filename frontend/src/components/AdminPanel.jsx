@@ -871,6 +871,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
     savingsBadge: '',
     popular: false,
     bestValue: false,
+    defaultSelected: false,
     image: '',
     stock: 0,
     active: true
@@ -2056,6 +2057,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       savingsBadge: '',
       popular: false,
       bestValue: false,
+      defaultSelected: false,
       image: '',
       stock: 100,
       active: true
@@ -2074,6 +2076,7 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
       savingsBadge: prod.savingsBadge || '',
       popular: prod.popular || false,
       bestValue: prod.bestValue || false,
+      defaultSelected: prod.defaultSelected || false,
       image: prod.image,
       stock: prod.stock !== undefined ? prod.stock : 0,
       active: prod.active !== false
@@ -5881,6 +5884,15 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                             <label className="flex items-center gap-2 text-sm font-semibold text-[#3A2E26] cursor-pointer">
                               <input
                                 type="checkbox"
+                                checked={productForm.defaultSelected}
+                                onChange={(e) => setProductForm({ ...productForm, defaultSelected: e.target.checked })}
+                                className="w-4 h-4 text-[#C97C5D] border-gray-300 rounded focus:ring-[#C97C5D]"
+                              />
+                              <span>Selected by Default on website (only one product)</span>
+                            </label>
+                            <label className="flex items-center gap-2 text-sm font-semibold text-[#3A2E26] cursor-pointer">
+                              <input
+                                type="checkbox"
                                 checked={productForm.active}
                                 onChange={(e) => setProductForm({ ...productForm, active: e.target.checked })}
                                 className="w-4 h-4 text-[#7A8B6F] border-gray-300 rounded focus:ring-[#7A8B6F]"
@@ -6033,6 +6045,9 @@ function AdminPanel({ token, onLogout, showNotification, onViewStorefront, setti
                                             )}
                                             {p.bestValue && (
                                               <span className="px-2.5 py-0.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-md text-[9px] font-bold uppercase tracking-wider">Best Value</span>
+                                            )}
+                                            {p.defaultSelected && (
+                                              <span className="px-2.5 py-0.5 bg-blue-50 text-blue-800 border border-blue-200 rounded-md text-[9px] font-bold uppercase tracking-wider">Default</span>
                                             )}
                                           </div>
                                         </td>
