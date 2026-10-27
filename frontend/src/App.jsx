@@ -443,6 +443,11 @@ export default function App() {
   const isAuthenticated = !!localUser || isAuth0Authenticated;
   const activeToken = localToken || auth0Token;
 
+  // Pass logged-in user's details to Meta Pixel advanced matching
+  useEffect(() => {
+    if (user) window.hmSetFbUserData?.(user);
+  }, [user?.email, user?.mobile, user?.phone, user?.name]);
+
   useEffect(() => {
     if (window.location.pathname === '/admin') {
       if (isAuthenticated && user?.is_admin) {

@@ -270,6 +270,7 @@ export default function CheckoutModal({ isOpen, onClose, cartItems, onOrderCompl
       alert('Please enter a valid email address.');
       return;
     }
+    window.hmSetFbUserData?.(formData);
     setStep('payment');
   };
 
