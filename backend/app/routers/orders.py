@@ -1,5 +1,6 @@
 from typing import Optional
 from datetime import datetime, timedelta, timezone
+import re
 import uuid
 import httpx
 import hmac
@@ -820,7 +821,15 @@ async def process_delhivery_shipment_booking(order_or_id, weight=500, length=15,
         except Exception as wb_err:
             print(f"Delhivery waybill fetch error: {wb_err}")
 
-    waybill = real_awb or f"DELHIVERY{str(uuid.uuid4().int)[:10]}"
+    # Never send a made-up waybill: Delhivery rejects unknown AWBs. Leave it blank so Delhivery assigns one.
+    waybill = real_awb or ""
+
+    # Delhivery's parser crashes ("suspicious order/consignee") on characters like & # % ; \ " and on newlines
+    def clean_text(value, fallback=""):
+        text = str(value or "").replace("&", " and ")
+        text = re.sub(r'[#%;\\"\'<>|`~^*{}\[\]]', " ", text)
+        text = re.sub(r"\s+", " ", text).strip()
+        return text or fallback
 
     # Determine payment mode (COD vs Prepaid)
     if payment_mode:
@@ -849,19 +858,19 @@ async def process_delhivery_shipment_booking(order_or_id, weight=500, length=15,
         clean_phone = clean_phone[1:]
     
     # Ensure address is at least 12 chars for Delhivery
-    raw_address = order.get("shippingAddress", {}).get("address", "")
+    raw_address = clean_text(order.get("shippingAddress", {}).get("address", ""))
     if len(raw_address) < 12:
-        raw_address = raw_address + " - " + order.get("shippingAddress", {}).get("city", "")
+        raw_address = raw_address + " - " + clean_text(order.get("shippingAddress", {}).get("city", ""))
 
     shipment_data = {
         "shipments": [
             {
                 "waybill": waybill,
-                "name": order.get("shippingAddress", {}).get("fullName", "Customer"),
+                "name": clean_text(order.get("shippingAddress", {}).get("fullName"), "Customer"),
                 "add": raw_address,
-                "pin": order.get("shippingAddress", {}).get("pincode", "395010"),
-                "city": order.get("shippingAddress", {}).get("city", "Surat"),
-                "state": order.get("shippingAddress", {}).get("state", "Gujarat"),
+                "pin": ''.join(filter(str.isdigit, str(order.get("shippingAddress", {}).get("pincode", "395010")))),
+                "city": clean_text(order.get("shippingAddress", {}).get("city"), "Surat"),
+                "state": clean_text(order.get("shippingAddress", {}).get("state"), "Gujarat"),
                 "country": "India",
                 "phone": clean_phone,
                 "payment_mode": pmode,
@@ -938,7 +947,10 @@ async def process_delhivery_shipment_booking(order_or_id, weight=500, length=15,
                 raise ValueError(f"Delhivery API Error: {err_msg}")
         except Exception as e:
             raise ValueError(f"Delhivery shipment booking failed: {str(e)}")
-            
+
+    if not waybill:
+        raise ValueError("Delhivery shipment booking failed: Delhivery did not return a waybill number")
+
     fulfillment = {
         "awb": waybill,
         "provider": "Delhivery Express",
